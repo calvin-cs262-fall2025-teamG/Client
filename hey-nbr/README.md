@@ -1,3 +1,7 @@
+# Project
+Parent repo:
+* [Project](https://github.com/calvin-cs262-fall2025-teamG/Project)
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
