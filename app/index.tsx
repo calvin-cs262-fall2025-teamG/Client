@@ -1,383 +1,141 @@
-import React, { useState } from "react";
-import { Image } from "react-native";
-const logo = require("../assets/images/logo.png");
+// including this bc VS Code gave me errors;
+import React from "react";
+import { Text, View, Pressable, Image, StyleProp, ViewStyle, TextStyle, StyleSheet, Dimensions } from "react-native";
 
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  TextInput,
-} from "react-native";
+/*
+      <Text
+        style={{
+          fontFamily: "Times New Roman",
+          color: "#00204a",
+          fontSize: 50,
+        }}
+      >
+      </Text>
+      <Text
+        style={{
+          fontFamily: "Times New Roman",
+          color: "#fdb44b",
+          fontSize: 30,
+        }}
+      >
+        Share, Borrow, Connect
+      </Text>
+*/
 
-interface Item {
-  id: number;
-  name: string;
-  count: number;
-  image: string;
+// it's a bummer I can't use CSS at all;
+
+/* way #1:
+const s_font: TextStyle = {
+    fontFamily: "'Times New Roman', Times, serif",
+    fontSize: 16,
+    color: "#000d20",
 }
+const s_navbar: StyleProp<ViewStyle> = {
+    display: "flex",
+    flex: 1,
+}
+const s_navbar_btn: StyleProp<ViewStyle> = {
+    width: 1,
+}
+const s_navbar_img: StyleProp<ViewStyle> = {
+    aspectRatio: "1 / 1",
+}
+const s_navbar_txt: TextStyle = {
+    textAlign: "center",
+    margin: "auto",
+}
+*/
+
+const style = StyleSheet.create({
+    font: {
+        fontFamily: "'Times New Roman', Times, serif",
+        fontSize: 20,
+        color: "#000d20",
+    },
+    app: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: "space-around",
+        width: Dimensions.get("window").width,
+        height: Dimensions.get("window").height,
+    },
+    content: {
+        overflowY: "scroll",
+        flexGrow: 1,
+        flexShrink: 1,
+    },
+    navbar: {
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "stretch",
+        justifyContent: "space-around",
+        width: Dimensions.get("window").width,
+        height: 100,
+    },
+    navbar_btn: {
+        flexGrow: 1,
+        // width: 10,
+        padding: 10,
+        paddingBottom: 0,
+        backgroundColor: "white",
+        borderRadius: 10,
+    },
+    navbar_img: {
+        width: 75,
+        height: 75,
+        resizeMode: "contain",
+        // aspectRatio: "1 / 1",
+    },
+    navbar_txt: {
+        textAlign: "center",
+        margin: "auto",
+    }
+})
+
+const my_par = (<View>
+  <Text style={style.font}>
+    An item can be enchanted by using an enchanting table and placing the item and 1-3 lapis lazuli in the input slots. Upon placing the item, three (pseudo)randomized options appear on the right of the GUI. The glyphs, written in Standard Galactic Alphabet, do not affect the enchantment, but hovering over a presented enchantment shows one enchantment to be applied. On mobile devices, the player can tap an enchantment before putting in the lapis lazuli or hold the enchantment before release. The only choices available have a level requirement equal to or below the player's current level and a lapis lazuli requirement equal to or below the number of lapis lazuli placed in the table. Each option imbues the item with a randomized set of enchantments that are dependent on the number of experience levels required (e.g. a level 30 enchantment can give a pickaxe the "Efficiency II" enchantment); the actual level cost and the number of lapis lazuli required have no effect.
+  </Text>
+</View>);
 
 export default function Index() {
-  const [activeTab, setActiveTab] = useState("Popular");
-
-  const listings: Item[] = [
-    { id: 1, name: "Tractor", count: 3, image: "🚜" },
-    { id: 2, name: "Tools", count: 5, image: "🔧" },
-    { id: 3, name: "Hose", count: 8, image: "💧" },
-    { id: 4, name: "Chair", count: 15, image: "🪑" },
-    { id: 5, name: "Vacuum", count: 1, image: "🧹" },
-    { id: 6, name: "Couch", count: 12, image: "🛋️" },
-    { id: 7, name: "Table", count: 10, image: "🪑" },
-    { id: 8, name: "Skate", count: 6, image: "🛹" },
-  ];
-
-  const recommended: Item[] = [
-    { id: 1, name: "USBC Charger", count: 254, image: "🔌" },
-    { id: 2, name: "Core 100 Book", count: 243, image: "📚" },
-    { id: 3, name: "Keurig", count: 180, image: "☕" },
-    { id: 4, name: "Camping Tent", count: 156, image: "⛺" },
-  ];
-
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Image source={logo} style={styles.logoImage} resizeMode="contain" />
-
-        <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            placeholderTextColor="#9ca3af"
-          />
+    <View style={style.app}>
+        <View style={style.content}>
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
+            {React.cloneElement(my_par)}
         </View>
-
-        <View style={styles.iconGroup}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.icon}>🔖</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.icon}>🛍️</Text>
-          </TouchableOpacity>
+        <View style={style.navbar}>
+          <Pressable style={style.navbar_btn}>
+            <Image style={style.navbar_img} source={require("../assets/images/icons/home.png")} />
+            <Text style={[style.font, style.navbar_txt]}>Home</Text>
+          </Pressable>
+          <Pressable style={style.navbar_btn}>
+            <Image style={style.navbar_img} source={require("../assets/images/icons/search.png")} />
+            <Text style={[style.font, style.navbar_txt]}>Search</Text>
+          </Pressable>
+          <Pressable style={style.navbar_btn}>
+            <Image style={style.navbar_img} source={require("../assets/images/icons/post.png")} />
+            <Text style={[style.font, style.navbar_txt]}>Post</Text>
+          </Pressable>
+          <Pressable style={style.navbar_btn}>
+            <Image style={style.navbar_img} source={require("../assets/images/icons/messages.png")} />
+            <Text style={[style.font, style.navbar_txt]}>Messages</Text>
+          </Pressable>
+          <Pressable style={style.navbar_btn}>
+            <Image style={style.navbar_img} source={require("../assets/images/icons/profile.png")} />
+            <Text style={[style.font, style.navbar_txt]}>Profile</Text>
+          </Pressable>
         </View>
-      </View>
-
-      <ScrollView style={styles.scrollView}>
-        {/* Your Listings Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>Your Listings</Text>
-        </View>
-
-        <View style={styles.listingsGrid}>
-          {listings.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.listingItem}>
-              <View style={styles.listingImageContainer}>
-                <Text style={styles.listingEmoji}>{item.image}</Text>
-              </View>
-              <Text style={styles.listingName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View style={styles.countRow}>
-                <Text style={styles.countText}>{item.count}</Text>
-                <Text style={styles.bookmarkIcon}>🔖</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Recommended Items Section */}
-        <View style={[styles.sectionHeader, styles.orangeHeader]}>
-          <Text style={styles.sectionHeaderText}>Recommended Items</Text>
-        </View>
-
-        {/* Tabs */}
-        <View style={styles.tabContainer}>
-          {["Popular", "Home", "Books", "Tools"].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Recommended Grid */}
-        <View style={styles.recommendedGrid}>
-          {recommended.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.recommendedItem}>
-              <View style={styles.recommendedImageContainer}>
-                <Text style={styles.recommendedEmoji}>{item.image}</Text>
-              </View>
-              <View style={styles.recommendedInfo}>
-                <Text style={styles.recommendedName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <View style={styles.countRow}>
-                  <Text style={styles.countTextSmall}>{item.count}</Text>
-                  <Text style={styles.bookmarkIconSmall}>🔖</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIconActive}>🏠</Text>
-          <Text style={styles.navTextActive}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>🧭</Text>
-          <Text style={styles.navText}>Browse</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={[styles.navIcon, styles.navIconLarge]}>➕</Text>
-          <Text style={styles.navText}>List</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>💬</Text>
-          <Text style={styles.navText}>Chat</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  header: {
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  logoImage: {
-    width: 60,
-    height: 60,
-  },
-  logo: {
-    fontSize: 24,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-    fontSize: 16,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#000",
-  },
-  iconGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  icon: {
-    fontSize: 22,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  sectionHeader: {
-    backgroundColor: "#15803d",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  orangeHeader: {
-    backgroundColor: "#f97316",
-  },
-  sectionHeaderText: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  listingsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    backgroundColor: "#ffffff",
-  },
-  listingItem: {
-    width: "25%",
-    alignItems: "center",
-    paddingHorizontal: 4,
-    marginBottom: 12,
-  },
-  listingImageContainer: {
-    backgroundColor: "#e5e7eb",
-    borderRadius: 8,
-    width: "100%",
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  listingEmoji: {
-    fontSize: 36,
-  },
-  listingName: {
-    fontSize: 11,
-    fontWeight: "500",
-    textAlign: "center",
-    width: "100%",
-  },
-  countRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  countText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  bookmarkIcon: {
-    fontSize: 10,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#f97316",
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#4b5563",
-  },
-  activeTabText: {
-    color: "#f97316",
-  },
-  recommendedGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    backgroundColor: "#f9fafb",
-  },
-  recommendedItem: {
-    width: "48%",
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
-    marginBottom: 12,
-    marginHorizontal: "1%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  recommendedImageContainer: {
-    backgroundColor: "#e5e7eb",
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  recommendedEmoji: {
-    fontSize: 60,
-  },
-  recommendedInfo: {
-    padding: 12,
-  },
-  recommendedName: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  countTextSmall: {
-    fontSize: 12,
-    color: "#4b5563",
-  },
-  bookmarkIconSmall: {
-    fontSize: 10,
-  },
-  bottomNav: {
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
-  },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  navIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconActive: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconLarge: {
-    fontSize: 28,
-  },
-  navText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  navTextActive: {
-    fontSize: 11,
-    color: "#374151",
-  },
-});
