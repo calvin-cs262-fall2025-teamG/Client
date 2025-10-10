@@ -1,5 +1,6 @@
+// including this bc VS Code gave me errors;
 import React from "react";
-import { Text, View } from "react-native";
+import { Text, View, Pressable, Image } from "react-native";
 import "./index.css";
 
 /*
@@ -31,28 +32,28 @@ export default function Index() {
         alignItems: "center",
       }}
       >
-        <div className="navbar">
-          <button>
-            <img src="home.png" />
+        <View className="navbar">
+          <Pressable>
+            <Image src="home.png" />
             <Text>Home</Text>
-          </button>
-          <button>
-            <img src="search.png" />
+          </Pressable>
+          <Pressable>
+            <Image src="search.png" />
             <Text>Search</Text>
-          </button>
-          <button>
-            <img src="post.png" />
+          </Pressable>
+          <Pressable>
+            <Image src="post.png" />
             <Text>Post</Text>
-          </button>
-          <button>
-            <img src="messages.png" />
+          </Pressable>
+          <Pressable>
+            <Image src="messages.png" />
             <Text>Messages</Text>
-          </button>
-          <button>
-            <img src="profile.png" />
+          </Pressable>
+          <Pressable>
+            <Image src="profile.png" />
             <Text>Profile</Text>
-          </button>
-        </div>
+          </Pressable>
+        </View>
     </View>
   );
 }
