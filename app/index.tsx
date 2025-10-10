@@ -52,6 +52,9 @@ const style = StyleSheet.create({
         fontSize: 20,
         color: "#000d20",
     },
+    app: {
+        height: Dimensions.get("window").height,
+    },
     navbar: {
         display: "flex",
         flexDirection: "row",
@@ -59,15 +62,21 @@ const style = StyleSheet.create({
         alignItems: "stretch",
         justifyContent: "space-around",
         width: Dimensions.get("window").width,
+        position: "absolute",
+        bottom: 0,
     },
     navbar_btn: {
         // width: 10,
+        padding: 10,
+        paddingBottom: 0,
         backgroundColor: "white",
         borderRadius: 10,
     },
     navbar_img: {
         width: 80,
-        aspectRatio: "1 / 1",
+        height: 80,
+        resizeMode: "contain",
+        // aspectRatio: "1 / 1",
     },
     navbar_txt: {
         textAlign: "center",
@@ -78,26 +87,26 @@ const style = StyleSheet.create({
 
 export default function Index() {
   return (
-    <View>
+    <View style={style.app}>
         <View style={style.navbar}>
           <Pressable style={style.navbar_btn}>
-            <Image source={require("../assets/images/icons/home.png")} />
+            <Image style={style.navbar_img} source={require("../assets/images/icons/home.png")} />
             <Text style={[style.font, style.navbar_txt]}>Home</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image source={require("../assets/images/icons/search.png")} />
+            <Image style={style.navbar_img} source={require("../assets/images/icons/search.png")} />
             <Text style={[style.font, style.navbar_txt]}>Search</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image source={require("../assets/images/icons/post.png")} />
+            <Image style={style.navbar_img} source={require("../assets/images/icons/post.png")} />
             <Text style={[style.font, style.navbar_txt]}>Post</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image source={require("../assets/images/icons/messages.png")} />
+            <Image style={style.navbar_img} source={require("../assets/images/icons/messages.png")} />
             <Text style={[style.font, style.navbar_txt]}>Messages</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image source={require("../assets/images/icons/profile.png")} />
+            <Image style={style.navbar_img} source={require("../assets/images/icons/profile.png")} />
             <Text style={[style.font, style.navbar_txt]}>Profile</Text>
           </Pressable>
         </View>
