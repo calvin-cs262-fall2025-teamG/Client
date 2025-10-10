@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Image } from "react-native";
 const logo = require("../assets/images/logo.png");
 
+//?
+
 import {
     SafeAreaView,
     ScrollView,
