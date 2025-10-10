@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-import { Stack } from "expo-router";
-
-export default function RootLayout() {
-  return <Stack />;
-}
-=======
-
 import { Stack } from "expo-router";
 
 export default function RootLayout() {
@@ -20,4 +12,3 @@ export default function RootLayout() {
     </Stack>
   );
 }
->>>>>>> 53a5cc7 (Updated Prototype)

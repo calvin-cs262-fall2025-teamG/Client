@@ -1,37 +1,3 @@
-<<<<<<< HEAD
-import { Text, View } from "react-native";
-
-export default function Index() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text
-        style={{
-          fontFamily: "Times New Roman",
-          color: "#00204a",
-          fontSize: 50,
-        }}
-      >
-        Hey, Neighbor!
-      </Text>
-      <Text
-        style={{
-          fontFamily: "Times New Roman",
-          color: "#fdb44b",
-          fontSize: 30,
-        }}
-      >
-        Share, Borrow, Connect
-      </Text>
-    </View>
-  );
-}
-=======
 import React, { useState } from "react";
 import { Image } from "react-native";
 const logo = require("../assets/images/logo.png");
@@ -415,4 +381,3 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
 });
->>>>>>> 53a5cc7 (Updated Prototype)
