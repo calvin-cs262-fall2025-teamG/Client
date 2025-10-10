@@ -1,0 +1,23 @@
+
+body{
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 16px;
+    color: #000d20;
+}
+.navbar{
+    display: flex;
+    flex: 1 0 0;
+}
+.navbar button{
+    width: 1em;
+    display: inline-block;
+}
+.navbar button img{
+    display: block;
+    aspect-ratio: 1 / 1;
+}
+.navbar button img{
+    display: block;
+    text-align: center;
+    margin: auto;
+}

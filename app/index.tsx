@@ -1,14 +1,8 @@
+import React from "react";
 import { Text, View } from "react-native";
+import "./index.css";
 
-export default function Index() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
+/*
       <Text
         style={{
           fontFamily: "Times New Roman",
@@ -16,7 +10,6 @@ export default function Index() {
           fontSize: 50,
         }}
       >
-        Hey, Neighbor!
       </Text>
       <Text
         style={{
@@ -27,6 +20,39 @@ export default function Index() {
       >
         Share, Borrow, Connect
       </Text>
+*/
+
+export default function Index() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+      >
+        <div className="navbar">
+          <button>
+            <img src="home.png" />
+            <Text>Home</Text>
+          </button>
+          <button>
+            <img src="search.png" />
+            <Text>Search</Text>
+          </button>
+          <button>
+            <img src="post.png" />
+            <Text>Post</Text>
+          </button>
+          <button>
+            <img src="messages.png" />
+            <Text>Messages</Text>
+          </button>
+          <button>
+            <img src="profile.png" />
+            <Text>Profile</Text>
+          </button>
+        </div>
     </View>
   );
 }
