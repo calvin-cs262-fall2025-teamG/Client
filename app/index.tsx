@@ -68,10 +68,10 @@ const style = StyleSheet.create({
     navbar: {
         display: "flex",
         flexDirection: "row",
-        flexGrow: 0,
         alignItems: "stretch",
         justifyContent: "space-around",
         width: Dimensions.get("window").width,
+        height: 100,
     },
     navbar_btn: {
         flexGrow: 1,
@@ -82,8 +82,8 @@ const style = StyleSheet.create({
         borderRadius: 10,
     },
     navbar_img: {
-        width: 80,
-        height: 80,
+        width: 75,
+        height: 75,
         resizeMode: "contain",
         // aspectRatio: "1 / 1",
     },
