@@ -1,6 +1,6 @@
 // including this bc VS Code gave me errors;
 import React from "react";
-import { Text, View, Pressable, Image, StyleProp, ViewStyle, TextStyle, StyleSheet } from "react-native";
+import { Text, View, Pressable, Image, StyleProp, ViewStyle, TextStyle, StyleSheet, Dimensions } from "react-native";
 
 /*
       <Text
@@ -49,17 +49,24 @@ const s_navbar_txt: TextStyle = {
 const style = StyleSheet.create({
     font: {
         fontFamily: "'Times New Roman', Times, serif",
-        fontSize: 16,
+        fontSize: 20,
         color: "#000d20",
     },
     navbar: {
         display: "flex",
-        flex: 1,
+        flexDirection: "row",
+        flexGrow: 1,
+        alignItems: "stretch",
+        justifyContent: "space-around",
+        width: Dimensions.get("window").width,
     },
     navbar_btn: {
-        width: 1,
+        // width: 10,
+        backgroundColor: "white",
+        borderRadius: 10,
     },
     navbar_img: {
+        width: 80,
         aspectRatio: "1 / 1",
     },
     navbar_txt: {
@@ -74,23 +81,23 @@ export default function Index() {
     <View>
         <View style={style.navbar}>
           <Pressable style={style.navbar_btn}>
-            <Image src="home.png" />
+            <Image source={require("../assets/images/icons/home.png")} />
             <Text style={[style.font, style.navbar_txt]}>Home</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image src="search.png" />
+            <Image source={require("../assets/images/icons/search.png")} />
             <Text style={[style.font, style.navbar_txt]}>Search</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image src="post.png" />
+            <Image source={require("../assets/images/icons/post.png")} />
             <Text style={[style.font, style.navbar_txt]}>Post</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image src="messages.png" />
+            <Image source={require("../assets/images/icons/messages.png")} />
             <Text style={[style.font, style.navbar_txt]}>Messages</Text>
           </Pressable>
           <Pressable style={style.navbar_btn}>
-            <Image src="profile.png" />
+            <Image source={require("../assets/images/icons/profile.png")} />
             <Text style={[style.font, style.navbar_txt]}>Profile</Text>
           </Pressable>
         </View>
