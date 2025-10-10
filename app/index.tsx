@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Image } from "react-native";
 const logo = require("../assets/images/logo.png");
 
-//?
+
+const where_do_we_wanna_store_the_images = "../assets/user_images/"
 
 import {
     SafeAreaView,
@@ -25,14 +26,14 @@ export default function Index() {
   const [activeTab, setActiveTab] = useState("Popular");
 
   const listings: Item[] = [
-    { id: 1, name: "Tractor", count: 3, image: "🚜" },
-    { id: 2, name: "Tools", count: 5, image: "🔧" },
-    { id: 3, name: "Hose", count: 8, image: "💧" },
-    { id: 4, name: "Chair", count: 15, image: "🪑" },
-    { id: 5, name: "Vacuum", count: 1, image: "🧹" },
-    { id: 6, name: "Couch", count: 12, image: "🛋️" },
-    { id: 7, name: "Table", count: 10, image: "🪑" },
-    { id: 8, name: "Skate", count: 6, image: "🛹" },
+    { id: 1, name: "Diamond", count: 3, image: "Diamond.png",},
+    { id: 2, name: "Gold Ingot", count: 5, image: "Gold_Ingot.png",},
+    { id: 3, name: "Iron Ingot", count: 8, image: "Iron_Ingot.png",},
+    { id: 4, name: "Rotten Flesh", count: 15, image: "Rotten_Flesh.png",},
+    { id: 5, name: "Creeper", count: 1, image: "Creeper.png",},
+    { id: 6, name: "Oak Planks", count: 12, image: "Oak_Planks.png",},
+    { id: 7, name: "Stronghold", count: 10, image: "",},
+    { id: 8, name: "Mace", count: 6, image: "Mace.png",},
   ];
 
   const recommended: Item[] = [
@@ -77,7 +78,7 @@ export default function Index() {
           {listings.map((item) => (
             <TouchableOpacity key={item.id} style={styles.listingItem}>
               <View style={styles.listingImageContainer}>
-                <Text style={styles.listingEmoji}>{item.image}</Text>
+                <Image src={where_do_we_wanna_store_the_images + item.image} />
               </View>
               <Text style={styles.listingName} numberOfLines={1}>
                 {item.name}
@@ -120,7 +121,7 @@ export default function Index() {
           {recommended.map((item) => (
             <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
-                <Text style={styles.recommendedEmoji}>{item.image}</Text>
+                <Image src={where_do_we_wanna_store_the_images + item.image} />
               </View>
               <View style={styles.recommendedInfo}>
                 <Text style={styles.recommendedName} numberOfLines={1}>
