@@ -6,13 +6,12 @@ const logo = require("../assets/images/logo.png");
 const where_do_we_wanna_store_the_images = "../assets/user_images/"
 
 import {
-    SafeAreaView,
+    View,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
 } from "react-native";
 
 interface Item {
@@ -37,14 +36,14 @@ export default function Index() {
   ];
 
   const recommended: Item[] = [
-    { id: 1, name: "USBC Charger", count: 254, image: "🔌" },
-    { id: 2, name: "Core 100 Book", count: 243, image: "📚" },
-    { id: 3, name: "Keurig", count: 180, image: "☕" },
-    { id: 4, name: "Camping Tent", count: 156, image: "⛺" },
+    { id: 1, name: "USBC Charger", count: 254, image: "Diamond.png" },
+    { id: 2, name: "Core 100 Book", count: 243, image: "Diamond.png" },
+    { id: 3, name: "Keurig", count: 180, image: "Diamond.png" },
+    { id: 4, name: "Camping Tent", count: 156, image: "Diamond.png" },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Image source={logo} style={styles.logoImage} resizeMode="contain" />
@@ -78,7 +77,7 @@ export default function Index() {
           {listings.map((item) => (
             <TouchableOpacity key={item.id} style={styles.listingItem}>
               <View style={styles.listingImageContainer}>
-                <Image src={where_do_we_wanna_store_the_images + item.image} />
+                <Image style={styles.userImage} source={{uri: where_do_we_wanna_store_the_images + item.image}} />
               </View>
               <Text style={styles.listingName} numberOfLines={1}>
                 {item.name}
@@ -121,7 +120,7 @@ export default function Index() {
           {recommended.map((item) => (
             <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
-                <Image src={where_do_we_wanna_store_the_images + item.image} />
+                <Image style={styles.userImage} source={{uri: where_do_we_wanna_store_the_images + item.image}} />
               </View>
               <View style={styles.recommendedInfo}>
                 <Text style={styles.recommendedName} numberOfLines={1}>
@@ -160,11 +159,16 @@ export default function Index() {
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  userImage: {
+    width: 50,
+    height: 50,
+    resizeMode: "contain",
+  },
   container: {
     flex: 1,
     backgroundColor: "#f9fafb",
