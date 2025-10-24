@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useRouter } from "expo-router";
 import { Image } from "react-native";
 const logo = require("../assets/images/logo.png");
 
@@ -20,6 +21,7 @@ interface Item {
 }
 
 export default function Index() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("Popular");
 
   const listings: Item[] = [
@@ -140,7 +142,10 @@ export default function Index() {
           <Text style={styles.navIconActive}>🏠</Text>
           <Text style={styles.navTextActive}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/browse")}
+        >
           <Text style={styles.navIcon}>🧭</Text>
           <Text style={styles.navText}>Browse</Text>
         </TouchableOpacity>
