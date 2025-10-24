@@ -161,7 +161,8 @@ export default function Index() {
           <Text style={styles.navIcon}>💬</Text>
           <Text style={styles.navText}>Chat</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem}
+          onPress={() => router.push("/profile")} >
           <Text style={styles.navIcon}>👤</Text>
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
