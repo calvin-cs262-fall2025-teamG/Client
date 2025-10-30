@@ -22,6 +22,10 @@ interface Item {
 export default function Index() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Popular");
+  
+  // TODO: make some way to figure out if user is logged in;
+  let loggedIn = false;
+  if(!loggedIn) router.replace("../login");
 
   const listings: Item[] = [
     { id: 1, name: "Tractor", count: 3, image: "🚜" },
@@ -63,7 +67,9 @@ export default function Index() {
 
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push("/cart")}  // 👈 this is key
+            // for some reason, this requires a ".", at least in my VS code;
+            // it seems it's because it's not in the main list of buttons;
+            onPress={() => router.push("./cart")}  // 👈 this is key
           >
             <Text style={styles.icon}>🛍️</Text>
           </TouchableOpacity>

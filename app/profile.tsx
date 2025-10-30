@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, SafeAreaView, TextInput, ScrollView, Image } from "react-native";
+import { View, Text, StyleSheet, TextInput, ScrollView, Image } from "react-native";
+import { useNavigation } from '@react-navigation/native';
 import { useRouter } from "expo-router";
 
 // You can replace these with actual images later
