@@ -31,6 +31,7 @@ const LoginScreen = () => {
       <Text style={styles.subtitle}>Use your Calvin credentials</Text>
       <Text style={styles.subtitle}>(wip: this currently uses a fake passphrase)</Text>
 
+      <Text style={[isRed.passphrase ? styles.requiredNotice : styles.hidden]}>Field is required</Text>
       <TextInput
         style={[styles.input, isRed.username ? styles.redInput : undefined]}
         placeholder="Calvin username"
@@ -39,7 +40,8 @@ const LoginScreen = () => {
         value={username}
         onChangeText={setUsername}
       />
-
+      
+      <Text style={[styles.subtitle, isRed.passphrase ? styles.requiredNotice : styles.hidden]}>Field is required</Text>
       <TextInput
         style={[styles.input, isRed.passphrase ? styles.redInput : undefined]}
         placeholder="Calvin passphrase"
@@ -59,6 +61,9 @@ const LoginScreen = () => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
+  hidden: {
+    display: 'none',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -88,8 +93,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  redInout: {
+  redInput: {
     borderColor: '#e51b00ff',
+  },
+  requiredNotice: {
+    color: '#e51b00ff',
   },
   button: {
     backgroundColor: '#007AFF',
