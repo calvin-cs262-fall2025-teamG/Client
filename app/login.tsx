@@ -9,18 +9,19 @@ import {
 } from 'react-native';
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [passphrase, setPassphrase] = useState('');
 
-  let isRed = {email: true, passphrase: true,}
+  let isRed = {username: false, passphrase: false,}
   
   const handleLogin = () => {
-    if (!email || !passphrase) {
-      Alert.alert('Error', 'Please fill in both fields');
+    if (!username || !passphrase) {
+      isRed.username = !username;
+      isRed.passphrase = !passphrase;
       return;
     }
     // Example login action
-    Alert.alert('Login Successful', `Welcome, ${email}!`);
+    Alert.alert('Login Successful', `Welcome, ${username}!`);
   };
 
   return (
@@ -31,17 +32,16 @@ const LoginScreen = () => {
       <Text style={styles.subtitle}>(wip: this currently uses a fake passphrase)</Text>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, isRed.username ? styles.redInput : undefined]}
         placeholder="Calvin username"
         placeholderTextColor="#aaa"
-        keyboardType="email-address"
         autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
+        value={username}
+        onChangeText={setUsername}
       />
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, isRed.passphrase ? styles.redInput : undefined]}
         placeholder="Calvin passphrase"
         placeholderTextColor="#aaa"
         secureTextEntry
@@ -87,6 +87,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     color: '#333',
+  },
+  redInout: {
+    borderColor: '#e51b00ff',
   },
   button: {
     backgroundColor: '#007AFF',
