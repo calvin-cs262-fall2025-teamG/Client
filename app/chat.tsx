@@ -6,7 +6,7 @@ export default function Chat() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backButton}>←</Text>
@@ -36,7 +36,7 @@ export default function Chat() {
           <Text style={styles.sendText}>📨</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

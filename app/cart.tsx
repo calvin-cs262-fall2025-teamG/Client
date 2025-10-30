@@ -5,7 +5,7 @@ export default function Cart() {
   const router = useRouter();
   
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>🛍️ Your Cart</Text>
         <Text style={styles.subtitle}>This is the cart screen!</Text>
@@ -14,7 +14,7 @@ export default function Cart() {
           <Text style={styles.buttonText}>← Back to Home</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -9,7 +9,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   TextInput,
 } from "react-native";
 
@@ -43,7 +42,7 @@ export default function Index() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Image source={logo} style={styles.logoImage} resizeMode="contain" />
@@ -167,7 +166,7 @@ export default function Index() {
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -21,7 +21,7 @@ export default function Profile() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>👤 Profile</Text>
 
@@ -53,7 +53,7 @@ export default function Profile() {
           ← Back to Home
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
