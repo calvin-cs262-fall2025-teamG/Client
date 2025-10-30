@@ -10,10 +10,12 @@ import {
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [passphrase, setPassphrase] = useState('');
 
+  let isRed = {email: true, passphrase: true,}
+  
   const handleLogin = () => {
-    if (!email || !password) {
+    if (!email || !passphrase) {
       Alert.alert('Error', 'Please fill in both fields');
       return;
     }
@@ -23,12 +25,14 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back 👋</Text>
+      <Text style={styles.title}>Hello, Neybr!</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
+      <Text style={styles.subtitle}>Use your Calvin credentials</Text>
+      <Text style={styles.subtitle}>(wip: this currently uses a fake passphrase)</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder="Calvin username"
         placeholderTextColor="#aaa"
         keyboardType="email-address"
         autoCapitalize="none"
@@ -38,11 +42,11 @@ const LoginScreen = () => {
 
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Calvin passphrase"
         placeholderTextColor="#aaa"
         secureTextEntry
-        value={password}
-        onChangeText={setPassword}
+        value={passphrase}
+        onChangeText={setPassphrase}
       />
 
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
