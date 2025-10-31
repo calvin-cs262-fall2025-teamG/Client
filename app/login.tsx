@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { router } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,16 +13,56 @@ const LoginScreen = () => {
   const [username, setUsername] = useState('');
   const [passphrase, setPassphrase] = useState('');
 
-  let isRed = {username: false, passphrase: false,}
+  let isEmpty = useState({username: false, passphrase: false,})[0];
+  let isIncorrect = useState({username: false, passphrase: false,})[0];
+  
+  const r_style_ue = useRef([]);
+  const r_style_ui = useRef([]);
+  const r_style_pe = useRef([]);
+  const r_style_pi = useRef([]);
   
   const handleLogin = () => {
-    if (!username || !passphrase) {
-      isRed.username = !username;
-      isRed.passphrase = !passphrase;
-      return;
+    // TODO: add a way to keep users signed in, i.e. through some kind of automatic auth;
+    let signed_in = false;
+    
+    if(!signed_in){
+        // handle empty fields
+        isEmpty.username   = !username;
+        isEmpty.passphrase = !passphrase;
+        // you can't deny the absolute truth!
+        // send username and password
+        // server does internal check
+        isIncorrect.username   = (!!username   && username   !== "Simon");
+        isIncorrect.passphrase = (!!passphrase && passphrase !== "is the best");
+        if(isIncorrect.username) isIncorrect.passphrase = true;
     }
-    // Example login action
-    Alert.alert('Login Successful', `Welcome, ${username}!`);
+    // if not signed in, make them start over!
+    if(!(isEmpty.username || isEmpty.passphrase || isIncorrect.username || isIncorrect.passphrase)){
+      // then login if it succeeds
+      router.replace("/home");
+    }
+    
+    let o_style_ue = [
+      styles.subtitle, styles.redInput,
+      isEmpty.username ? styles.requiredNotice : styles.hidden
+    ];
+    let o_style_ui = [
+      styles.subtitle, styles.redInput,
+      isIncorrect.passphrase ? styles.requiredNotice : styles.hidden
+    ];
+    let o_style_pe = [
+      styles.subtitle, styles.redInput,
+      isEmpty.passphrase ? styles.requiredNotice : styles.hidden
+    ];
+    let o_style_pi = [
+      styles.subtitle, styles.redInput,
+      isIncorrect.passphrase ? styles.requiredNotice : styles.hidden
+    ];
+    
+    if(r_style_ue.current !== null) r_style_ue.current[0] = r_style_ue;
+    if(r_style_ui.current !== null) r_style_ui.current[0] = r_style_ui;
+    if(r_style_pe.current !== null) r_style_pe.current[0] = r_style_pe;
+    if(r_style_pi.current !== null) r_style_pi.current[0] = r_style_pi;
   };
 
   return (
@@ -30,20 +71,21 @@ const LoginScreen = () => {
       <Text style={styles.subtitle}>Sign in to continue</Text>
       <Text style={styles.subtitle}>Use your Calvin credentials</Text>
       <Text style={styles.subtitle}>(wip: this currently uses a fake passphrase)</Text>
-
-      <Text style={[isRed.passphrase ? styles.requiredNotice : styles.hidden]}>Field is required</Text>
+      
+      <Text ref={r_style_ue}>Field is required</Text>
+      <Text ref={r_style_ui}>Incorrect username or password</Text>
       <TextInput
-        style={[styles.input, isRed.username ? styles.redInput : undefined]}
+        style={[styles.input, isEmpty.username ? styles.redInput : undefined]}
         placeholder="Calvin username"
         placeholderTextColor="#aaa"
         autoCapitalize="none"
         value={username}
         onChangeText={setUsername}
       />
-      
-      <Text style={[styles.subtitle,isRed.passphrase ? styles.requiredNotice : styles.hidden]}>Field is required</Text>
+      <Text ref={r_style_pe}>Field is required</Text>
+      <Text ref={r_style_pi}>Incorrect username or password</Text>
       <TextInput
-        style={[styles.input, isRed.passphrase ? styles.redInput : undefined]}
+        style={[styles.input, isEmpty.passphrase ? styles.redInput : undefined]}
         placeholder="Calvin passphrase"
         placeholderTextColor="#aaa"
         secureTextEntry
@@ -62,7 +104,7 @@ export default LoginScreen;
 
 const styles = StyleSheet.create({
   hidden: {
-    display: 'none',
+    // display: 'none',
   },
   container: {
     flex: 1,
