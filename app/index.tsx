@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
-import { Image } from "react-native";
-const logo = require("../assets/images/logo.png");
-
 import {
+  Image,
   View,
   Text,
   ScrollView,
@@ -12,6 +10,11 @@ import {
   SafeAreaView,
   TextInput,
 } from "react-native";
+import BookmarkHeaderIcon from "../components/BookmarkHeaderIcon";
+import BookmarkButton from "../components/BookmarkButton";
+import { BookmarksProvider } from "../context/BookmarksContext";
+
+const logo = require("../assets/images/logo.png");
 
 interface Item {
   id: number;
@@ -36,146 +39,122 @@ export default function Index() {
   ];
 
   const recommended: Item[] = [
-    { id: 1, name: "USBC Charger", count: 254, image: "🔌" },
-    { id: 2, name: "Core 100 Book", count: 243, image: "📚" },
-    { id: 3, name: "Keurig", count: 180, image: "☕" },
-    { id: 4, name: "Camping Tent", count: 156, image: "⛺" },
+    { id: 101, name: "USBC Charger", count: 254, image: "🔌" },
+    { id: 102, name: "Core 100 Book", count: 243, image: "📚" },
+    { id: 103, name: "Keurig", count: 180, image: "☕" },
+    { id: 104, name: "Camping Tent", count: 156, image: "⛺" },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Image source={logo} style={styles.logoImage} resizeMode="contain" />
-
-        <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            placeholderTextColor="#9ca3af"
-          />
-        </View>
-
-        <View style={styles.iconGroup}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.bookmarkIcon}>🔖</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/cart")}  // 👈 this is key
-          >
-            <Text style={styles.icon}>🛍️</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView style={styles.scrollView}>
-        {/* Your Listings Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>Your Listings</Text>
-        </View>
-
-        <View style={styles.listingsGrid}>
-          {listings.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.listingItem}>
-              <View style={styles.listingImageContainer}>
-                <Text style={styles.listingEmoji}>{item.image}</Text>
-              </View>
-              <Text style={styles.listingName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View style={styles.countRow}>
-                <Text style={styles.countText}>{item.count}</Text>
-                <Text style={styles.bookmarkIcon}>🔖</Text>
-              </View>
+    <BookmarksProvider>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          <View style={styles.searchContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <View style={styles.iconGroup}>
+            <BookmarkHeaderIcon />
+            <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/cart")}>
+              <Text style={styles.icon}>🛍️</Text>
             </TouchableOpacity>
-          ))}
+          </View>
         </View>
 
-        {/* Recommended Items Section */}
-        <View style={[styles.sectionHeader, styles.orangeHeader]}>
-          <Text style={styles.sectionHeaderText}>Recommended Items</Text>
-        </View>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderText}>Your Listings</Text>
+          </View>
 
-        {/* Tabs */}
-        <View style={styles.tabContainer}>
-          {["Popular", "Home", "Books", "Tools"].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Recommended Grid */}
-        <View style={styles.recommendedGrid}>
-          {recommended.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.recommendedItem}>
-              <View style={styles.recommendedImageContainer}>
-                <Text style={styles.recommendedEmoji}>{item.image}</Text>
-              </View>
-              <View style={styles.recommendedInfo}>
-                <Text style={styles.recommendedName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <View style={styles.countRow}>
-                  <Text style={styles.countTextSmall}>{item.count}</Text>
-                  <Text style={styles.bookmarkIconSmall}>🔖</Text>
+          <View style={styles.listingsGrid}>
+            {listings.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.listingItem} activeOpacity={0.8}>
+                <View style={styles.listingImageContainer}>
+                  <Text style={styles.listingEmoji}>{item.image}</Text>
+                  <View style={styles.heartOverlay}>
+                    <BookmarkButton item={{ id: String(item.id), title: item.name }} size={18} />
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+                <Text style={styles.listingName} numberOfLines={1}>{item.name}</Text>
+                <View style={styles.countRow}>
+                  <Text style={styles.countText}>{item.count}</Text>
+                  <Text style={styles.bookmarkIcon}>🔖</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIconActive}>🏠</Text>
-          <Text style={styles.navTextActive}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/browse")}
-        >
-          <Text style={styles.navIcon}>🧭</Text>
-          <Text style={styles.navText}>Browse</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={[styles.navIcon, styles.navIconLarge]}>➕</Text>
-          <Text style={styles.navText}>List</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/chat")}>
-          <Text style={styles.navIcon}>💬</Text>
-          <Text style={styles.navText}>Chat</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}
-          onPress={() => router.push("/profile")} >
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <View style={[styles.sectionHeader, styles.orangeHeader]}>
+            <Text style={styles.sectionHeaderText}>Recommended Items</Text>
+          </View>
+
+          <View style={styles.tabContainer}>
+            {["Popular", "Home", "Books", "Tools"].map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={[styles.tab, activeTab === tab && styles.activeTab]}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.recommendedGrid}>
+            {recommended.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.recommendedItem} activeOpacity={0.8}>
+                <View style={styles.recommendedImageContainer}>
+                  <Text style={styles.recommendedEmoji}>{item.image}</Text>
+                  <View style={styles.heartOverlayBig}>
+                    <BookmarkButton item={{ id: String(item.id), title: item.name }} size={20} />
+                  </View>
+                </View>
+                <View style={styles.recommendedInfo}>
+                  <Text style={styles.recommendedName} numberOfLines={1}>{item.name}</Text>
+                  <View style={styles.countRow}>
+                    <Text style={styles.countTextSmall}>{item.count}</Text>
+                    <Text style={styles.bookmarkIconSmall}>🔖</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+
+        <View style={styles.bottomNav}>
+          <TouchableOpacity style={styles.navItem}>
+            <Text style={styles.navIconActive}>🏠</Text>
+            <Text style={styles.navTextActive}>Home</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push("/browse")}>
+            <Text style={styles.navIcon}>🧭</Text>
+            <Text style={styles.navText}>Browse</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem}>
+            <Text style={[styles.navIcon, styles.navIconLarge]}>➕</Text>
+            <Text style={styles.navText}>List</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push("/chat")}>
+            <Text style={styles.navIcon}>💬</Text>
+            <Text style={styles.navText}>Chat</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push("/profile")}>
+            <Text style={styles.navIcon}>👤</Text>
+            <Text style={styles.navText}>Profile</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </BookmarksProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
+  container: { flex: 1, backgroundColor: "#f9fafb" },
   header: {
     backgroundColor: "#ffffff",
     flexDirection: "row",
@@ -188,13 +167,8 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  logoImage: {
-    width: 60,
-    height: 60,
-  },
-  logo: {
-    fontSize: 24,
-  },
+  logoImage: { width: 60, height: 60 },
+  logo: { fontSize: 24 },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
@@ -205,54 +179,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginHorizontal: 12,
   },
-  searchIcon: {
-    marginRight: 8,
-    fontSize: 16,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#000",
-  },
-  iconGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  icon: {
-    fontSize: 22,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  sectionHeader: {
-    backgroundColor: "#15803d",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  orangeHeader: {
-    backgroundColor: "#f97316",
-  },
-  sectionHeaderText: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  listingsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    backgroundColor: "#ffffff",
-  },
+  searchIcon: { marginRight: 8, fontSize: 16 },
+  searchInput: { flex: 1, fontSize: 14, color: "#000" },
+  iconGroup: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconButton: { padding: 4 },
+  icon: { fontSize: 22 },
+  scrollView: { flex: 1 },
+  sectionHeader: { backgroundColor: "#15803d", paddingVertical: 12, paddingHorizontal: 16 },
+  orangeHeader: { backgroundColor: "#f97316" },
+  sectionHeaderText: { color: "#ffffff", fontSize: 20, fontWeight: "600", textAlign: "center" },
+  listingsGrid: { flexDirection: "row", flexWrap: "wrap", padding: 12, backgroundColor: "#ffffff" },
   listingItem: {
     width: "25%",
     alignItems: "center",
     paddingHorizontal: 4,
     marginBottom: 12,
+    position: "relative",
   },
   listingImageContainer: {
     backgroundColor: "#e5e7eb",
@@ -262,57 +204,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 4,
+    position: "relative",
   },
-  listingEmoji: {
-    fontSize: 36,
-  },
-  listingName: {
-    fontSize: 11,
-    fontWeight: "500",
-    textAlign: "center",
-    width: "100%",
-  },
-  countRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  countText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  bookmarkIcon: {
-    fontSize: 10,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#f97316",
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#4b5563",
-  },
-  activeTabText: {
-    color: "#f97316",
-  },
-  recommendedGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    backgroundColor: "#f9fafb",
-  },
+  heartOverlay: { position: "absolute", top: 6, right: 6 },
+  heartOverlayBig: { position: "absolute", top: 10, right: 10 },
+  listingEmoji: { fontSize: 36 },
+  listingName: { fontSize: 11, fontWeight: "500", textAlign: "center", width: "100%" },
+  countRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  countText: { fontSize: 11, color: "#4b5563" },
+  bookmarkIcon: { fontSize: 10 },
+  tabContainer: { flexDirection: "row", backgroundColor: "#ffffff", borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: "#f97316" },
+  tabText: { fontSize: 14, fontWeight: "500", color: "#4b5563" },
+  activeTabText: { color: "#f97316" },
+  recommendedGrid: { flexDirection: "row", flexWrap: "wrap", padding: 12, backgroundColor: "#f9fafb" },
   recommendedItem: {
     width: "48%",
     backgroundColor: "#ffffff",
@@ -324,6 +230,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    position: "relative",
   },
   recommendedImageContainer: {
     backgroundColor: "#e5e7eb",
@@ -332,25 +239,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
+    position: "relative",
   },
-  recommendedEmoji: {
-    fontSize: 60,
-  },
-  recommendedInfo: {
-    padding: 12,
-  },
-  recommendedName: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  countTextSmall: {
-    fontSize: 12,
-    color: "#4b5563",
-  },
-  bookmarkIconSmall: {
-    fontSize: 10,
-  },
+  recommendedEmoji: { fontSize: 60 },
+  recommendedInfo: { padding: 12 },
+  recommendedName: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
+  countTextSmall: { fontSize: 12, color: "#4b5563" },
+  bookmarkIconSmall: { fontSize: 10 },
   bottomNav: {
     backgroundColor: "#ffffff",
     flexDirection: "row",
@@ -365,29 +260,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  navIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconActive: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconLarge: {
-    fontSize: 28,
-  },
-  navText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  navTextActive: {
-    fontSize: 11,
-    color: "#374151",
-  },
+  navItem: { alignItems: "center", justifyContent: "center", paddingVertical: 8, paddingHorizontal: 12 },
+  navIcon: { fontSize: 24, marginBottom: 4 },
+  navIconActive: { fontSize: 24, marginBottom: 4 },
+  navIconLarge: { fontSize: 28 },
+  navText: { fontSize: 11, color: "#4b5563" },
+  navTextActive: { fontSize: 11, color: "#374151" },
 });
