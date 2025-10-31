@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
-import { Image } from "react-native";
+import { Image, ImageSourcePropType } from "react-native";
 const logo = require("../assets/images/logo.png");
 
 import {
@@ -13,34 +13,46 @@ import {
   TextInput,
 } from "react-native";
 
+const charger = require("../assets/images/charger.jpg");
+const corebook = require("../assets/images/corebook.jpg");
+const chair = require("../assets/images/chair.jpg");
+const tools = require("../assets/images/tools.jpg");
+const tractor = require("../assets/images/tractor.jpg");
+const vacuum = require("../assets/images/vacuum.jpg");
+const cartIcon = require("../assets/images/cart.png");
+const bookmarkIcon = require("../assets/images/bookmark.png");
+const searchIcon = require("../assets/images/search.png");
+const homeIcon = require("../assets/images/home.png");
+const listIcon = require("../assets/images/list.png");
+const chatIcon = require("../assets/images/chat.png");
+const profileIcon = require("../assets/images/profile.png");
+
 interface Item {
   id: number;
   name: string;
   count: number;
-  image: string;
+  image: ImageSourcePropType;
+  category: string;
 }
 
 export default function Index() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Popular");
 
-  const listings: Item[] = [
-    { id: 1, name: "Tractor", count: 3, image: "🚜" },
-    { id: 2, name: "Tools", count: 5, image: "🔧" },
-    { id: 3, name: "Hose", count: 8, image: "💧" },
-    { id: 4, name: "Chair", count: 15, image: "🪑" },
-    { id: 5, name: "Vacuum", count: 1, image: "🧹" },
-    { id: 6, name: "Couch", count: 12, image: "🛋️" },
-    { id: 7, name: "Table", count: 10, image: "🪑" },
-    { id: 8, name: "Skate", count: 6, image: "🛹" },
+  const allItems: Item[] = [
+    { id: 1, name: "USBC Charger", count: 254, image: charger, category: "Popular" },
+    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books" },
+    { id: 3, name: "Chair", count: 180, image: chair, category: "Home" },
+    { id: 4, name: "Tools", count: 156, image: tools, category: "Tools" },
+    { id: 5, name: "Tractor", count: 180, image: tractor, category: "Tools" },
+    { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
   ];
 
-  const recommended: Item[] = [
-    { id: 1, name: "USBC Charger", count: 254, image: "🔌" },
-    { id: 2, name: "Core 100 Book", count: 243, image: "📚" },
-    { id: 3, name: "Keurig", count: 180, image: "☕" },
-    { id: 4, name: "Camping Tent", count: 156, image: "⛺" },
-  ];
+  // Filter items based on active tab
+  const filteredItems = allItems.filter(item => {
+    if (activeTab === "Popular") return true; // Show all items for Popular
+    return item.category === activeTab;
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -49,7 +61,11 @@ export default function Index() {
         <Image source={logo} style={styles.logoImage} resizeMode="contain" />
 
         <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Image
+            source={searchIcon}
+            style={styles.searchIconImage}
+            resizeMode="contain"
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
@@ -59,46 +75,26 @@ export default function Index() {
 
         <View style={styles.iconGroup}>
           <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.bookmarkIcon}>🔖</Text>
+            <Image
+              source={bookmarkIcon}
+              style={{ width: 24, height: 24 }}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push("/cart")}  // 👈 this is key
+            onPress={() => router.push("/cart")}
           >
-            <Text style={styles.icon}>🛍️</Text>
+            <Image
+              source={cartIcon}
+              style={{ width: 24, height: 24 }}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         </View>
       </View>
-
       <ScrollView style={styles.scrollView}>
-        {/* Your Listings Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>Your Listings</Text>
-        </View>
-
-        <View style={styles.listingsGrid}>
-          {listings.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.listingItem}>
-              <View style={styles.listingImageContainer}>
-                <Text style={styles.listingEmoji}>{item.image}</Text>
-              </View>
-              <Text style={styles.listingName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View style={styles.countRow}>
-                <Text style={styles.countText}>{item.count}</Text>
-                <Text style={styles.bookmarkIcon}>🔖</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Recommended Items Section */}
-        <View style={[styles.sectionHeader, styles.orangeHeader]}>
-          <Text style={styles.sectionHeaderText}>Recommended Items</Text>
-        </View>
-
         {/* Tabs */}
         <View style={styles.tabContainer}>
           {["Popular", "Home", "Books", "Tools"].map((tab) => (
@@ -121,10 +117,14 @@ export default function Index() {
 
         {/* Recommended Grid */}
         <View style={styles.recommendedGrid}>
-          {recommended.map((item) => (
+          {filteredItems.map((item) => (
             <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
-                <Text style={styles.recommendedEmoji}>{item.image}</Text>
+                <Image
+                  source={item.image}
+                  style={styles.recommendedImage}
+                  resizeMode="cover"
+                />
               </View>
               <View style={styles.recommendedInfo}>
                 <Text style={styles.recommendedName} numberOfLines={1}>
@@ -132,7 +132,11 @@ export default function Index() {
                 </Text>
                 <View style={styles.countRow}>
                   <Text style={styles.countTextSmall}>{item.count}</Text>
-                  <Text style={styles.bookmarkIconSmall}>🔖</Text>
+                  <Image
+                    source={bookmarkIcon}
+                    style={styles.smallBookmarkIcon}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
             </TouchableOpacity>
@@ -143,27 +147,52 @@ export default function Index() {
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIconActive}>🏠</Text>
+          <Image
+            source={homeIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navTextActive}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/browse")}
         >
-          <Text style={styles.navIcon}>🧭</Text>
+          <Image
+            source={searchIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>Browse</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <Text style={[styles.navIcon, styles.navIconLarge]}>➕</Text>
+          <Image
+            source={listIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>List</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/chat")}>
-          <Text style={styles.navIcon}>💬</Text>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/chat")}
+        >
+          <Image
+            source={chatIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>Chat</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}
-          onPress={() => router.push("/profile")} >
-          <Text style={styles.navIcon}>👤</Text>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/profile")}
+        >
+          <Image
+            source={profileIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -209,10 +238,26 @@ const styles = StyleSheet.create({
     marginRight: 8,
     fontSize: 16,
   },
+  searchIconImage: {
+    width: 18,
+    height: 18,
+    marginRight: 8,
+    alignSelf: "center",
+  },
+  smallBookmarkIcon: {
+    width: 14,
+    height: 14,
+    marginLeft: 1,
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: "#000",
+  },
+  navIconImage: {
+    width: 24,
+    height: 24,
+    marginBottom: 4,
   },
   iconGroup: {
     flexDirection: "row",
@@ -232,6 +277,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#15803d",
     paddingVertical: 12,
     paddingHorizontal: 16,
+  },
+  recommendedImage: {
+    width: "100%",
+    height: "100%",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   orangeHeader: {
     backgroundColor: "#f97316",
