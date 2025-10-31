@@ -41,7 +41,7 @@ const LoginScreen = () => {
         onChangeText={setUsername}
       />
       
-      <Text style={[styles.subtitle, isRed.passphrase ? styles.requiredNotice : styles.hidden]}>Field is required</Text>
+      <Text style={[styles.subtitle,isRed.passphrase ? styles.requiredNotice : styles.hidden]}>Field is required</Text>
       <TextInput
         style={[styles.input, isRed.passphrase ? styles.redInput : undefined]}
         placeholder="Calvin passphrase"

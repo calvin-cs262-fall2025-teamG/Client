@@ -1,7 +1,7 @@
 
 // app/index.tsx
 import { useEffect } from 'react';
-import { useRouter, useRootNavigationState } from 'expo-router';
+import { useRouter, useRootNavigationState, Redirect } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 
 export default function Index() {
@@ -9,17 +9,17 @@ export default function Index() {
   const navState = useRootNavigationState();
 
   // Replace this with your real auth check
-  const userIsLoggedIn = false;
+  const userIsLoggedIn = true;
 
   useEffect(() => {
     // ✅ Wait until the navigation tree is ready
     if (!navState?.key) return;
-    
+    console.log(navState);
     // TODO: make some way to figure out if user is logged in;
     if (userIsLoggedIn) {
-      router.replace('/home');
+      // router.replace('/home');
     } else {
-      router.replace('/login');
+      // router.replace('/login');
     }
   }, [navState?.key]);
 
