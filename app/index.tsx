@@ -32,20 +32,27 @@ interface Item {
   name: string;
   count: number;
   image: ImageSourcePropType;
+  category: string;
 }
 
 export default function Index() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Popular");
 
-  const recommended: Item[] = [
-    { id: 1, name: "USBC Charger", count: 254, image: charger },
-    { id: 2, name: "Core 100 Book", count: 243, image: corebook },
-    { id: 3, name: "Chair", count: 180, image: chair },
-    { id: 4, name: "Tools", count: 156, image: tools },
-    { id: 5, name: "Tractor", count: 180, image: tractor },
-    { id: 6, name: "Vacuum", count: 156, image: vacuum },
+  const allItems: Item[] = [
+    { id: 1, name: "USBC Charger", count: 254, image: charger, category: "Popular" },
+    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books" },
+    { id: 3, name: "Chair", count: 180, image: chair, category: "Home" },
+    { id: 4, name: "Tools", count: 156, image: tools, category: "Tools" },
+    { id: 5, name: "Tractor", count: 180, image: tractor, category: "Tools" },
+    { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
   ];
+
+  // Filter items based on active tab
+  const filteredItems = allItems.filter(item => {
+    if (activeTab === "Popular") return true; // Show all items for Popular
+    return item.category === activeTab;
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,7 +117,7 @@ export default function Index() {
 
         {/* Recommended Grid */}
         <View style={styles.recommendedGrid}>
-          {recommended.map((item) => (
+          {filteredItems.map((item) => (
             <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
                 <Image
@@ -232,7 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   searchIconImage: {
-    width: 18, // adjust to your icon’s size
+    width: 18,
     height: 18,
     marginRight: 8,
     alignSelf: "center",
