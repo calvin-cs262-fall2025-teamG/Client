@@ -13,13 +13,23 @@ const LoginScreen = () => {
   const [username, setUsername] = useState('');
   const [passphrase, setPassphrase] = useState('');
 
-  let isEmpty = useState({username: false, passphrase: false,})[0];
-  let isIncorrect = useState({username: false, passphrase: false,})[0];
+  let isEmpty_username = useState(false);
+  let isEmpty_passphrase = useState(false);
+  let isIncorrect_username = useState(false);
+  let isIncorrect_passphrase = useState(false);
   
-  const r_style_ue = useRef([]);
-  const r_style_ui = useRef([]);
-  const r_style_pe = useRef([]);
-  const r_style_pi = useRef([]);
+  const r_style_ue = {
+    color: isEmpty_username ? "red" : "black",
+  };
+  const r_style_ui = {
+    color: isEmpty_passphrase ? "red" : "black",
+  };
+  const r_style_pe = {
+    color: isIncorrect_username ? "red" : "black",
+  };
+  const r_style_pi = {
+    color: isIncorrect_passphrase ? "red" : "black",
+  };
   
   const handleLogin = () => {
     // TODO: add a way to keep users signed in, i.e. through some kind of automatic auth;
@@ -41,30 +51,13 @@ const LoginScreen = () => {
       // then login if it succeeds
       router.replace("/home");
     }
-    
-    let o_style_ue = [
-      styles.subtitle, styles.redInput,
-      isEmpty.username ? styles.requiredNotice : styles.hidden
-    ];
-    let o_style_ui = [
-      styles.subtitle, styles.redInput,
-      isIncorrect.passphrase ? styles.requiredNotice : styles.hidden
-    ];
-    let o_style_pe = [
-      styles.subtitle, styles.redInput,
-      isEmpty.passphrase ? styles.requiredNotice : styles.hidden
-    ];
-    let o_style_pi = [
-      styles.subtitle, styles.redInput,
-      isIncorrect.passphrase ? styles.requiredNotice : styles.hidden
-    ];
-    
-    if(r_style_ue.current !== null) r_style_ue.current[0] = r_style_ue;
-    if(r_style_ui.current !== null) r_style_ui.current[0] = r_style_ui;
-    if(r_style_pe.current !== null) r_style_pe.current[0] = r_style_pe;
-    if(r_style_pi.current !== null) r_style_pi.current[0] = r_style_pi;
   };
-
+  
+  const style_ue = {};
+  const style_ui = {};
+  const style_pe = {};
+  const style_pi = {};
+  
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Hello, Neybr!</Text>
@@ -72,8 +65,8 @@ const LoginScreen = () => {
       <Text style={styles.subtitle}>Use your Calvin credentials</Text>
       <Text style={styles.subtitle}>(wip: this currently uses a fake passphrase)</Text>
       
-      <Text ref={r_style_ue}>Field is required</Text>
-      <Text ref={r_style_ui}>Incorrect username or password</Text>
+      <Text style={style_ue}>Field is required</Text>
+      <Text style={style_ui}>Incorrect username or password</Text>
       <TextInput
         style={[styles.input, isEmpty.username ? styles.redInput : undefined]}
         placeholder="Calvin username"
@@ -82,8 +75,8 @@ const LoginScreen = () => {
         value={username}
         onChangeText={setUsername}
       />
-      <Text ref={r_style_pe}>Field is required</Text>
-      <Text ref={r_style_pi}>Incorrect username or password</Text>
+      <Text style={style_pe}>Field is required</Text>
+      <Text style={style_pi}>Incorrect username or password</Text>
       <TextInput
         style={[styles.input, isEmpty.passphrase ? styles.redInput : undefined]}
         placeholder="Calvin passphrase"
