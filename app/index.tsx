@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { Image, ImageSourcePropType } from "react-native";
 const logo = require("../assets/images/logo.png");
 
-
 import {
   View,
   Text,
