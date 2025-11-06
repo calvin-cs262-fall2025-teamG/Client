@@ -16,6 +16,7 @@ import BookmarkButton from "./components/BookmarkButton";
 
 const logo = require("../assets/images/logo.png");
 
+
 const charger = require("../assets/images/charger.jpg");
 const corebook = require("../assets/images/corebook.jpg");
 const chair = require("../assets/images/chair.jpg");
@@ -146,6 +147,8 @@ export default function Index() {
     </SafeAreaView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
