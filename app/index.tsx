@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { Image, ImageSourcePropType } from "react-native";
 const logo = require("../assets/images/logo.png");
 
+
 import {
   View,
   Text,
@@ -12,6 +13,7 @@ import {
   SafeAreaView,
   TextInput,
 } from "react-native";
+
 
 const charger = require("../assets/images/charger.jpg");
 const corebook = require("../assets/images/corebook.jpg");
@@ -192,6 +194,8 @@ export default function Index() {
     </SafeAreaView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
