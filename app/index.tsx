@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
-import { Image, ImageSourcePropType } from "react-native";
-const logo = require("../assets/images/logo.png");
-
 import {
+  Image,
   View,
   Text,
   ScrollView,
@@ -12,6 +10,11 @@ import {
   SafeAreaView,
   TextInput,
 } from "react-native";
+import type { ImageSourcePropType } from "react-native";
+import BookmarkHeaderIcon from "./components/BookmarkHeaderIcon";
+import BookmarkButton from "./components/BookmarkButton";
+
+const logo = require("../assets/images/logo.png");
 
 const charger = require("../assets/images/charger.jpg");
 const corebook = require("../assets/images/corebook.jpg");
@@ -19,6 +22,7 @@ const chair = require("../assets/images/chair.jpg");
 const tools = require("../assets/images/tools.jpg");
 const tractor = require("../assets/images/tractor.jpg");
 const vacuum = require("../assets/images/vacuum.jpg");
+
 const cartIcon = require("../assets/images/cart.png");
 const bookmarkIcon = require("../assets/images/bookmark.png");
 const searchIcon = require("../assets/images/search.png");
@@ -32,33 +36,34 @@ interface Item {
   name: string;
   count: number;
   image: ImageSourcePropType;
+  category: string;
 }
 
 export default function Index() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Popular");
 
-  const recommended: Item[] = [
-    { id: 1, name: "USBC Charger", count: 254, image: charger },
-    { id: 2, name: "Core 100 Book", count: 243, image: corebook },
-    { id: 3, name: "Chair", count: 180, image: chair },
-    { id: 4, name: "Tools", count: 156, image: tools },
-    { id: 5, name: "Tractor", count: 180, image: tractor },
-    { id: 6, name: "Vacuum", count: 156, image: vacuum },
+  const allItems: Item[] = [
+    { id: 1, name: "USBC Charger", count: 254, image: charger, category: "Popular" },
+    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books" },
+    { id: 3, name: "Chair", count: 180, image: chair, category: "Home" },
+    { id: 4, name: "Tools", count: 156, image: tools, category: "Tools" },
+    { id: 5, name: "Tractor", count: 180, image: tractor, category: "Tools" },
+    { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
   ];
+
+  const filteredItems = allItems.filter((item) => {
+    if (activeTab === "Popular") return true;
+    return item.category === activeTab;
+  });
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Image source={logo} style={styles.logoImage} resizeMode="contain" />
 
         <View style={styles.searchContainer}>
-          <Image
-            source={searchIcon}
-            style={styles.searchIconImage}
-            resizeMode="contain"
-          />
+          <Image source={searchIcon} style={styles.searchIconImage} resizeMode="contain" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
@@ -67,28 +72,14 @@ export default function Index() {
         </View>
 
         <View style={styles.iconGroup}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image
-              source={bookmarkIcon}
-              style={{ width: 24, height: 24 }}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/cart")}
-          >
-            <Image
-              source={cartIcon}
-              style={{ width: 24, height: 24 }}
-              resizeMode="contain"
-            />
+          <BookmarkHeaderIcon />
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/cart")}>
+            <Image source={cartIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
+
       <ScrollView style={styles.scrollView}>
-        {/* Tabs */}
         <View style={styles.tabContainer}>
           {["Popular", "Home", "Books", "Tools"].map((tab) => (
             <TouchableOpacity
@@ -96,28 +87,21 @@ export default function Index() {
               onPress={() => setActiveTab(tab)}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
                 {tab}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Recommended Grid */}
         <View style={styles.recommendedGrid}>
-          {recommended.map((item) => (
+          {filteredItems.map((item) => (
             <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
-                <Image
-                  source={item.image}
-                  style={styles.recommendedImage}
-                  resizeMode="cover"
-                />
+                <Image source={item.image} style={styles.recommendedImage} resizeMode="cover" />
+                <View style={styles.heartOverlayBig}>
+                  <BookmarkButton item={{ id: String(item.id), title: item.name }} size={20} />
+                </View>
               </View>
               <View style={styles.recommendedInfo}>
                 <Text style={styles.recommendedName} numberOfLines={1}>
@@ -137,55 +121,25 @@ export default function Index() {
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
-          <Image
-            source={homeIcon}
-            style={styles.navIconImage}
-            resizeMode="contain"
-          />
+          <Image source={homeIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navTextActive}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/browse")}
-        >
-          <Image
-            source={searchIcon}
-            style={styles.navIconImage}
-            resizeMode="contain"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/browse")}>
+          <Image source={searchIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navText}>Browse</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <Image
-            source={listIcon}
-            style={styles.navIconImage}
-            resizeMode="contain"
-          />
+          <Image source={listIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navText}>List</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/chat")}
-        >
-          <Image
-            source={chatIcon}
-            style={styles.navIconImage}
-            resizeMode="contain"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/chat")}>
+          <Image source={chatIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navText}>Chat</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/profile")}
-        >
-          <Image
-            source={profileIcon}
-            style={styles.navIconImage}
-            resizeMode="contain"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/profile")}>
+          <Image source={profileIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -227,12 +181,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginHorizontal: 12,
   },
-  searchIcon: {
-    marginRight: 8,
-    fontSize: 16,
-  },
   searchIconImage: {
-    width: 18, // adjust to your icon’s size
+    width: 18,
     height: 18,
     marginRight: 8,
     alignSelf: "center",
@@ -270,12 +220,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#15803d",
     paddingVertical: 12,
     paddingHorizontal: 16,
-  },
-  recommendedImage: {
-    width: "100%",
-    height: "100%",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
   },
   orangeHeader: {
     backgroundColor: "#f97316",
@@ -376,6 +320,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
+    position: "relative",
+    overflow: "hidden",
+  },
+  recommendedImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  heartOverlayBig: {
+    position: "absolute",
+    top: 10,
+    right: 10,
   },
   recommendedEmoji: {
     fontSize: 60,
@@ -391,9 +347,6 @@ const styles = StyleSheet.create({
   countTextSmall: {
     fontSize: 12,
     color: "#4b5563",
-  },
-  bookmarkIconSmall: {
-    fontSize: 10,
   },
   bottomNav: {
     backgroundColor: "#ffffff",
