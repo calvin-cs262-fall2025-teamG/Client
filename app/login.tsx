@@ -45,35 +45,34 @@ const LoginScreen = () => {
     // TODO: add a way to keep users signed in, i.e. through some kind of automatic auth;
     let signed_in = false;
     
+    // handle empty fields
+    let m_is_empty_username   = !username;
+    let m_is_empty_passphrase = !passphrase;
+    let m_is_incorrect_username = false;
+    let m_is_incorrect_passphrase = false;
     if(!signed_in){
-        // handle empty fields
-        const m_is_empty_username   = !username;
-        const m_is_empty_passphrase = !passphrase;
-        let m_is_incorrect_username = false;
-        let m_is_incorrect_passphrase = false;
-        
-        // you can't deny the absolute truth!
-        // send username and password
-        // server does internal check
-        if(!m_is_empty_username && !m_is_empty_passphrase){
-          m_is_incorrect_username   = username   !== "Simon";
-          m_is_incorrect_passphrase = passphrase !== "aaa";
-        }
-        if(m_is_incorrect_username || m_is_incorrect_passphrase){
-          m_is_incorrect_username   = true;
-          m_is_incorrect_passphrase = true;
-        }
-        
-        // update useState;
-        set_is_empty_username(m_is_empty_username);
-        set_is_empty_passphrase(m_is_empty_passphrase);
-        set_is_incorrect_username(m_is_incorrect_username);
-        set_is_incorrect_passphrase(m_is_incorrect_passphrase);
+      // you can't deny the absolute truth!
+      // send username and password
+      // server does internal check
+      if(!m_is_empty_username && !m_is_empty_passphrase){
+        m_is_incorrect_username   = username   !== "Simon";
+        m_is_incorrect_passphrase = passphrase !== "aaa";
+      }
+      if(m_is_incorrect_username || m_is_incorrect_passphrase){
+        m_is_incorrect_username   = true;
+        m_is_incorrect_passphrase = true;
+      }
+      
+      // update useState;
+      set_is_empty_username(m_is_empty_username);
+      set_is_empty_passphrase(m_is_empty_passphrase);
+      set_is_incorrect_username(m_is_incorrect_username);
+      set_is_incorrect_passphrase(m_is_incorrect_passphrase);
     }
     // if not signed in, make them start over!
-    if(!(is_empty_username || is_empty_passphrase || is_incorrect_username || is_incorrect_passphrase)){
+    if(!(m_is_empty_username || m_is_empty_passphrase || m_is_incorrect_username || m_is_incorrect_passphrase)){
       // then login if it succeeds
-      // router.replace("/home");
+      router.replace("/home");
     }
   };
   
