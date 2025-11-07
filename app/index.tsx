@@ -17,7 +17,6 @@ import BookmarkButton from "./components/BookmarkButton";
 
 const logo = require("../assets/images/logo.png");
 
-
 const charger = require("../assets/images/charger.jpg");
 const corebook = require("../assets/images/corebook.jpg");
 const chair = require("../assets/images/chair.jpg");
@@ -38,7 +37,7 @@ interface Item {
   id: number;
   name: string;
   count: number;
-  image: ImageSourcePropType;
+  image: ImageSourcePropType | string;
   category: string;
 }
 
@@ -47,6 +46,7 @@ export default function Index() {
   const [activeTab, setActiveTab] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [userItems, setUserItems] = useState<Item[]>([]);
   const searchInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -59,6 +59,17 @@ export default function Index() {
       }
     };
     loadSearches();
+  }, []);
+
+  useEffect(() => {
+    const loadUserItems = async () => {
+      const stored = await AsyncStorage.getItem("userItems");
+      if (stored) {
+        setUserItems(JSON.parse(stored));
+      }
+    };
+
+    loadUserItems();
   }, []);
 
   useEffect(() => {
@@ -91,7 +102,7 @@ export default function Index() {
     }
   };
 
-  const allItems: Item[] = [
+  const presetItems: Item[] = [
     { id: 1, name: "USBC Charger", count: 254, image: charger, category: "Popular" },
     { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books" },
     { id: 3, name: "Chair", count: 180, image: chair, category: "Home" },
@@ -99,6 +110,8 @@ export default function Index() {
     { id: 5, name: "Tractor", count: 180, image: tractor, category: "Tools" },
     { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
   ];
+
+  const allItems = [...userItems, ...presetItems];
 
   const filteredItems = allItems.filter((item) => {
     const matchesCategory = activeTab === "Popular" || item.category === activeTab;
@@ -200,7 +213,11 @@ export default function Index() {
           {filteredItems.map((item) => (
             <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
-                <Image source={item.image} style={styles.recommendedImage} resizeMode="cover" />
+                <Image
+                  source={typeof item.image === "string" ? { uri: item.image } : item.image}
+                  style={styles.recommendedImage}
+                  resizeMode="cover"
+                />
                 <View style={styles.heartOverlayBig}>
                   <BookmarkButton item={{ id: String(item.id), title: item.name }} size={20} />
                 </View>
@@ -233,10 +250,14 @@ export default function Index() {
           <Image source={searchIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navText}>Browse</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/list-item")}
+        >
           <Image source={listIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navText}>List</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.navItem} onPress={() => router.push("/chat")}>
           <Image source={chatIcon} style={styles.navIconImage} resizeMode="contain" />
           <Text style={styles.navText}>Chat</Text>
@@ -249,7 +270,6 @@ export default function Index() {
     </SafeAreaView>
   );
 }
-
 
 
 const styles = StyleSheet.create({
