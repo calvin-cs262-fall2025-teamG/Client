@@ -56,7 +56,7 @@ const LoginScreen = () => {
       // server does internal check
       if(!m_is_empty_username && !m_is_empty_passphrase){
         m_is_incorrect_username   = username   !== "Simon";
-        m_is_incorrect_passphrase = passphrase !== "aaa";
+        m_is_incorrect_passphrase = passphrase !== "Aaa";
       }
       if(m_is_incorrect_username || m_is_incorrect_passphrase){
         m_is_incorrect_username   = true;
