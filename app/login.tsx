@@ -12,24 +12,34 @@ import {
 const LoginScreen = () => {
   const [username, setUsername] = useState('');
   const [passphrase, setPassphrase] = useState('');
-
-  let isEmpty_username = useState(false);
-  let isEmpty_passphrase = useState(false);
-  let isIncorrect_username = useState(false);
-  let isIncorrect_passphrase = useState(false);
   
-  const r_style_ue = {
-    color: isEmpty_username ? "red" : "black",
-  };
-  const r_style_ui = {
-    color: isEmpty_passphrase ? "red" : "black",
-  };
-  const r_style_pe = {
-    color: isIncorrect_username ? "red" : "black",
-  };
-  const r_style_pi = {
-    color: isIncorrect_passphrase ? "red" : "black",
-  };
+  const [is_empty_username, set_is_empty_username] = useState(false);
+  const [is_empty_passphrase, set_is_empty_passphrase] = useState(false);
+  const [is_incorrect_username, set_is_incorrect_username] = useState(false);
+  const [is_incorrect_passphrase, set_is_incorrect_passphrase] = useState(false);
+  
+  const r_style = StyleSheet.create({
+    ue: {
+      color: is_empty_username ? "red" : "black",
+      // @ts-ignore
+      display: is_empty_username ? "undefined" : "none",
+    },
+    ui: {
+      color: is_incorrect_username ? "red" : "black",
+      // @ts-ignore
+      display: is_incorrect_username ? "undefined" : "none",
+    },
+    pe: {
+      color: is_empty_passphrase ? "red" : "black",
+      // @ts-ignore
+      display: is_empty_passphrase ? "undefined" : "none",
+    },
+    pi: {
+      color: is_incorrect_passphrase ? "red" : "black",
+      // @ts-ignore
+      display: is_incorrect_passphrase ? "undefined" : "none",
+    },
+  });
   
   const handleLogin = () => {
     // TODO: add a way to keep users signed in, i.e. through some kind of automatic auth;
@@ -37,26 +47,35 @@ const LoginScreen = () => {
     
     if(!signed_in){
         // handle empty fields
-        isEmpty.username   = !username;
-        isEmpty.passphrase = !passphrase;
+        const m_is_empty_username   = !username;
+        const m_is_empty_passphrase = !passphrase;
+        let m_is_incorrect_username = false;
+        let m_is_incorrect_passphrase = false;
+        
         // you can't deny the absolute truth!
         // send username and password
         // server does internal check
-        isIncorrect.username   = (!!username   && username   !== "Simon");
-        isIncorrect.passphrase = (!!passphrase && passphrase !== "is the best");
-        if(isIncorrect.username) isIncorrect.passphrase = true;
+        if(!m_is_empty_username && !m_is_empty_passphrase){
+          m_is_incorrect_username   = username   !== "Simon";
+          m_is_incorrect_passphrase = passphrase !== "aaa";
+        }
+        if(m_is_incorrect_username || m_is_incorrect_passphrase){
+          m_is_incorrect_username   = true;
+          m_is_incorrect_passphrase = true;
+        }
+        
+        // update useState;
+        set_is_empty_username(m_is_empty_username);
+        set_is_empty_passphrase(m_is_empty_passphrase);
+        set_is_incorrect_username(m_is_incorrect_username);
+        set_is_incorrect_passphrase(m_is_incorrect_passphrase);
     }
     // if not signed in, make them start over!
-    if(!(isEmpty.username || isEmpty.passphrase || isIncorrect.username || isIncorrect.passphrase)){
+    if(!(is_empty_username || is_empty_passphrase || is_incorrect_username || is_incorrect_passphrase)){
       // then login if it succeeds
-      router.replace("/home");
+      // router.replace("/home");
     }
   };
-  
-  const style_ue = {};
-  const style_ui = {};
-  const style_pe = {};
-  const style_pi = {};
   
   return (
     <View style={styles.container}>
@@ -65,20 +84,42 @@ const LoginScreen = () => {
       <Text style={styles.subtitle}>Use your Calvin credentials</Text>
       <Text style={styles.subtitle}>(wip: this currently uses a fake passphrase)</Text>
       
-      <Text style={style_ue}>Field is required</Text>
-      <Text style={style_ui}>Incorrect username or password</Text>
+      <Text style={[
+        // @ts-ignore
+        r_style.ue,
+        styles.lil_info_notice_warning_thingy,
+      ]}>Field is required</Text>
+      <Text style={[
+        // @ts-ignore
+        r_style.ui,
+        styles.lil_info_notice_warning_thingy,
+      ]}>Incorrect username or password</Text>
       <TextInput
-        style={[styles.input, isEmpty.username ? styles.redInput : undefined]}
+        style={[
+          styles.input,
+          is_empty_username ? styles.redInput : undefined,
+        ]}
         placeholder="Calvin username"
         placeholderTextColor="#aaa"
         autoCapitalize="none"
         value={username}
         onChangeText={setUsername}
       />
-      <Text style={style_pe}>Field is required</Text>
-      <Text style={style_pi}>Incorrect username or password</Text>
+      <Text style={[
+        // @ts-ignore
+        r_style.pe,
+        styles.lil_info_notice_warning_thingy,
+      ]}>Field is required</Text>
+      <Text style={[
+        // @ts-ignore
+        r_style.pi,
+        styles.lil_info_notice_warning_thingy,
+      ]}>Incorrect username or password</Text>
       <TextInput
-        style={[styles.input, isEmpty.passphrase ? styles.redInput : undefined]}
+        style={[
+          styles.input,
+          is_empty_passphrase ? styles.redInput : undefined,
+        ]}
         placeholder="Calvin passphrase"
         placeholderTextColor="#aaa"
         secureTextEntry
@@ -128,11 +169,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  redInput: {
-    borderColor: '#e51b00ff',
+  redInput:{
+    color: '#c00726ff',
   },
-  requiredNotice: {
-    color: '#e51b00ff',
+  lil_info_notice_warning_thingy: {
+    fontSize: 16,
   },
   button: {
     backgroundColor: '#007AFF',
