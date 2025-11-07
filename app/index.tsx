@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import {
   Image,
@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   TextInput,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ImageSourcePropType } from "react-native";
 import BookmarkHeaderIcon from "./components/BookmarkHeaderIcon";
 import BookmarkButton from "./components/BookmarkButton";
@@ -31,6 +32,7 @@ const homeIcon = require("../assets/images/home.png");
 const listIcon = require("../assets/images/list.png");
 const chatIcon = require("../assets/images/chat.png");
 const profileIcon = require("../assets/images/profile.png");
+const closeIcon = require("../assets/images/close.png");
 
 interface Item {
   id: number;
@@ -43,6 +45,51 @@ interface Item {
 export default function Index() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Popular");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const searchInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    const loadSearches = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("recentSearches");
+        if (saved) setRecentSearches(JSON.parse(saved));
+      } catch (err) {
+        console.error("Error loading recent searches", err);
+      }
+    };
+    loadSearches();
+  }, []);
+
+  useEffect(() => {
+    const saveSearches = async () => {
+      try {
+        await AsyncStorage.setItem("recentSearches", JSON.stringify(recentSearches));
+      } catch (err) {
+        console.error("Error saving recent searches", err);
+      }
+    };
+    saveSearches();
+  }, [recentSearches]);
+
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const handleSearchSubmit = () => {
+    const trimmed = searchQuery.trim();
+    if (trimmed && !recentSearches.includes(trimmed)) {
+      setRecentSearches([trimmed, ...recentSearches].slice(0, 5));
+    }
+    setIsSearchFocused(false);
+  };
+
+  const handleClearRecentSearches = async () => {
+    try {
+      await AsyncStorage.removeItem("recentSearches");
+      setRecentSearches([]);
+    } catch (err) {
+      console.error("Error clearing recent searches", err);
+    }
+  };
 
   const allItems: Item[] = [
     { id: 1, name: "USBC Charger", count: 254, image: charger, category: "Popular" },
@@ -54,8 +101,9 @@ export default function Index() {
   ];
 
   const filteredItems = allItems.filter((item) => {
-    if (activeTab === "Popular") return true;
-    return item.category === activeTab;
+    const matchesCategory = activeTab === "Popular" || item.category === activeTab;
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
   });
 
   return (
@@ -65,12 +113,34 @@ export default function Index() {
 
         <View style={styles.searchContainer}>
           <Image source={searchIcon} style={styles.searchIconImage} resizeMode="contain" />
+
           <TextInput
+            ref={searchInputRef}
             style={styles.searchInput}
             placeholder="Search"
             placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={(text) => setSearchQuery(text)}
+            onFocus={() => setIsSearchFocused(true)}
+            onSubmitEditing={handleSearchSubmit}
+            returnKeyType="search"
           />
+
+
+          {(isSearchFocused || searchQuery.length > 0) && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                setIsSearchFocused(false);
+                setActiveTab("Popular");
+                searchInputRef.current?.blur(); // 👈 hides cursor and keyboard
+              }}
+            >
+              <Image source={closeIcon} style={styles.closeIcon} resizeMode="contain" />
+            </TouchableOpacity>
+          )}
         </View>
+
 
         <View style={styles.iconGroup}>
           <BookmarkHeaderIcon />
@@ -80,12 +150,43 @@ export default function Index() {
         </View>
       </View>
 
+      {isSearchFocused && recentSearches.length > 0 && (
+        <View style={styles.recentDropdown}>
+          {recentSearches
+            .filter((term) =>
+              term.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .map((term, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => {
+                  setSearchQuery(term);
+                  setIsSearchFocused(false);
+                }}
+                style={styles.recentItem}
+              >
+                <Text style={styles.recentText}>{term}</Text>
+              </TouchableOpacity>
+            ))}
+
+          <TouchableOpacity
+            onPress={handleClearRecentSearches}
+            style={styles.clearButton}
+          >
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ScrollView style={styles.scrollView}>
         <View style={styles.tabContainer}>
           {["Popular", "Home", "Books", "Tools"].map((tab) => (
             <TouchableOpacity
               key={tab}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => {
+                setActiveTab(tab);
+                setSearchQuery("");
+              }}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
@@ -104,6 +205,7 @@ export default function Index() {
                   <BookmarkButton item={{ id: String(item.id), title: item.name }} size={20} />
                 </View>
               </View>
+
               <View style={styles.recommendedInfo}>
                 <Text style={styles.recommendedName} numberOfLines={1}>
                   {item.name}
@@ -171,6 +273,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
   },
+  closeIcon: {
+    width: 15,
+    height: 15,
+    marginLeft: 8,
+    tintColor: "#323335ff",
+  },
   logo: {
     fontSize: 24,
   },
@@ -223,6 +331,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#15803d",
     paddingVertical: 12,
     paddingHorizontal: 16,
+  },
+  recommendedImage: {
+    width: "100%",
+    height: "100%",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   orangeHeader: {
     backgroundColor: "#f97316",
@@ -326,11 +440,6 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
-  recommendedImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
   heartOverlayBig: {
     position: "absolute",
     top: 10,
@@ -389,5 +498,41 @@ const styles = StyleSheet.create({
   navTextActive: {
     fontSize: 11,
     color: "#374151",
+  },
+  recentDropdown: {
+    position: "absolute",
+    top: 110,
+    left: 100,
+    right: 100,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+    zIndex: 10,
+    maxHeight: 150,
+  },
+  recentItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  recentText: {
+    fontSize: 14,
+    color: "#000",
+  },
+  clearButton: {
+    paddingVertical: 10,
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  clearButtonText: {
+    color: "#f97316",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });
