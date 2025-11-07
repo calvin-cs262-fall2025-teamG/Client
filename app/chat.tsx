@@ -11,6 +11,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
+const homeIcon = require("../assets/images/home.png");
+const searchIcon = require("../assets/images/search.png");
+const listIcon = require("../assets/images/list.png");
+const chatIcon = require("../assets/images/chat.png");
+const profileIcon = require("../assets/images/profile.png");
+
 interface ChatPreview {
   id: number;
   name: string;
@@ -72,34 +78,30 @@ export default function Chat() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>💬 Messages</Text>
-        <TouchableOpacity style={styles.composeButton}>
-          <Text style={styles.composeIcon}>✏️</Text>
-        </TouchableOpacity>
+      {/* No green header, only search bar */}
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchContainer}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search messages"
+            placeholderTextColor="#9ca3af"
+          />
+        </View>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search messages"
-          placeholderTextColor="#9ca3af"
-        />
-      </View>
-
-      {/* Chat List */}
+      {/* Chat list */}
       <ScrollView style={styles.chatList}>
         {chats.map((chat) => (
           <TouchableOpacity
             key={chat.id}
             style={styles.chatItem}
-            onPress={() => router.push({
-              pathname: "/chat-thread",
-              params: { id: chat.id, name: chat.name }
-            })}
+            onPress={() =>
+              router.push({
+                pathname: "/chat-thread",
+                params: { id: chat.id, name: chat.name },
+              })
+            }
           >
             <View style={styles.avatarContainer}>
               <Text style={styles.avatar}>{chat.avatar}</Text>
@@ -131,26 +133,59 @@ export default function Chat() {
         ))}
       </ScrollView>
 
-      {/* Bottom Navigation */}
+      {/* Bottom nav copied from Home, Chat active */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/")}>
-          <Text style={styles.navIcon}>🏠</Text>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/")}
+        >
+          <Image
+            source={homeIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>🧭</Text>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/browse")}
+        >
+          <Image
+            source={searchIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>Browse</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.navItem}>
-          <Text style={[styles.navIcon, styles.navIconLarge]}>➕</Text>
+          <Image
+            source={listIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>List</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIconActive}>💬</Text>
+          <Image
+            source={chatIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navTextActive}>Chat</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>👤</Text>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/profile")}
+        >
+          <Image
+            source={profileIcon}
+            style={styles.navIconImage}
+            resizeMode="contain"
+          />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -163,36 +198,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f9fafb",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#15803d",
-    paddingVertical: 12,
+
+  /* Search */
+  searchWrapper: {
+    backgroundColor: "#f9fafb",
     paddingHorizontal: 16,
-  },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  composeButton: {
-    padding: 4,
-  },
-  composeIcon: {
-    fontSize: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 999,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    margin: 16,
+    paddingVertical: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -205,12 +228,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
   },
+
+  /* Chat list */
   chatList: {
     flex: 1,
   },
   chatItem: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
@@ -272,10 +297,12 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   unreadText: {
-    color: "#fff",
+    color: "#ffffff",
     fontSize: 12,
     fontWeight: "600",
   },
+
+  /* Bottom nav (same style as Home) */
   bottomNav: {
     backgroundColor: "#ffffff",
     flexDirection: "row",
@@ -296,16 +323,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  navIcon: {
-    fontSize: 24,
+  navIconImage: {
+    width: 24,
+    height: 24,
     marginBottom: 4,
-  },
-  navIconActive: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconLarge: {
-    fontSize: 28,
   },
   navText: {
     fontSize: 11,
