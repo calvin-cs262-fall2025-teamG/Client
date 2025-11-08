@@ -1,31 +1,32 @@
 import React from "react";
-import { TouchableOpacity, Image, StyleSheet } from "react-native";
+import { TouchableOpacity, Image, StyleSheet, ViewStyle } from "react-native";
 import { useRouter } from "expo-router";
 
 const closeIcon = require("../../assets/images/close.png");
 
-export default function CloseButton() {
+export default function CloseButton({ style }: { style?: ViewStyle }) {
   const router = useRouter();
   return (
-    <TouchableOpacity style={styles.closeButton} onPress={() => router.push("/")}>
-      <Image source={closeIcon} style={styles.closeIcon} resizeMode="contain" />
+    <TouchableOpacity
+      onPress={() => router.push("/")}
+      style={[styles.button, style]}
+    >
+      <Image source={closeIcon} style={styles.icon} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  closeButton: {
+  button: {
     position: "absolute",
-    top: 50, // adjust for notch if needed
-    left: 20,
+    top: 10,
+    left: 12,
     zIndex: 10,
-    backgroundColor: "#ffffffaa",
-    borderRadius: 20,
-    padding: 6,
   },
-  closeIcon: {
-    width: 18,
-    height: 18,
-    tintColor: "#000",
+  icon: {
+    width: 20,
+    height: 20,
+    tintColor: "#4b5563",
   },
 });
+

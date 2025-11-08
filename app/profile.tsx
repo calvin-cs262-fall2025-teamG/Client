@@ -1,9 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, SafeAreaView, TextInput, ScrollView, Image } from "react-native";
+import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import CloseButton from "./components/CloseButton";
+import PageContainer from "./components/PageContainer";
 
-// You can replace these with actual images later
 const placeholderImage = "https://via.placeholder.com/80";
 
 interface Listing {
@@ -22,56 +21,51 @@ export default function Profile() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <CloseButton />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>👤 Profile</Text>
+    <PageContainer>
+      <Text style={styles.title}>👤 Profile</Text>
 
-        {/* Name */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput style={styles.input} placeholder="Your name" />
+      {/* Name */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Your name"
+          placeholderTextColor="#6b7280"
+        />
+      </View>
+
+      {/* School Year */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>School Year</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Sophomore"
+          placeholderTextColor="#6b7280"
+        />
+      </View>
+
+      {/* Listings */}
+      <Text style={[styles.subtitle, { marginTop: 24 }]}>Your Listings</Text>
+      {listings.map((item) => (
+        <View key={item.id} style={styles.listing}>
+          <Image source={{ uri: item.image }} style={styles.listingImage} />
+          <Text style={styles.listingName}>{item.name}</Text>
         </View>
+      ))}
 
-        {/* School Year */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>School Year</Text>
-          <TextInput style={styles.input} placeholder="e.g., Sophomore" />
-        </View>
-
-        {/* Listings */}
-        <Text style={[styles.subtitle, { marginTop: 20 }]}>Your Listings</Text>
-        {listings.map((item) => (
-          <View key={item.id} style={styles.listing}>
-            <Image source={{ uri: item.image }} style={styles.listingImage} />
-            <Text style={styles.listingName}>{item.name}</Text>
-          </View>
-        ))}
-
-        <Text
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          ← Back to Home
-        </Text>
-      </ScrollView>
-    </SafeAreaView>
+      <TouchableOpacity onPress={() => router.push("/")}>
+        <Text style={styles.backButton}>← Back to Home</Text>
+      </TouchableOpacity>
+    </PageContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  content: {
-    alignItems: "center",
-    padding: 20,
-  },
   title: {
     fontSize: 28,
-    fontWeight: "bold",
+    fontWeight: "700",
     marginBottom: 24,
+    color: "#111827",
   },
   subtitle: {
     fontSize: 18,
@@ -96,6 +90,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: "#fff",
     fontSize: 16,
+    color: "#111827",
   },
   listing: {
     flexDirection: "row",
@@ -115,6 +110,7 @@ const styles = StyleSheet.create({
   listingName: {
     fontSize: 16,
     fontWeight: "500",
+    color: "#111827",
   },
   backButton: {
     marginTop: 30,
@@ -123,4 +119,3 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
-
