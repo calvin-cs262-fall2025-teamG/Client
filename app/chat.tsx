@@ -10,6 +10,7 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import CloseButton from "./components/CloseButton";
 
 interface ChatPreview {
   id: number;
@@ -72,6 +73,7 @@ export default function Chat() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <CloseButton />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>💬 Messages</Text>

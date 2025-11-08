@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, SafeAreaView, TextInput, ScrollView, Image } from "react-native";
 import { useRouter } from "expo-router";
+import CloseButton from "./components/CloseButton";
 
 // You can replace these with actual images later
 const placeholderImage = "https://via.placeholder.com/80";
@@ -22,6 +23,7 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <CloseButton />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>👤 Profile</Text>
 

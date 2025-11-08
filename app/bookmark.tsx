@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context"; // ✅ correct import
 import { useBookmarks } from "./context/BookmarksContext";
+import CloseButton from "./components/CloseButton";
 
 export default function BookmarkScreen() {
   const { ids, byId, remove, ready } = useBookmarks();
@@ -40,6 +41,7 @@ export default function BookmarkScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <CloseButton />
       <View style={styles.container}>
         <Text style={styles.title}>Bookmarks</Text>
         <FlatList
