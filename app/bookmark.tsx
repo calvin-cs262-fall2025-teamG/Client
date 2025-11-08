@@ -6,8 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useBookmarks } from "../context/BookmarksContext";
-import PageContainer from "./components/PageContainer";
+import CloseButton from "./components/CloseButton";
 
 export default function BookmarkScreen() {
   const { ids, byId, remove, ready } = useBookmarks();
@@ -18,25 +19,32 @@ export default function BookmarkScreen() {
 
   if (!ready) {
     return (
-      <PageContainer>
-        <Text style={styles.title}>Bookmarks</Text>
-        <Text style={styles.subText}>Loading...</Text>
-      </PageContainer>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.title}>Bookmarks</Text>
+          <Text>Loading…</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (data.length === 0) {
     return (
-      <PageContainer>
-        <Text style={styles.title}>Bookmarks</Text>
-        <Text style={styles.subText}>You haven’t saved anything yet.</Text>
-      </PageContainer>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.title}>Bookmarks</Text>
+          <Text>No items saved yet.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <PageContainer>
-      <Text style={styles.title}>Bookmarks</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <CloseButton />
+        <Text style={styles.title}>Bookmarks</Text>
+      </View>
 
       <FlatList
         data={data}
@@ -50,21 +58,37 @@ export default function BookmarkScreen() {
             </TouchableOpacity>
           </View>
         )}
+        contentContainerStyle={styles.listContent}
       />
-    </PageContainer>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    marginBottom: 8,
+  },
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#fff",
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 16,
-  },
-  subText: {
-    fontSize: 16,
-    color: "#6b7280",
+    marginLeft: 12,
   },
   row: {
     flexDirection: "row",
@@ -72,18 +96,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
   },
-  itemTitle: {
-    fontSize: 16,
-    color: "#111827",
-    flex: 1,
-  },
-  remove: {
-    fontSize: 14,
-    color: "#f97316",
-    fontWeight: "600",
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#e5e7eb",
-  },
+  itemTitle: { fontSize: 16 },
+  remove: { fontSize: 14, color: "#ef4444" },
+  separator: { height: 1, backgroundColor: "#e5e7eb" },
 });
