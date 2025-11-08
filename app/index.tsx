@@ -211,7 +211,7 @@ export default function Index() {
 
         <View style={styles.recommendedGrid}>
           {filteredItems.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.recommendedItem}>
+            <View key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
                 <Image
                   source={typeof item.image === "string" ? { uri: item.image } : item.image}
@@ -235,8 +235,22 @@ export default function Index() {
                     resizeMode="contain"
                   />
                 </View>
+
+                {item.category === "User" && (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/edit-item",
+                        params: { id: item.id, name: item.name, image: typeof item.image === "string" ? item.image : "" },
+                      })
+                    }
+                  >
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
       </ScrollView>
@@ -397,6 +411,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     width: "100%",
   },
+  editButton: {
+    marginTop: 6,
+    paddingVertical: 6,
+    backgroundColor: "#f97316",
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  editButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
   countRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -480,20 +507,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#4b5563",
   },
-  bottomNav: {
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
-  },
+ bottomNav: {
+  backgroundColor: "#ffffff",
+  flexDirection: "row",
+  justifyContent: "space-evenly",
+  alignItems: "center",
+  paddingVertical: 8,
+  borderTopWidth: 1,
+  borderTopColor: "#e5e7eb",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: -2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 8,
+},
+
   navItem: {
     alignItems: "center",
     justifyContent: "center",

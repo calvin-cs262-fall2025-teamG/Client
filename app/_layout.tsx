@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { BookmarksProvider } from "./context/BookmarksContext";
+import { BookmarksProvider } from "../context/BookmarksContext";
 
 export default function RootLayout() {
   return (

@@ -1,8 +1,16 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  Image, 
+  StyleSheet, 
+  Alert 
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import PageContainer from "./components/PageContainer";
 
 export default function EditItem() {
   const router = useRouter();
@@ -34,8 +42,29 @@ export default function EditItem() {
     router.push("/");
   };
 
+  const deleteItem = async () => {
+    Alert.alert(
+      "Delete Item",
+      "Are you sure you want to delete this item?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const stored = await AsyncStorage.getItem("userItems");
+            let items = stored ? JSON.parse(stored) : [];
+            const updated = items.filter((item: any) => item.id != id);
+            await AsyncStorage.setItem("userItems", JSON.stringify(updated));
+            router.push("/");
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <View style={styles.container}>
+    <PageContainer>
       <Text style={styles.header}>Edit Item</Text>
 
       <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
@@ -46,39 +75,73 @@ export default function EditItem() {
         value={title}
         onChangeText={setTitle}
         style={styles.input}
+        placeholder="Edit item name"
+        placeholderTextColor="#6b7280"
       />
 
       <TouchableOpacity style={styles.button} onPress={saveEdit}>
         <Text style={styles.buttonText}>Save Changes</Text>
       </TouchableOpacity>
-    </View>
+
+      <TouchableOpacity style={styles.deleteButton} onPress={deleteItem}>
+        <Text style={styles.deleteButtonText}>Delete Item</Text>
+      </TouchableOpacity>
+    </PageContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  header: { fontSize: 22, fontWeight: "600", marginBottom: 20 },
+  header: { 
+    fontSize: 24, 
+    fontWeight: "700", 
+    marginBottom: 20, 
+    color: "#111827" 
+  },
   imagePicker: {
-    height: 200,
+    height: 250,
     backgroundColor: "#f3f4f6",
-    borderRadius: 10,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
+    overflow: "hidden",
   },
-  imagePreview: { width: "100%", height: "100%", borderRadius: 10 },
+  imagePreview: { 
+    width: "100%", 
+    height: "100%", 
+    borderRadius: 10 
+  },
   input: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#f9fafb",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 10,
     padding: 12,
-    borderRadius: 8,
     fontSize: 16,
+    color: "#111827",
     marginBottom: 20,
   },
   button: {
     backgroundColor: "#f97316",
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: "center",
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: "600" 
+  },
+  deleteButton: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#ef4444",
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });

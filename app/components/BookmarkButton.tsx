@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarksUnsafe } from "../context/BookmarksContext";
+import { useBookmarksUnsafe } from "../../context/BookmarksContext";
 
 type Props = {
   item: { id: string; title: string };

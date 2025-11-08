@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useBookmarksUnsafe } from "../context/BookmarksContext";
+import { useBookmarksUnsafe } from "../../context/BookmarksContext";
 
 export default function BookmarkHeaderIcon() {
   const router = useRouter();

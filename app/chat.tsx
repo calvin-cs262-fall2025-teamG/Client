@@ -3,13 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import PageContainer from "./components/PageContainer";
 
 interface ChatPreview {
   id: number;
@@ -28,7 +27,7 @@ export default function Chat() {
       id: 1,
       name: "Sarah Johnson",
       avatar: "👩",
-      lastMessage: "Perfect! I need the book for cs 262 😄",
+      lastMessage: "Perfect! I need the book for CS 262 😄",
       time: "2m",
       unread: 2,
     },
@@ -65,13 +64,13 @@ export default function Chat() {
       id: 6,
       name: "Tom Anderson",
       avatar: "👨‍🦲",
-      lastMessage: "What's your best price?",
+      lastMessage: "When can I borrow it?",
       time: "2d",
     },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <PageContainer>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>💬 Messages</Text>
@@ -96,10 +95,12 @@ export default function Chat() {
           <TouchableOpacity
             key={chat.id}
             style={styles.chatItem}
-            onPress={() => router.push({
-              pathname: "/chat-thread",
-              params: { id: chat.id, name: chat.name }
-            })}
+            onPress={() =>
+              router.push({
+                pathname: "/chat-thread",
+                params: { id: chat.id, name: chat.name },
+              })
+            }
           >
             <View style={styles.avatarContainer}>
               <Text style={styles.avatar}>{chat.avatar}</Text>
@@ -110,6 +111,7 @@ export default function Chat() {
                 <Text style={styles.chatName}>{chat.name}</Text>
                 <Text style={styles.chatTime}>{chat.time}</Text>
               </View>
+
               <View style={styles.messageRow}>
                 <Text
                   style={[
@@ -130,51 +132,25 @@ export default function Chat() {
           </TouchableOpacity>
         ))}
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/")}>
-          <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>🧭</Text>
-          <Text style={styles.navText}>Browse</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={[styles.navIcon, styles.navIconLarge]}>➕</Text>
-          <Text style={styles.navText}>List</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIconActive}>💬</Text>
-          <Text style={styles.navTextActive}>Chat</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </PageContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#15803d",
+    backgroundColor: "#f97316",
     paddingVertical: 12,
     paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 12,
   },
   headerTitle: {
     color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "700",
   },
   composeButton: {
     padding: 4,
@@ -189,7 +165,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    margin: 16,
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -203,7 +179,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#000",
+    color: "#111827",
   },
   chatList: {
     flex: 1,
@@ -220,7 +196,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -235,7 +211,6 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 4,
   },
   chatName: {
@@ -262,7 +237,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   unreadBadge: {
-    backgroundColor: "#15803d",
+    backgroundColor: "#f97316",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -275,44 +250,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontWeight: "600",
-  },
-  bottomNav: {
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
-  },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  navIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconActive: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconLarge: {
-    fontSize: 28,
-  },
-  navText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  navTextActive: {
-    fontSize: 11,
-    color: "#374151",
   },
 });
