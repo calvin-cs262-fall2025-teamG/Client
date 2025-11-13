@@ -20,6 +20,7 @@ const chair = require("../../assets/images/chair.jpg");
 const tools = require("../../assets/images/tools.jpg");
 const tractor = require("../../assets/images/tractor.jpg");
 const vacuum = require("../../assets/images/vacuum.jpg");
+const keurig = require("../../assets/images/keurig.png");
 
 interface Item {
   id: number;
@@ -90,9 +91,10 @@ export default function Index() {
     { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular", status: "none" },
     { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books", status: "borrowed" },
     { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home", status: "none" },
-    { id: 4, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
-    { id: 5, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
-    { id: 6, name: "Vacuum Cleaner", count: 156, image: vacuum, category: "Home", status: "borrowed" },
+    { id: 4, name: "Keurig", count: 180, image: keurig, category: "Home", status: "none" },
+    { id: 5, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
+    { id: 6, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
+    { id: 7, name: "Vacuum", count: 156, image: vacuum, category: "Home", status: "borrowed" },
   ];
 
   const filteredItems = presetItems.filter((item) => {
@@ -244,7 +246,7 @@ export default function Index() {
                     item.status === "borrowed" && { opacity: 0.7 },
                   ]}
                 >
-                  {item.count} available
+                  {item.count}
                 </Text>
               </View>
             </TouchableOpacity>
