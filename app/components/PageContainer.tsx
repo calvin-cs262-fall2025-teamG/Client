@@ -1,16 +1,24 @@
 import React from "react";
-import { ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CloseButton from "./CloseButton";
 
-export default function PageContainer({ children }: { children: React.ReactNode }) {
+export default function PageContainer({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-  
         <CloseButton style={styles.closeButton} />
 
         <ScrollView contentContainerStyle={styles.container}>
@@ -33,9 +41,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   closeButton: {
-  position: "absolute",
-  top: 10,
-  left: 20,
-  zIndex: 10,
-},
+    position: "absolute",
+    top: 10,
+    left: 20,
+    zIndex: 10,
+  },
 });

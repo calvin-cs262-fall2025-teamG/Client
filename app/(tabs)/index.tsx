@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import {
   Image,
   View,
@@ -12,26 +13,16 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ImageSourcePropType } from "react-native";
-import BookmarkHeaderIcon from "./components/BookmarkHeaderIcon";
-import BookmarkButton from "./components/BookmarkButton";
 
-const logo = require("../assets/images/logo.png");
+const logo = require("../../assets/images/logo.png");
 
-const charger = require("../assets/images/charger.jpg");
-const corebook = require("../assets/images/corebook.jpg");
-const chair = require("../assets/images/chair.jpg");
-const tools = require("../assets/images/tools.jpg");
-const tractor = require("../assets/images/tractor.jpg");
-const vacuum = require("../assets/images/vacuum.jpg");
-
-const cartIcon = require("../assets/images/cart.png");
-const bookmarkIcon = require("../assets/images/bookmark.png");
-const searchIcon = require("../assets/images/search.png");
-const homeIcon = require("../assets/images/home.png");
-const listIcon = require("../assets/images/list.png");
-const chatIcon = require("../assets/images/chat.png");
-const profileIcon = require("../assets/images/profile.png");
-const closeIcon = require("../assets/images/close.png");
+const charger = require("../../assets/images/charger.jpg");
+const corebook = require("../../assets/images/corebook.jpg");
+const chair = require("../../assets/images/chair.jpg");
+const tools = require("../../assets/images/tools.jpg");
+const tractor = require("../../assets/images/tractor.jpg");
+const vacuum = require("../../assets/images/vacuum.jpg");
+const closeIcon = require("../../assets/images/close.png");
 
 interface Item {
   id: number;
@@ -125,8 +116,11 @@ export default function Index() {
         <Image source={logo} style={styles.logoImage} resizeMode="contain" />
 
         <View style={styles.searchContainer}>
-          <Image source={searchIcon} style={styles.searchIconImage} resizeMode="contain" />
-
+          <Image
+            source={require("../../assets/images/search.png")}
+            style={styles.searchIconImage}
+            resizeMode="contain"
+          />
           <TextInput
             ref={searchInputRef}
             style={styles.searchInput}
@@ -139,26 +133,36 @@ export default function Index() {
             returnKeyType="search"
           />
 
-
           {(isSearchFocused || searchQuery.length > 0) && (
             <TouchableOpacity
               onPress={() => {
                 setSearchQuery("");
                 setIsSearchFocused(false);
                 setActiveTab("Popular");
-                searchInputRef.current?.blur(); // 👈 hides cursor and keyboard
+                searchInputRef.current?.blur(); // hides cursor and keyboard
               }}
             >
-              <Image source={closeIcon} style={styles.closeIcon} resizeMode="contain" />
+              <Image
+                source={closeIcon}
+                style={styles.closeIcon}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           )}
         </View>
 
-
         <View style={styles.iconGroup}>
-          <BookmarkHeaderIcon />
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/cart")}>
-            <Image source={cartIcon} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/bookmark")}
+          >
+            <Ionicons name="bookmark" size={24} color="#3b1b0d" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/cart")}
+          >
+            <Ionicons name="cart" size={24} color="#3b1b0d" />
           </TouchableOpacity>
         </View>
       </View>
@@ -202,7 +206,12 @@ export default function Index() {
               }}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
                 {tab}
               </Text>
             </TouchableOpacity>
@@ -214,13 +223,14 @@ export default function Index() {
             <View key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
                 <Image
-                  source={typeof item.image === "string" ? { uri: item.image } : item.image}
+                  source={
+                    typeof item.image === "string"
+                      ? { uri: item.image }
+                      : item.image
+                  }
                   style={styles.recommendedImage}
                   resizeMode="cover"
                 />
-                <View style={styles.heartOverlayBig}>
-                  <BookmarkButton item={{ id: String(item.id), title: item.name }} size={20} />
-                </View>
               </View>
 
               <View style={styles.recommendedInfo}>
@@ -229,11 +239,6 @@ export default function Index() {
                 </Text>
                 <View style={styles.countRow}>
                   <Text style={styles.countTextSmall}>{item.count}</Text>
-                  <Image
-                    source={bookmarkIcon}
-                    style={styles.smallBookmarkIcon}
-                    resizeMode="contain"
-                  />
                 </View>
 
                 {item.category === "User" && (
@@ -242,7 +247,12 @@ export default function Index() {
                     onPress={() =>
                       router.push({
                         pathname: "/edit-item",
-                        params: { id: item.id, name: item.name, image: typeof item.image === "string" ? item.image : "" },
+                        params: {
+                          id: item.id,
+                          name: item.name,
+                          image:
+                            typeof item.image === "string" ? item.image : "",
+                        },
                       })
                     }
                   >
@@ -254,33 +264,6 @@ export default function Index() {
           ))}
         </View>
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Image source={homeIcon} style={styles.navIconImage} resizeMode="contain" />
-          <Text style={styles.navTextActive}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/browse")}>
-          <Image source={searchIcon} style={styles.navIconImage} resizeMode="contain" />
-          <Text style={styles.navText}>Browse</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/list-item")}
-        >
-          <Image source={listIcon} style={styles.navIconImage} resizeMode="contain" />
-          <Text style={styles.navText}>List</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/chat")}>
-          <Image source={chatIcon} style={styles.navIconImage} resizeMode="contain" />
-          <Text style={styles.navText}>Chat</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/profile")}>
-          <Image source={profileIcon} style={styles.navIconImage} resizeMode="contain" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -331,11 +314,6 @@ const styles = StyleSheet.create({
     height: 18,
     marginRight: 8,
     alignSelf: "center",
-  },
-  smallBookmarkIcon: {
-    width: 14,
-    height: 14,
-    marginLeft: 1,
   },
   searchInput: {
     flex: 1,
@@ -432,9 +410,6 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: 11,
     color: "#4b5563",
-  },
-  bookmarkIcon: {
-    fontSize: 10,
   },
   tabContainer: {
     flexDirection: "row",
