@@ -10,12 +10,9 @@ import {
   StyleSheet,
   SafeAreaView,
   TextInput,
+  RefreshControl,
 } from "react-native";
-import { RefreshControl } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { ImageSourcePropType } from "react-native";
-
-const logo = require("../../assets/images/logo.png");
 
 const charger = require("../../assets/images/charger.jpg");
 const corebook = require("../../assets/images/corebook.jpg");
@@ -23,103 +20,80 @@ const chair = require("../../assets/images/chair.jpg");
 const tools = require("../../assets/images/tools.jpg");
 const tractor = require("../../assets/images/tractor.jpg");
 const vacuum = require("../../assets/images/vacuum.jpg");
-const closeIcon = require("../../assets/images/close.png");
 
 interface Item {
   id: number;
   name: string;
   count: number;
-  image: ImageSourcePropType | string;
+  image: any;
   category: string;
 }
 
 export default function Index() {
   const router = useRouter();
+
   const [activeTab, setActiveTab] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [userItems, setUserItems] = useState<Item[]>([]);
-  const searchInputRef = useRef<TextInput>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-
-    // Reload recent searches
-    const saved = await AsyncStorage.getItem("recentSearches");
-    if (saved) setRecentSearches(JSON.parse(saved));
-
-    const stored = await AsyncStorage.getItem("userItems");
-    if (stored) setUserItems(JSON.parse(stored));
-
-    setRefreshing(false);
-  };
+  const searchInputRef = useRef<TextInput>(null);
+  const searchBarRef = useRef<View>(null);
 
   useEffect(() => {
     const loadSearches = async () => {
-      try {
-        const saved = await AsyncStorage.getItem("recentSearches");
-        if (saved) setRecentSearches(JSON.parse(saved));
-      } catch (err) {
-        console.error("Error loading recent searches", err);
-      }
+      const saved = await AsyncStorage.getItem("recentSearches");
+      if (saved) setRecentSearches(JSON.parse(saved));
     };
     loadSearches();
   }, []);
 
   useEffect(() => {
-    const loadUserItems = async () => {
-      const stored = await AsyncStorage.getItem("userItems");
-      if (stored) {
-        setUserItems(JSON.parse(stored));
-      }
-    };
-
-    loadUserItems();
-  }, []);
-
-  useEffect(() => {
-    const saveSearches = async () => {
-      try {
-        await AsyncStorage.setItem("recentSearches", JSON.stringify(recentSearches));
-      } catch (err) {
-        console.error("Error saving recent searches", err);
-      }
-    };
-    saveSearches();
+    AsyncStorage.setItem("recentSearches", JSON.stringify(recentSearches));
   }, [recentSearches]);
 
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  useEffect(() => {
+    if (searchQuery.length > 0 && searchBarRef.current) {
+      searchBarRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setDropdownLayout({
+          top: pageY + height + 4,
+          left: pageX,
+          width: width,
+        });
+      });
+    }
+  }, [searchQuery]);
 
   const handleSearchSubmit = () => {
     const trimmed = searchQuery.trim();
     if (trimmed && !recentSearches.includes(trimmed)) {
       setRecentSearches([trimmed, ...recentSearches].slice(0, 5));
     }
-    setIsSearchFocused(false);
   };
 
   const handleClearRecentSearches = async () => {
-    try {
-      await AsyncStorage.removeItem("recentSearches");
-      setRecentSearches([]);
-    } catch (err) {
-      console.error("Error clearing recent searches", err);
-    }
+    await AsyncStorage.removeItem("recentSearches");
+    setRecentSearches([]);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    const saved = await AsyncStorage.getItem("recentSearches");
+    if (saved) setRecentSearches(JSON.parse(saved));
+    setRefreshing(false);
   };
 
   const presetItems: Item[] = [
-    { id: 1, name: "USBC Charger", count: 254, image: charger, category: "Popular" },
+    { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular" },
     { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books" },
-    { id: 3, name: "Chair", count: 180, image: chair, category: "Home" },
-    { id: 4, name: "Tools", count: 156, image: tools, category: "Tools" },
-    { id: 5, name: "Tractor", count: 180, image: tractor, category: "Tools" },
-    { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
+    { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home" },
+    { id: 4, name: "Tool Set", count: 156, image: tools, category: "Tools" },
+    { id: 5, name: "Garden Tractor", count: 180, image: tractor, category: "Tools" },
+    { id: 6, name: "Vacuum Cleaner", count: 156, image: vacuum, category: "Home" },
   ];
 
-  const allItems = [...presetItems];
-
-  const filteredItems = allItems.filter((item) => {
+  const filteredItems = presetItems.filter((item) => {
     const matchesCategory = activeTab === "Popular" || item.category === activeTab;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -127,95 +101,90 @@ export default function Index() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* HEADER */}
       <View style={styles.header}>
-        <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+        <Image
+          source={require("../../assets/images/logo.png")}
+          style={styles.logoImage}
+        />
 
-        <View style={styles.searchContainer}>
-          <Image
-            source={require("../../assets/images/close.png")}
-            style={styles.searchIconImage}
-            resizeMode="contain"
-          />
+        <View ref={searchBarRef} style={styles.searchBar}>
+          <Ionicons name="search" size={18} color="#6b7280" style={{ marginRight: 8 }} />
+
           <TextInput
             ref={searchInputRef}
             style={styles.searchInput}
-            placeholder="Search"
+            placeholder="Search items"
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={(text) => setSearchQuery(text)}
-            onFocus={() => setIsSearchFocused(true)}
             onSubmitEditing={handleSearchSubmit}
-            returnKeyType="search"
           />
 
-          {(isSearchFocused || searchQuery.length > 0) && (
+          {searchQuery.length > 0 && (
             <TouchableOpacity
               onPress={() => {
                 setSearchQuery("");
-                setIsSearchFocused(false);
-                setActiveTab("Popular");
-                searchInputRef.current?.blur(); // hides cursor and keyboard
+                searchInputRef.current?.blur();
               }}
             >
-              <Image
-                source={closeIcon}
-                style={styles.closeIcon}
-                resizeMode="contain"
-              />
+              <Ionicons name="close-circle" size={18} color="#6b7280" />
             </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.iconGroup}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/bookmark")}
-          >
-            <Ionicons name="bookmark" size={24} color="#3b1b0d" />
+          <TouchableOpacity onPress={() => router.push("/bookmark")}>
+            <Ionicons name="bookmark-outline" size={24} color="#1f2937" />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/cart")}
-          >
-            <Ionicons name="cart" size={24} color="#3b1b0d" />
+
+          <TouchableOpacity onPress={() => router.push("/cart")}>
+            <Ionicons name="cart-outline" size={24} color="#1f2937" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {isSearchFocused && recentSearches.length > 0 && (
-        <View style={styles.recentDropdown}>
-          {recentSearches
-            .filter((term) =>
-              term.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            .map((term, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => {
-                  setSearchQuery(term);
-                  setIsSearchFocused(false);
-                }}
-                style={styles.recentItem}
-              >
-                <Text style={styles.recentText}>{term}</Text>
-              </TouchableOpacity>
-            ))}
+      {/* RECENT SEARCH DROPDOWN */}
+      {searchQuery.length > 0 && recentSearches.length > 0 && (
+        <View
+          style={[
+            styles.recentDropdown,
+            {
+              top: dropdownLayout.top,
+              left: dropdownLayout.left,
+              width: dropdownLayout.width,
+            },
+          ]}
+        >
+          {recentSearches.slice(0, 5).map((term, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => {
+                setSearchQuery(term);
+                searchInputRef.current?.blur();
+              }}
+              style={styles.recentRow}
+            >
+              <Ionicons name="time-outline" size={16} color="#6b7280" />
+              <Text style={styles.recentRowText}>{term}</Text>
+            </TouchableOpacity>
+          ))}
 
           <TouchableOpacity
             onPress={handleClearRecentSearches}
-            style={styles.clearButton}
+            style={styles.recentClearRow}
           >
-            <Text style={styles.clearButtonText}>Clear All</Text>
+            <Text style={styles.recentClearText}>Clear recent searches</Text>
           </TouchableOpacity>
         </View>
       )}
 
+      {/* MAIN CONTENT */}
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* TABS */}
         <View style={styles.tabContainer}>
           {["Popular", "Home", "Books", "Tools"].map((tab) => (
             <TouchableOpacity
@@ -226,61 +195,26 @@ export default function Index() {
               }}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
                 {tab}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
+        {/* ITEMS GRID */}
         <View style={styles.recommendedGrid}>
           {filteredItems.map((item) => (
-            <View key={item.id} style={styles.recommendedItem}>
+            <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
-                <Image
-                  source={
-                    typeof item.image === "string"
-                      ? { uri: item.image }
-                      : item.image
-                  }
-                  style={styles.recommendedImage}
-                  resizeMode="cover"
-                />
+                <Image source={item.image} style={styles.recommendedImage} />
               </View>
 
               <View style={styles.recommendedInfo}>
-                <Text style={styles.recommendedName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <View style={styles.countRow}>
-                  <Text style={styles.countTextSmall}>{item.count}</Text>
-                </View>
-
-                {item.category === "User" && (
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/edit-item",
-                        params: {
-                          id: item.id,
-                          name: item.name,
-                          image:
-                            typeof item.image === "string" ? item.image : "",
-                        },
-                      })
-                    }
-                  >
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </TouchableOpacity>
-                )}
+                <Text style={styles.recommendedName}>{item.name}</Text>
+                <Text style={styles.countText}>{item.count} available</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
@@ -288,294 +222,178 @@ export default function Index() {
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f9fafb",
   },
+
   header: {
-    backgroundColor: "#ffffff",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 12,
+    backgroundColor: "#fff",
+    gap: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
+
   logoImage: {
-    width: 60,
-    height: 60,
+    width: 55,
+    height: 55,
+    borderRadius: 12,
   },
-  closeIcon: {
-    width: 15,
-    height: 15,
-    marginLeft: 8,
-    tintColor: "#323335ff",
-  },
-  logo: {
-    fontSize: 24,
-  },
-  searchContainer: {
+
+  searchBar: {
     flex: 1,
     flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#f3f4f6",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: "center",
   },
-  searchIconImage: {
-    width: 18,
-    height: 18,
-    marginRight: 8,
-    alignSelf: "center",
-  },
+
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#000",
+    color: "#111827",
   },
-  navIconImage: {
-    width: 24,
-    height: 24,
-    marginBottom: 4,
-  },
+
   iconGroup: {
     flexDirection: "row",
+    gap: 14,
+  },
+
+  // RECENT DROPDOWN
+  recentDropdown: {
+    position: "absolute",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    zIndex: 1000,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#f3f4f6",
+  },
+
+  recentRow: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    gap: 10,
+    borderRadius: 8,
   },
-  iconButton: {
-    padding: 4,
-  },
-  icon: {
-    fontSize: 22,
-  },
-  scrollView: {
+
+  recentRowText: {
+    fontSize: 14,
+    color: "#1f2937",
     flex: 1,
   },
-  sectionHeader: {
-    backgroundColor: "#15803d",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  recommendedImage: {
-    width: "100%",
-    height: "100%",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  orangeHeader: {
-    backgroundColor: "#f97316",
-  },
-  sectionHeaderText: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  listingsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    backgroundColor: "#ffffff",
-  },
-  listingItem: {
-    width: "25%",
-    alignItems: "center",
-    paddingHorizontal: 4,
-    marginBottom: 12,
-  },
-  listingImageContainer: {
-    backgroundColor: "#e5e7eb",
-    borderRadius: 8,
-    width: "100%",
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  listingEmoji: {
-    fontSize: 36,
-  },
-  listingName: {
-    fontSize: 11,
-    fontWeight: "500",
-    textAlign: "center",
-    width: "100%",
-  },
-  editButton: {
-    marginTop: 6,
-    paddingVertical: 6,
-    backgroundColor: "#f97316",
-    borderRadius: 6,
+
+  recentClearRow: {
+    marginTop: 2,
+    paddingTop: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
     alignItems: "center",
   },
-  editButtonText: {
-    color: "#fff",
+
+  recentClearText: {
+    color: "#f97316",
     fontSize: 13,
     fontWeight: "600",
   },
 
-  countRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  countText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
+  // TABS
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
+
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: "center",
   },
+
   activeTab: {
     borderBottomWidth: 2,
     borderBottomColor: "#f97316",
   },
+
   tabText: {
     fontSize: 14,
+    color: "#6b7280",
     fontWeight: "500",
-    color: "#4b5563",
   },
+
   activeTabText: {
     color: "#f97316",
+    fontWeight: "600",
   },
+
+  // ITEMS
+  scrollView: {
+    flex: 1,
+  },
+
   recommendedGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     padding: 12,
-    backgroundColor: "#f9fafb",
+    gap: 12,
   },
+
   recommendedItem: {
-    width: "48%",
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
-    marginBottom: 12,
-    marginHorizontal: "1%",
+    width: "47.5%",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
     elevation: 2,
   },
+
   recommendedImageContainer: {
-    backgroundColor: "#e5e7eb",
+    width: "100%",
     aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    position: "relative",
-    overflow: "hidden",
+    backgroundColor: "#f3f4f6",
   },
-  heartOverlayBig: {
-    position: "absolute",
-    top: 10,
-    right: 10,
+
+  recommendedImage: {
+    width: "100%",
+    height: "100%",
   },
-  recommendedEmoji: {
-    fontSize: 60,
-  },
+
   recommendedInfo: {
     padding: 12,
   },
+
   recommendedName: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 4,
-  },
-  countTextSmall: {
-    fontSize: 12,
-    color: "#4b5563",
-  },
-  bottomNav: {
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
   },
 
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  navIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconActive: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconLarge: {
-    fontSize: 28,
-  },
-  navText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  navTextActive: {
-    fontSize: 11,
-    color: "#374151",
-  },
-  recentDropdown: {
-    position: "absolute",
-    top: 110,
-    left: 100,
-    right: 100,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
-    zIndex: 10,
-    maxHeight: 150,
-  },
-  recentItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  recentText: {
-    fontSize: 14,
-    color: "#000",
-  },
-  clearButton: {
-    paddingVertical: 10,
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-  },
-  clearButtonText: {
-    color: "#f97316",
-    fontWeight: "600",
-    fontSize: 14,
+  countText: {
+    fontSize: 13,
+    color: "#6b7280",
   },
 });

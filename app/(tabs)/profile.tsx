@@ -70,6 +70,16 @@ export default function Profile() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.recommendedGrid}>
+          <TouchableOpacity
+            style={[styles.recommendedItem, styles.createItemCard]}
+            onPress={() => router.push("/(tabs)/list")}
+          >
+            <View style={styles.createItemInner}>
+              <Ionicons name="add-circle" size={40} color="#f97316" />
+              <Text style={styles.createItemText}>Create New</Text>
+            </View>
+          </TouchableOpacity>
+
           {listings.map((item) => (
             <View key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
@@ -229,4 +239,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6b7280",
   },
+createItemCard: {
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: 20,
+},
+
+createItemInner: {
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: 20,
+},
+
+createItemText: {
+  marginTop: 8,
+  fontSize: 15,
+  fontWeight: "600",
+  color: "#f97316",
+},
+
 });
