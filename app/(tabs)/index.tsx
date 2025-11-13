@@ -27,6 +27,7 @@ interface Item {
   count: number;
   image: any;
   category: string;
+  status: "none" | "borrowed";
 }
 
 export default function Index() {
@@ -37,6 +38,7 @@ export default function Index() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
+
 
   const searchInputRef = useRef<TextInput>(null);
   const searchBarRef = useRef<View>(null);
@@ -85,12 +87,12 @@ export default function Index() {
   };
 
   const presetItems: Item[] = [
-    { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular" },
-    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books" },
-    { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home" },
-    { id: 4, name: "Tool Set", count: 156, image: tools, category: "Tools" },
-    { id: 5, name: "Garden Tractor", count: 180, image: tractor, category: "Tools" },
-    { id: 6, name: "Vacuum Cleaner", count: 156, image: vacuum, category: "Home" },
+    { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular", status: "none" },
+    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books", status: "borrowed" },
+    { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home", status: "none" },
+    { id: 4, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
+    { id: 5, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
+    { id: 6, name: "Vacuum Cleaner", count: 156, image: vacuum, category: "Home", status: "borrowed" },
   ];
 
   const filteredItems = presetItems.filter((item) => {
@@ -205,16 +207,48 @@ export default function Index() {
         {/* ITEMS GRID */}
         <View style={styles.recommendedGrid}>
           {filteredItems.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.recommendedItem}>
+            <TouchableOpacity
+              key={item.id}
+              style={styles.recommendedItem}
+              onPress={() => router.push(`/item/${item.id}`)}
+            >
               <View style={styles.recommendedImageContainer}>
-                <Image source={item.image} style={styles.recommendedImage} />
+                {item.status === "borrowed" && (
+                  <View style={[styles.statusBadge, styles.statusBorrowed]}>
+                    <Text style={styles.statusText}>Borrowed</Text>
+                  </View>
+                )}
+
+                <Image
+                  source={item.image}
+                  style={[
+                    styles.recommendedImage,
+                    item.status === "borrowed" && { opacity: 0.55 },
+                  ]}
+                />
               </View>
 
               <View style={styles.recommendedInfo}>
-                <Text style={styles.recommendedName}>{item.name}</Text>
-                <Text style={styles.countText}>{item.count} available</Text>
+                <Text
+                  style={[
+                    styles.recommendedName,
+                    item.status === "borrowed" && { opacity: 0.7 },
+                  ]}
+                >
+                  {item.name}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.countText,
+                    item.status === "borrowed" && { opacity: 0.7 },
+                  ]}
+                >
+                  {item.count} available
+                </Text>
               </View>
             </TouchableOpacity>
+
           ))}
         </View>
       </ScrollView>
@@ -396,4 +430,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6b7280",
   },
+
+  statusBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+
+  statusText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  statusBorrowed: {
+    backgroundColor: "#f73e3eaf", // red
+  },
+
 });
