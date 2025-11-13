@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   TextInput,
 } from "react-native";
+import { RefreshControl } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ImageSourcePropType } from "react-native";
 
@@ -39,6 +40,20 @@ export default function Index() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [userItems, setUserItems] = useState<Item[]>([]);
   const searchInputRef = useRef<TextInput>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+
+    // Reload recent searches
+    const saved = await AsyncStorage.getItem("recentSearches");
+    if (saved) setRecentSearches(JSON.parse(saved));
+
+    const stored = await AsyncStorage.getItem("userItems");
+    if (stored) setUserItems(JSON.parse(stored));
+
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     const loadSearches = async () => {
@@ -102,7 +117,7 @@ export default function Index() {
     { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
   ];
 
-  const allItems = [...userItems, ...presetItems];
+  const allItems = [...presetItems];
 
   const filteredItems = allItems.filter((item) => {
     const matchesCategory = activeTab === "Popular" || item.category === activeTab;
@@ -195,7 +210,12 @@ export default function Index() {
         </View>
       )}
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.tabContainer}>
           {["Popular", "Home", "Books", "Tools"].map((tab) => (
             <TouchableOpacity
@@ -482,20 +502,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#4b5563",
   },
- bottomNav: {
-  backgroundColor: "#ffffff",
-  flexDirection: "row",
-  justifyContent: "space-evenly",
-  alignItems: "center",
-  paddingVertical: 8,
-  borderTopWidth: 1,
-  borderTopColor: "#e5e7eb",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: -2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 8,
-},
+  bottomNav: {
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
+  },
 
   navItem: {
     alignItems: "center",

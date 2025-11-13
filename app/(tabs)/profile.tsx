@@ -1,15 +1,16 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { RefreshControl } from "react-native";
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
   StyleSheet,
   Image,
   ScrollView,
-  //TouchableOpacity,
   SafeAreaView,
-  //TextInput,
+  TouchableOpacity
 } from "react-native";
-//import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const roseImage = require("../../assets/images/rose.png");
 
@@ -21,28 +22,52 @@ interface Item {
   category: string;
 }
 
-const listings: Item[] = [
-  { id: 1, name: "Basketball", count: 5, image: roseImage, category: "User" },
-  {
-    id: 2,
-    name: "Laptop Charger",
-    count: 2,
-    image: roseImage,
-    category: "User",
-  },
-  {
-    id: 3,
-    name: "Textbook: Calculus",
-    count: 10,
-    image: roseImage,
-    category: "User",
-  },
-];
-
 export default function Profile() {
+  const [listings, setListings] = useState<Item[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
+
+  const loadItems = async () => {
+    const stored = await AsyncStorage.getItem("userItems");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+
+      const fixed = parsed.map((item: any) => ({
+        ...item,
+        count: item.count ?? 0,
+      }));
+
+      setListings(fixed);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadItems();
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    const loadItems = async () => {
+      const stored = await AsyncStorage.getItem("userItems");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+
+        const fixed = parsed.map((item: any) => ({
+          ...item,
+          count: item.count ?? 0,
+        }));
+
+        setListings(fixed);
+      }
+
+    };
+    loadItems();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Custom Top Header: Profile Picture, Name, Neighbors */}
+      {/* Top profile header */}
       <View style={styles.profileTop}>
         <Image source={roseImage} style={styles.profileImage} />
         <View style={styles.profileInfo}>
@@ -51,34 +76,51 @@ export default function Profile() {
         </View>
       </View>
 
-      {/* Listings Label */}
-      <Text
-        style={[styles.sectionHeaderText, { marginTop: 12, marginLeft: 12 }]}
-      >
+      <Text style={[styles.sectionHeaderText, { marginTop: 12, marginLeft: 12 }]}>
         Your Listings
       </Text>
 
-      {/* Listings Grid */}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.recommendedGrid}>
           {listings.map((item) => (
             <View key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
                 <Image
-                  source={item.image}
+                  source={typeof item.image === "string" ? { uri: item.image } : item.image}
                   style={styles.recommendedImage}
                   resizeMode="cover"
                 />
               </View>
+
               <View style={styles.recommendedInfo}>
                 <Text style={styles.recommendedName} numberOfLines={1}>
                   {item.name}
                 </Text>
+
                 <View style={styles.countRow}>
                   <Text style={styles.countTextSmall}>{item.count}</Text>
                 </View>
-                {/* Optional: You can add edit button or other controls here */}
               </View>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() =>
+                  router.push({
+                    pathname: "/edit-item",
+                    params: {
+                      id: item.id,
+                      name: item.name,
+                      image: typeof item.image === "string" ? item.image : "",
+                    },
+                  })
+                }
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -178,4 +220,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6b7280",
   },
+  editButton: {
+    marginTop: 6,
+    paddingVertical: 6,
+    backgroundColor: "#f97316",
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  editButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
 });

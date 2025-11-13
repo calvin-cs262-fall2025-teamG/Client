@@ -57,8 +57,10 @@ export default function ListItem() {
     const updated = [newItem, ...parsed];
 
     await AsyncStorage.setItem("userItems", JSON.stringify(updated));
-    router.push("/");
+
+    router.push("/profile");
   };
+
 
   return (
     <PageContainer>
