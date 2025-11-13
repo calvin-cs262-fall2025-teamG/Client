@@ -10,7 +10,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import PageContainer from "./components/PageContainer"; // 👈 replaces CloseButton + layout
+import PageContainer from "../components/PageContainer"; // 👈 replaces CloseButton + layout
 
 export default function ListItem() {
   const router = useRouter();

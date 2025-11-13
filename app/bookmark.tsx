@@ -1,102 +1,57 @@
-import React from "react";
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SafeAreaView,
   TouchableOpacity,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useBookmarks } from "../context/BookmarksContext";
-import CloseButton from "./components/CloseButton";
+import { useRouter } from "expo-router";
 
-export default function BookmarkScreen() {
-  const { ids, byId, remove, ready } = useBookmarks();
-
-  const data = Array.from(ids)
-    .map((id) => byId[id])
-    .filter(Boolean);
-
-  if (!ready) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Bookmarks</Text>
-          <Text>Loading…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Bookmarks</Text>
-          <Text>No items saved yet.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+export default function Cart() {
+  const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <CloseButton />
-        <Text style={styles.title}>Bookmarks</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>🛍️ Your Cart</Text>
+        <Text style={styles.subtitle}>This is the cart screen!</Text>
 
-      <FlatList
-        data={data}
-        keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-            <TouchableOpacity onPress={() => remove(item.id)}>
-              <Text style={styles.remove}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        contentContainerStyle={styles.listContent}
-      />
+        <TouchableOpacity onPress={() => router.back()} style={styles.button}>
+          <Text style={styles.buttonText}>← Back to Home</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    marginBottom: 8,
-  },
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#f9fafb",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+  content: {
+    alignItems: "center",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginLeft: 12,
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 8,
   },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  subtitle: {
+    fontSize: 16,
+    color: "#4b5563",
+    marginBottom: 24,
+  },
+  button: {
+    backgroundColor: "#15803d",
+    paddingHorizontal: 20,
     paddingVertical: 10,
+    borderRadius: 8,
   },
-  itemTitle: { fontSize: 16 },
-  remove: { fontSize: 14, color: "#ef4444" },
-  separator: { height: 1, backgroundColor: "#e5e7eb" },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+  },
 });

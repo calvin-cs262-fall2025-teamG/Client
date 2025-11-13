@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import PageContainer from "./components/PageContainer";
+import PageContainer from "../components/PageContainer";
 
 interface ChatPreview {
   id: number;
@@ -116,7 +116,7 @@ export default function Chat() {
                 <Text
                   style={[
                     styles.lastMessage,
-                    chat.unread && styles.unreadMessage,
+                    //chat.unread && styles.unreadMessage,
                   ]}
                   numberOfLines={1}
                 >
@@ -135,6 +135,10 @@ export default function Chat() {
     </PageContainer>
   );
 }
+
+export const options = {
+  headerShown: false,
+};
 
 const styles = StyleSheet.create({
   header: {

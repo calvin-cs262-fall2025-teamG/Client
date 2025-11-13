@@ -1,18 +1,31 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { BookmarksProvider } from "../context/BookmarksContext";
 
 export default function RootLayout() {
   return (
-    <BookmarksProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="bookmark" />
-        <Stack.Screen name="cart" />
-        <Stack.Screen name="browse" />
-        <Stack.Screen name="chat" />
-        <Stack.Screen name="profile" />
-      </Stack>
-    </BookmarksProvider>
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="bookmark"
+        options={{
+          title: "Bookmarks",
+          headerStyle: { backgroundColor: "white" },
+          headerTintColor: "#3b1b0d",
+          headerBackButtonDisplayMode: "minimal",
+          headerTitleStyle: { fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="cart"
+        options={{
+          title: "Cart",
+          headerTitleAlign: "left",
+          headerStyle: { backgroundColor: "white" },
+          headerTintColor: "#3b1b0d",
+          headerBackButtonDisplayMode: "minimal",
+          headerTitleStyle: { fontWeight: "bold" },
+        }}
+      />
+    </Stack>
   );
 }
