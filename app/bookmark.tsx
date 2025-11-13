@@ -6,11 +6,14 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context"; // ✅ correct import
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useBookmarks } from "./context/BookmarksContext";
 
 export default function BookmarkScreen() {
   const { ids, byId, remove, ready } = useBookmarks();
+  const router = useRouter();
 
   const data = Array.from(ids)
     .map((id) => byId[id])
@@ -20,7 +23,13 @@ export default function BookmarkScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <Text style={styles.title}>Bookmarks</Text>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="black" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Bookmarks</Text>
+            <View style={{ width: 24 }} />
+          </View>
           <Text>Loading…</Text>
         </View>
       </SafeAreaView>
@@ -31,7 +40,13 @@ export default function BookmarkScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <Text style={styles.title}>Bookmarks</Text>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="black" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Bookmarks</Text>
+            <View style={{ width: 24 }} />
+          </View>
           <Text>No items saved yet.</Text>
         </View>
       </SafeAreaView>
@@ -41,7 +56,15 @@ export default function BookmarkScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Bookmarks</Text>
+        {/* Header with back arrow */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Bookmarks</Text>
+          <View style={{ width: 24 }} /> 
+        </View>
+
         <FlatList
           data={data}
           keyExtractor={(item) => item.id}
@@ -68,22 +91,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 40, // ✅ added this to give extra space below notch/time
     backgroundColor: "#fff",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 12,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 10,
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    textAlign: "center",
+    flex: 1,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
-  itemTitle: { fontSize: 16 },
-  remove: { fontSize: 14, color: "#ef4444" },
-  separator: { height: 1, backgroundColor: "#e5e7eb" },
+  itemTitle: {
+    fontSize: 16,
+  },
+  remove: {
+    fontSize: 14,
+    color: "#ef4444",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+  },
 });

@@ -17,7 +17,6 @@ import BookmarkButton from "./components/BookmarkButton";
 
 const logo = require("../assets/images/logo.png");
 
-
 const charger = require("../assets/images/charger.jpg");
 const corebook = require("../assets/images/corebook.jpg");
 const chair = require("../assets/images/chair.jpg");
@@ -26,7 +25,6 @@ const tractor = require("../assets/images/tractor.jpg");
 const vacuum = require("../assets/images/vacuum.jpg");
 
 const cartIcon = require("../assets/images/cart.png");
-const bookmarkIcon = require("../assets/images/bookmark.png");
 const searchIcon = require("../assets/images/search.png");
 const homeIcon = require("../assets/images/home.png");
 const listIcon = require("../assets/images/list.png");
@@ -54,9 +52,7 @@ export default function Index() {
       try {
         const saved = await AsyncStorage.getItem("recentSearches");
         if (saved) setRecentSearches(JSON.parse(saved));
-      } catch (err) {
-        console.error("Error loading recent searches", err);
-      }
+      } catch {}
     };
     loadSearches();
   }, []);
@@ -65,9 +61,7 @@ export default function Index() {
     const saveSearches = async () => {
       try {
         await AsyncStorage.setItem("recentSearches", JSON.stringify(recentSearches));
-      } catch (err) {
-        console.error("Error saving recent searches", err);
-      }
+      } catch {}
     };
     saveSearches();
   }, [recentSearches]);
@@ -86,9 +80,7 @@ export default function Index() {
     try {
       await AsyncStorage.removeItem("recentSearches");
       setRecentSearches([]);
-    } catch (err) {
-      console.error("Error clearing recent searches", err);
-    }
+    } catch {}
   };
 
   const allItems: Item[] = [
@@ -126,21 +118,19 @@ export default function Index() {
             returnKeyType="search"
           />
 
-
           {(isSearchFocused || searchQuery.length > 0) && (
             <TouchableOpacity
               onPress={() => {
                 setSearchQuery("");
                 setIsSearchFocused(false);
                 setActiveTab("Popular");
-                searchInputRef.current?.blur(); // 👈 hides cursor and keyboard
+                searchInputRef.current?.blur();
               }}
             >
               <Image source={closeIcon} style={styles.closeIcon} resizeMode="contain" />
             </TouchableOpacity>
           )}
         </View>
-
 
         <View style={styles.iconGroup}>
           <BookmarkHeaderIcon />
@@ -153,9 +143,7 @@ export default function Index() {
       {isSearchFocused && recentSearches.length > 0 && (
         <View style={styles.recentDropdown}>
           {recentSearches
-            .filter((term) =>
-              term.toLowerCase().includes(searchQuery.toLowerCase())
-            )
+            .filter((term) => term.toLowerCase().includes(searchQuery.toLowerCase()))
             .map((term, index) => (
               <TouchableOpacity
                 key={index}
@@ -169,10 +157,7 @@ export default function Index() {
               </TouchableOpacity>
             ))}
 
-          <TouchableOpacity
-            onPress={handleClearRecentSearches}
-            style={styles.clearButton}
-          >
+          <TouchableOpacity onPress={handleClearRecentSearches} style={styles.clearButton}>
             <Text style={styles.clearButtonText}>Clear All</Text>
           </TouchableOpacity>
         </View>
@@ -189,9 +174,7 @@ export default function Index() {
               }}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab}
-              </Text>
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -201,22 +184,14 @@ export default function Index() {
             <TouchableOpacity key={item.id} style={styles.recommendedItem}>
               <View style={styles.recommendedImageContainer}>
                 <Image source={item.image} style={styles.recommendedImage} resizeMode="cover" />
-                <View style={styles.heartOverlayBig}>
-                  <BookmarkButton item={{ id: String(item.id), title: item.name }} size={20} />
-                </View>
               </View>
 
               <View style={styles.recommendedInfo}>
                 <Text style={styles.recommendedName} numberOfLines={1}>
                   {item.name}
                 </Text>
-                <View style={styles.countRow}>
-                  <Text style={styles.countTextSmall}>{item.count}</Text>
-                  <Image
-                    source={bookmarkIcon}
-                    style={styles.smallBookmarkIcon}
-                    resizeMode="contain"
-                  />
+                <View style={styles.bookmarkBottomRight}>
+                  <BookmarkButton item={{ id: String(item.id), title: item.name }} size={20} />
                 </View>
               </View>
             </TouchableOpacity>
@@ -250,13 +225,8 @@ export default function Index() {
   );
 }
 
-
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
+  container: { flex: 1, backgroundColor: "#f9fafb" },
   header: {
     backgroundColor: "#ffffff",
     flexDirection: "row",
@@ -269,19 +239,8 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  logoImage: {
-    width: 60,
-    height: 60,
-  },
-  closeIcon: {
-    width: 15,
-    height: 15,
-    marginLeft: 8,
-    tintColor: "#323335ff",
-  },
-  logo: {
-    fontSize: 24,
-  },
+  logoImage: { width: 60, height: 60 },
+  closeIcon: { width: 15, height: 15, marginLeft: 8, tintColor: "#323335ff" },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
@@ -292,132 +251,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginHorizontal: 12,
   },
-  searchIconImage: {
-    width: 18,
-    height: 18,
-    marginRight: 8,
-    alignSelf: "center",
-  },
-  smallBookmarkIcon: {
-    width: 14,
-    height: 14,
-    marginLeft: 1,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#000",
-  },
-  navIconImage: {
-    width: 24,
-    height: 24,
-    marginBottom: 4,
-  },
-  iconGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  icon: {
-    fontSize: 22,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  sectionHeader: {
-    backgroundColor: "#15803d",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  recommendedImage: {
-    width: "100%",
-    height: "100%",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  orangeHeader: {
-    backgroundColor: "#f97316",
-  },
-  sectionHeaderText: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  listingsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    backgroundColor: "#ffffff",
-  },
-  listingItem: {
-    width: "25%",
-    alignItems: "center",
-    paddingHorizontal: 4,
-    marginBottom: 12,
-  },
-  listingImageContainer: {
-    backgroundColor: "#e5e7eb",
-    borderRadius: 8,
-    width: "100%",
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  listingEmoji: {
-    fontSize: 36,
-  },
-  listingName: {
-    fontSize: 11,
-    fontWeight: "500",
-    textAlign: "center",
-    width: "100%",
-  },
-  countRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  countText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  bookmarkIcon: {
-    fontSize: 10,
-  },
+  searchIconImage: { width: 18, height: 18, marginRight: 8, alignSelf: "center" },
+  searchInput: { flex: 1, fontSize: 14, color: "#000" },
+  iconGroup: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconButton: { padding: 4 },
+  scrollView: { flex: 1 },
   tabContainer: {
     flexDirection: "row",
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#f97316",
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#4b5563",
-  },
-  activeTabText: {
-    color: "#f97316",
-  },
-  recommendedGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    backgroundColor: "#f9fafb",
-  },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: "#f97316" },
+  tabText: { fontSize: 14, fontWeight: "500", color: "#4b5563" },
+  activeTabText: { color: "#f97316" },
+  recommendedGrid: { flexDirection: "row", flexWrap: "wrap", padding: 12, backgroundColor: "#f9fafb" },
   recommendedItem: {
     width: "48%",
     backgroundColor: "#ffffff",
@@ -437,28 +286,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
-    position: "relative",
     overflow: "hidden",
   },
-  heartOverlayBig: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-  },
-  recommendedEmoji: {
-    fontSize: 60,
+  recommendedImage: {
+    width: "100%",
+    height: "100%",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   recommendedInfo: {
     padding: 12,
+    position: "relative",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  recommendedName: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  countTextSmall: {
-    fontSize: 12,
-    color: "#4b5563",
+  recommendedName: { fontSize: 14, fontWeight: "500" },
+  bookmarkBottomRight: {
+    position: "absolute",
+    right: 12,
+    bottom: 10,
   },
   bottomNav: {
     backgroundColor: "#ffffff",
@@ -474,31 +321,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  navIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconActive: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  navIconLarge: {
-    fontSize: 28,
-  },
-  navText: {
-    fontSize: 11,
-    color: "#4b5563",
-  },
-  navTextActive: {
-    fontSize: 11,
-    color: "#374151",
-  },
+  navItem: { alignItems: "center", justifyContent: "center", paddingVertical: 8, paddingHorizontal: 12 },
+  navIconImage: { width: 24, height: 24, marginBottom: 4 },
+  navText: { fontSize: 11, color: "#4b5563" },
+  navTextActive: { fontSize: 11, color: "#374151" },
   recentDropdown: {
     position: "absolute",
     top: 110,
@@ -520,19 +346,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
-  recentText: {
-    fontSize: 14,
-    color: "#000",
-  },
-  clearButton: {
-    paddingVertical: 10,
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-  },
-  clearButtonText: {
-    color: "#f97316",
-    fontWeight: "600",
-    fontSize: 14,
-  },
+  recentText: { fontSize: 14, color: "#000" },
+  clearButton: { paddingVertical: 10, alignItems: "center", borderTopWidth: 1, borderTopColor: "#e5e7eb" },
+  clearButtonText: { color: "#f97316", fontWeight: "600", fontSize: 14 },
 });

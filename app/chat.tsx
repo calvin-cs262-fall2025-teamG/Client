@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ interface ChatPreview {
 
 export default function Chat() {
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const chats: ChatPreview[] = [
     {
@@ -76,9 +77,29 @@ export default function Chat() {
     },
   ];
 
+  const filteredChats = chats.filter((chat) => {
+    if (!searchQuery.trim()) {
+      return true;
+    }
+    const q = searchQuery.toLowerCase();
+    return (
+      chat.name.toLowerCase().includes(q) ||
+      chat.lastMessage.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* No green header, only search bar */}
+      {/* Top Bar with Back Button */}
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.push("/")}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.pageTitle}>Messages</Text>
+        <View style={{ width: 20 }} />
+      </View>
+
+      {/* Search Bar */}
       <View style={styles.searchWrapper}>
         <View style={styles.searchContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -86,13 +107,15 @@ export default function Chat() {
             style={styles.searchInput}
             placeholder="Search messages"
             placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
       </View>
 
       {/* Chat list */}
       <ScrollView style={styles.chatList}>
-        {chats.map((chat) => (
+        {filteredChats.map((chat) => (
           <TouchableOpacity
             key={chat.id}
             style={styles.chatItem}
@@ -116,7 +139,7 @@ export default function Chat() {
                 <Text
                   style={[
                     styles.lastMessage,
-                    chat.unread && styles.unreadMessage,
+                    chat.unread ? styles.unreadMessage : undefined,
                   ]}
                   numberOfLines={1}
                 >
@@ -133,7 +156,7 @@ export default function Chat() {
         ))}
       </ScrollView>
 
-      {/* Bottom nav copied from Home, Chat active */}
+      {/* Bottom nav (same style as Home) */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
           style={styles.navItem}
@@ -197,6 +220,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f9fafb",
+  },
+
+  /* Top bar */
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 6,
+    backgroundColor: "#f9fafb",
+  },
+  backArrow: {
+    fontSize: 22,
+    color: "#111827",
+  },
+  pageTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
   },
 
   /* Search */
