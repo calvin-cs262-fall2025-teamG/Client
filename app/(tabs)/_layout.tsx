@@ -59,8 +59,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          headerShown: false,
-          title: "Chat",
+          title: "Chats",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "chatbubble" : "chatbubble-outline"}
