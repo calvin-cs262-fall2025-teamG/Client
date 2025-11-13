@@ -1,254 +1,155 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
-  TouchableOpacity,
   ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  SafeAreaView,
 } from "react-native";
-import { useRouter } from "expo-router";
-import PageContainer from "../components/PageContainer";
+import { Ionicons } from "@expo/vector-icons";
 
-interface ChatPreview {
+// Preset images
+const charger = require("../../assets/images/charger.jpg");
+const corebook = require("../../assets/images/corebook.jpg");
+const chair = require("../../assets/images/chair.jpg");
+const tools = require("../../assets/images/tools.jpg");
+const tractor = require("../../assets/images/tractor.jpg");
+const vacuum = require("../../assets/images/vacuum.jpg");
+
+interface Item {
   id: number;
   name: string;
-  avatar: string;
-  lastMessage: string;
-  time: string;
-  unread?: number;
+  count: number;
+  image: any;
+  category: string;
 }
 
-export default function Chat() {
-  const router = useRouter();
+export default function SearchScreen() {
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const chats: ChatPreview[] = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      avatar: "👩",
-      lastMessage: "Perfect! I need the book for CS 262 😄",
-      time: "2m",
-      unread: 2,
-    },
-    {
-      id: 2,
-      name: "Mike Chen",
-      avatar: "👨",
-      lastMessage: "Is the tractor still available?",
-      time: "1h",
-      unread: 1,
-    },
-    {
-      id: 3,
-      name: "Emma Davis",
-      avatar: "👩‍🦰",
-      lastMessage: "Thanks for the quick response!",
-      time: "3h",
-    },
-    {
-      id: 4,
-      name: "James Wilson",
-      avatar: "👨‍🦱",
-      lastMessage: "Can we meet tomorrow at 3pm?",
-      time: "5h",
-    },
-    {
-      id: 5,
-      name: "Lisa Brown",
-      avatar: "👩‍🦳",
-      lastMessage: "The couch looks great!",
-      time: "1d",
-    },
-    {
-      id: 6,
-      name: "Tom Anderson",
-      avatar: "👨‍🦲",
-      lastMessage: "When can I borrow it?",
-      time: "2d",
-    },
+  const presetItems: Item[] = [
+    { id: 1, name: "USBC Charger", count: 254, image: charger, category: "Popular" },
+    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books" },
+    { id: 3, name: "Chair", count: 180, image: chair, category: "Home" },
+    { id: 4, name: "Tools", count: 156, image: tools, category: "Tools" },
+    { id: 5, name: "Tractor", count: 180, image: tractor, category: "Tools" },
+    { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
   ];
 
+  const results = presetItems.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <PageContainer>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>💬 Messages</Text>
-        <TouchableOpacity style={styles.composeButton}>
-          <Text style={styles.composeIcon}>✏️</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>Search</Text>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
+      {/* SEARCH BAR */}
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={18} color="#6b7280" style={{ marginRight: 6 }} />
         <TextInput
-          style={styles.searchInput}
-          placeholder="Search messages"
+          placeholder="Search for items"
           placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          style={styles.searchInput}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery("")}>
+            <Ionicons name="close-circle" size={18} color="#6b7280" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Chat List */}
-      <ScrollView style={styles.chatList}>
-        {chats.map((chat) => (
-          <TouchableOpacity
-            key={chat.id}
-            style={styles.chatItem}
-            onPress={() =>
-              router.push({
-                pathname: "/chat-thread",
-                params: { id: chat.id, name: chat.name },
-              })
-            }
-          >
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatar}>{chat.avatar}</Text>
-            </View>
-
-            <View style={styles.chatContent}>
-              <View style={styles.chatHeader}>
-                <Text style={styles.chatName}>{chat.name}</Text>
-                <Text style={styles.chatTime}>{chat.time}</Text>
-              </View>
-
-              <View style={styles.messageRow}>
-                <Text
-                  style={[
-                    styles.lastMessage,
-                    //chat.unread && styles.unreadMessage,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {chat.lastMessage}
+      {/* RESULTS */}
+      <ScrollView style={{ flex: 1 }}>
+        <View style={styles.grid}>
+          {results.length > 0 ? (
+            results.map((item) => (
+              <View key={item.id} style={styles.card}>
+                <Image source={item.image} style={styles.cardImage} />
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  {item.name}
                 </Text>
-                {chat.unread && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadText}>{chat.unread}</Text>
-                  </View>
-                )}
+                <Text style={styles.cardCount}>{item.count} neighbors</Text>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            ))
+          ) : (
+            <Text style={styles.noResults}>No results found</Text>
+          )}
+        </View>
       </ScrollView>
-    </PageContainer>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+    padding: 16,
+  },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#f97316",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: "700",
+    color: "#111827",
+    marginBottom: 16,
   },
-  composeButton: {
-    padding: 4,
-  },
-  composeIcon: {
-    fontSize: 20,
-  },
-  searchContainer: {
+  searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  searchIcon: {
-    marginRight: 8,
-    fontSize: 16,
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 20,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: "#111827",
-  },
-  chatList: {
-    flex: 1,
-  },
-  chatItem: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#f3f4f6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatar: {
-    fontSize: 32,
-  },
-  chatContent: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  chatHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  chatName: {
     fontSize: 16,
-    fontWeight: "600",
     color: "#111827",
   },
-  chatTime: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-  messageRow: {
+  grid: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 14,
+    paddingBottom: 50,
   },
-  lastMessage: {
-    flex: 1,
-    fontSize: 14,
+  card: {
+    width: "47%",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cardImage: {
+    width: "100%",
+    height: 140,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    padding: 10,
+    paddingBottom: 2,
+    color: "#111827",
+  },
+  cardCount: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+    fontSize: 13,
     color: "#6b7280",
   },
-  unreadMessage: {
-    color: "#111827",
-    fontWeight: "500",
-  },
-  unreadBadge: {
-    backgroundColor: "#f97316",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-    marginLeft: 8,
-  },
-  unreadText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
+  noResults: {
+    fontSize: 16,
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: 30,
   },
 });
