@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import {
   View,
@@ -23,7 +24,28 @@ interface Item {
 
 export default function Profile() {
   const [listings, setListings] = useState<Item[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+
+  const loadItems = async () => {
+    const stored = await AsyncStorage.getItem("userItems");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+
+      const fixed = parsed.map((item: any) => ({
+        ...item,
+        count: item.count ?? 0,
+      }));
+
+      setListings(fixed);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadItems();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     const loadItems = async () => {
@@ -58,7 +80,12 @@ export default function Profile() {
         Your Listings
       </Text>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.recommendedGrid}>
           {listings.map((item) => (
             <View key={item.id} style={styles.recommendedItem}>
