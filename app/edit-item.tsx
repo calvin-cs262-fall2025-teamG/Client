@@ -1,15 +1,15 @@
 import React, { useState } from "react";
-import { 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Image, 
-  StyleSheet, 
-  Alert 
+import {
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, Stack } from "expo-router"; 
 import PageContainer from "./components/PageContainer";
 
 export default function EditItem() {
@@ -39,63 +39,71 @@ export default function EditItem() {
     );
 
     await AsyncStorage.setItem("userItems", JSON.stringify(updated));
-    router.push("/");
+
+    router.replace("/(tabs)/profile");
   };
 
   const deleteItem = async () => {
-    Alert.alert(
-      "Delete Item",
-      "Are you sure you want to delete this item?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            const stored = await AsyncStorage.getItem("userItems");
-            let items = stored ? JSON.parse(stored) : [];
-            const updated = items.filter((item: any) => item.id != id);
-            await AsyncStorage.setItem("userItems", JSON.stringify(updated));
-            router.push("/");
-          },
+    Alert.alert("Delete Item", "Are you sure you want to delete this item?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const stored = await AsyncStorage.getItem("userItems");
+          let items = stored ? JSON.parse(stored) : [];
+
+          const updated = items.filter((item: any) => item.id != id);
+          await AsyncStorage.setItem("userItems", JSON.stringify(updated));
+
+          router.replace("/(tabs)/profile");
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
-    <PageContainer>
-      <Text style={styles.header}>Edit Item</Text>
-
-      <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-        <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-      </TouchableOpacity>
-
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-        placeholder="Edit item name"
-        placeholderTextColor="#6b7280"
+    <>
+      <Stack.Screen
+        options={{
+          title: "Edit Item",
+          headerBackTitle: "",
+        }}
       />
 
-      <TouchableOpacity style={styles.button} onPress={saveEdit}>
-        <Text style={styles.buttonText}>Save Changes</Text>
-      </TouchableOpacity>
+      <PageContainer>
+        <Text style={styles.header}>Edit Item</Text>
 
-      <TouchableOpacity style={styles.deleteButton} onPress={deleteItem}>
-        <Text style={styles.deleteButtonText}>Delete Item</Text>
-      </TouchableOpacity>
-    </PageContainer>
+        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+        </TouchableOpacity>
+
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          style={styles.input}
+          placeholder="Edit item name"
+          placeholderTextColor="#6b7280"
+        />
+
+        <TouchableOpacity style={styles.button} onPress={saveEdit}>
+          <Text style={styles.buttonText}>Save Changes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.deleteButton} onPress={deleteItem}>
+          <Text style={styles.deleteButtonText}>Delete Item</Text>
+        </TouchableOpacity>
+      </PageContainer>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { 
-    fontSize: 24, 
-    fontWeight: "700", 
-    marginBottom: 20, 
-    color: "#111827" 
+  header: {
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 20,
+    color: "#111827",
   },
   imagePicker: {
     height: 250,
@@ -106,10 +114,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     overflow: "hidden",
   },
-  imagePreview: { 
-    width: "100%", 
-    height: "100%", 
-    borderRadius: 10 
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 10,
   },
   input: {
     backgroundColor: "#f9fafb",
@@ -127,10 +135,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  buttonText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    fontWeight: "600" 
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   deleteButton: {
     marginTop: 12,
