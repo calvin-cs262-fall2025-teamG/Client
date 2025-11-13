@@ -117,7 +117,7 @@ export default function Index() {
 
         <View style={styles.searchContainer}>
           <Image
-            source={require("../../assets/images/search.png")}
+            source={require("../../assets/images/close.png")}
             style={styles.searchIconImage}
             resizeMode="contain"
           />

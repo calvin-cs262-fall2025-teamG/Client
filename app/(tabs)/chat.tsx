@@ -6,14 +6,23 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Image,
+  SafeAreaView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import PageContainer from "../components/PageContainer";
+import { Ionicons } from "@expo/vector-icons";
+
+const jacobImage = require("../../assets/images/jacob.png");
+const helenImage = require("../../assets/images/helen.png");
+const lailaImage = require("../../assets/images/laila.png");
+const chloeImage = require("../../assets/images/chloe.png");
+const gregImage = require("../../assets/images/greg.png");
+const brynImage = require("../../assets/images/bryn.png");
 
 interface ChatPreview {
   id: number;
   name: string;
-  avatar: string;
+  avatar: any;
   lastMessage: string;
   time: string;
   unread?: number;
@@ -25,66 +34,65 @@ export default function Chat() {
   const chats: ChatPreview[] = [
     {
       id: 1,
-      name: "Sarah Johnson",
-      avatar: "👩",
+      name: "Bryn Lamppa",
+      avatar: brynImage,
       lastMessage: "Perfect! I need the book for CS 262 😄",
       time: "2m",
       unread: 2,
     },
     {
       id: 2,
-      name: "Mike Chen",
-      avatar: "👨",
+      name: "Helen Lee",
+      avatar: helenImage,
       lastMessage: "Is the tractor still available?",
       time: "1h",
       unread: 1,
     },
     {
       id: 3,
-      name: "Emma Davis",
-      avatar: "👩‍🦰",
+      name: "Laila Smith",
+      avatar: lailaImage,
       lastMessage: "Thanks for the quick response!",
       time: "3h",
     },
     {
       id: 4,
-      name: "James Wilson",
-      avatar: "👨‍🦱",
+      name: "Chloe Kottwitz",
+      avatar: chloeImage,
       lastMessage: "Can we meet tomorrow at 3pm?",
       time: "5h",
     },
     {
       id: 5,
-      name: "Lisa Brown",
-      avatar: "👩‍🦳",
+      name: "Gregory Goodfellow",
+      avatar: gregImage,
       lastMessage: "The couch looks great!",
       time: "1d",
     },
     {
       id: 6,
-      name: "Tom Anderson",
-      avatar: "👨‍🦲",
+      name: "Jacob Lanning",
+      avatar: jacobImage,
       lastMessage: "When can I borrow it?",
       time: "2d",
     },
   ];
 
   return (
-    <PageContainer>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>💬 Messages</Text>
-        <TouchableOpacity style={styles.composeButton}>
-          <Text style={styles.composeIcon}>✏️</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Removed orange header */}
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons
+          name="search"
+          size={16}
+          color="#6b7280"
+          style={styles.searchIcon}
+        />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search messages"
+          placeholder="Search Messages"
           placeholderTextColor="#9ca3af"
         />
       </View>
@@ -103,7 +111,7 @@ export default function Chat() {
             }
           >
             <View style={styles.avatarContainer}>
-              <Text style={styles.avatar}>{chat.avatar}</Text>
+              <Image source={chat.avatar} style={styles.avatarImage} />
             </View>
 
             <View style={styles.chatContent}>
@@ -113,13 +121,7 @@ export default function Chat() {
               </View>
 
               <View style={styles.messageRow}>
-                <Text
-                  style={[
-                    styles.lastMessage,
-                    //chat.unread && styles.unreadMessage,
-                  ]}
-                  numberOfLines={1}
-                >
+                <Text style={styles.lastMessage} numberOfLines={1}>
                   {chat.lastMessage}
                 </Text>
                 {chat.unread && (
@@ -132,7 +134,7 @@ export default function Chat() {
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </PageContainer>
+    </SafeAreaView>
   );
 }
 
@@ -141,26 +143,9 @@ export const options = {
 };
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#f97316",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  composeButton: {
-    padding: 4,
-  },
-  composeIcon: {
-    fontSize: 20,
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
   },
   searchContainer: {
     flexDirection: "row",
@@ -169,7 +154,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    marginTop: 12,
     marginBottom: 12,
+    marginHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -200,13 +187,17 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
+    overflow: "hidden",
     backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
-  avatar: {
-    fontSize: 32,
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    resizeMode: "cover",
   },
   chatContent: {
     flex: 1,
