@@ -102,7 +102,7 @@ export default function Index() {
     { id: 6, name: "Vacuum", count: 156, image: vacuum, category: "Home" },
   ];
 
-  const allItems = [...userItems, ...presetItems];
+ const allItems = [...presetItems];
 
   const filteredItems = allItems.filter((item) => {
     const matchesCategory = activeTab === "Popular" || item.category === activeTab;
@@ -117,7 +117,7 @@ export default function Index() {
 
         <View style={styles.searchContainer}>
           <Image
-            source={require("../../assets/images/search.png")}
+            source={require("../../assets/images/close.png")}
             style={styles.searchIconImage}
             resizeMode="contain"
           />
