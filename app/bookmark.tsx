@@ -1,221 +1,128 @@
 import React from "react";
-import {
-  Image,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { useBookmarks } from "../context/BookmarksContext";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-const charger = require("../assets/images/charger.jpg");
-const corebook = require("../assets/images/corebook.jpg");
-const chair = require("../assets/images/chair.jpg");
-const tools = require("../assets/images/tools.jpg");
-const tractor = require("../assets/images/tractor.jpg");
-const vacuum = require("../assets/images/vacuum.jpg");
-const keurig = require("../assets/images/keurig.png");
-
-interface Item {
-  id: number;
-  name: string;
-  count: number;
-  image: any;
-  category: string;
-  status: "none" | "borrowed";
-}
-
-const presetItems: Item[] = [
-  {
-    id: 1,
-    name: "USB-C Charger",
-    count: 254,
-    image: charger,
-    category: "Popular",
-    status: "none",
-  },
-  {
-    id: 2,
-    name: "Core 100 Book",
-    count: 243,
-    image: corebook,
-    category: "Books",
-    status: "borrowed",
-  },
-  {
-    id: 3,
-    name: "Office Chair",
-    count: 180,
-    image: chair,
-    category: "Home",
-    status: "none",
-  },
-  {
-    id: 4,
-    name: "Keurig",
-    count: 180,
-    image: keurig,
-    category: "Home",
-    status: "none",
-  },
-  {
-    id: 5,
-    name: "Tool Set",
-    count: 156,
-    image: tools,
-    category: "Tools",
-    status: "none",
-  },
-  {
-    id: 6,
-    name: "Garden Tractor",
-    count: 180,
-    image: tractor,
-    category: "Tools",
-    status: "none",
-  },
-  {
-    id: 7,
-    name: "Vacuum",
-    count: 156,
-    image: vacuum,
-    category: "Home",
-    status: "borrowed",
-  },
-];
-
-export default function Bookmark() {
+export default function BookmarkScreen() {
+  const { ids, byId, remove } = useBookmarks();
   const router = useRouter();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.grid}>
-          {presetItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.item}
-              onPress={() => router.push(`/item/${item.id}`)}
-            >
-              <View style={styles.imageContainer}>
-                {item.status === "borrowed" && (
-                  <View style={[styles.statusBadge, styles.statusBorrowed]}>
-                    <Text style={styles.statusText}>Borrowed</Text>
-                  </View>
-                )}
+  // Convert byId → array of bookmark items
+  const bookmarkedItems = Object.values(byId);
 
-                <Image
-                  source={item.image}
-                  style={[
-                    styles.image,
-                    item.status === "borrowed" && { opacity: 0.55 },
-                  ]}
-                />
-              </View>
-              <View style={styles.info}>
-                <Text
-                  style={[
-                    styles.name,
-                    item.status === "borrowed" && { opacity: 0.7 },
-                  ]}
+  return (
+    <View style={styles.container}>
+      {bookmarkedItems.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="bookmark-outline" size={60} color="#9ca3af" />
+          <Text style={styles.emptyText}>No bookmarks yet</Text>
+          <Text style={styles.emptySub}>Add items to your bookmarks to see them here.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={bookmarkedItems}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.itemCard}
+              onPress={() => router.push(`/item/${item.id}`)}
+              activeOpacity={0.8}
+            >
+              {item.image ? (
+                <Image source={item.image} style={styles.itemImage} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Ionicons name="image" size={30} color="#9ca3af" />
+                </View>
+              )}
+
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+
+                <TouchableOpacity
+                  onPress={() => remove(item.id)}
+                  style={styles.removeButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  {item.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.count,
-                    item.status === "borrowed" && { opacity: 0.7 },
-                  ]}
-                >
-                  {item.count}
-                </Text>
+                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          )}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 16,
-    backgroundColor: "#fff",
+  container: {
+    flex: 1,
+    backgroundColor: "#fafafa",
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#6b7280",
+
+  emptyText: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#4b5563",
+    marginTop: 12,
   },
-  scrollViewContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 24,
+
+  emptySub: {
+    fontSize: 14,
+    color: "#9ca3af",
+    marginTop: 6,
+    textAlign: "center",
   },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  item: {
-    width: "47.5%",
-    backgroundColor: "#fff",
-    borderRadius: 14,
+
+  itemCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    marginBottom: 16,
     overflow: "hidden",
-    marginBottom: 12,
     shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
     elevation: 2,
   },
-  imageContainer: {
+
+  itemImage: {
     width: "100%",
-    aspectRatio: 1,
+    height: 180,
+  },
+
+  imagePlaceholder: {
+    height: 180,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#f3f4f6",
   },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  statusBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    zIndex: 10,
-  },
-  statusBorrowed: {
-    backgroundColor: "#f73e3eaf",
-  },
-  statusText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  info: {
+
+  itemInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 12,
   },
-  name: {
-    fontSize: 15,
+
+  itemTitle: {
+    fontSize: 16,
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 4,
+    flexShrink: 1,
   },
-  count: {
-    fontSize: 13,
-    color: "#6b7280",
+
+  removeButton: {
+    padding: 4,
   },
 });

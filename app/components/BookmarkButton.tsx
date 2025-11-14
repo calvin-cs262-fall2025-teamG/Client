@@ -6,13 +6,14 @@ import { useBookmarksUnsafe } from "../../context/BookmarksContext";
 type Props = {
   item: { id: string; title: string };
   size?: number;
+  color?: string;
 };
 
-export default function BookmarkButton({ item, size = 20 }: Props) {
+export default function BookmarkButton({ item, size = 20, color = "#3b1b0d" }: Props) {
   const ctx = useBookmarksUnsafe();
 
   if (!ctx) {
-    return <Ionicons name="heart-outline" size={size} />;
+    return <Ionicons name="bookmark-outline" size={size} color={color} />;
   }
 
   const { isSaved, toggle } = ctx;
@@ -20,7 +21,11 @@ export default function BookmarkButton({ item, size = 20 }: Props) {
 
   return (
     <Pressable onPress={() => toggle(item)} hitSlop={8}>
-      <Ionicons name={saved ? "heart" : "heart-outline"} size={size} />
+      <Ionicons 
+        name={saved ? "bookmark" : "bookmark-outline"} 
+        size={size} 
+        color={color}
+      />
     </Pressable>
   );
 }
