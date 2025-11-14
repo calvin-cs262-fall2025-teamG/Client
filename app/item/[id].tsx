@@ -117,30 +117,6 @@ export default function ItemData() {
     );
   }
 
-  // -------- ADD TO CART FUNCTION ----------
-  const addToCart = async () => {
-    try {
-      const existing = await AsyncStorage.getItem("cart");
-      let cart = existing ? JSON.parse(existing) : [];
-
-      // prevent duplicates
-      if (!cart.some((c: any) => c.id === numericId)) {
-        cart.push({
-          id: numericId,
-          name: item.name,
-          image: item.image,
-        });
-      }
-
-      await AsyncStorage.setItem("cart", JSON.stringify(cart));
-
-      // navigate to cart
-      router.push("/cart");
-    } catch (err) {
-      console.log("Error adding to cart:", err);
-    }
-  };
-
   return (
     <ScrollView style={styles.container}>
 
@@ -172,26 +148,36 @@ export default function ItemData() {
           style={styles.viewProfileButton}
           onPress={() =>
             router.push({
-              pathname: "/profile/[name]",
-              params: { name: item.lister.name },
+              pathname: "/chat-thread",
+              params: {
+                name: item.lister.name,
+                avatar: item.lister.avatar,
+              },
             })
           }
         >
-          <Text style={styles.viewProfileText}>View Profile</Text>
+          <Text style={styles.viewProfileText}>Chat</Text>
         </TouchableOpacity>
+
       </View>
 
       {/* ACTION BUTTONS */}
 
-      {item.status === "none" ? (
-        <TouchableOpacity style={styles.borrowButton} onPress={addToCart}>
-          <Text style={styles.borrowText}>Borrow Now</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity style={styles.notifyButton}>
-          <Text style={styles.notifyText}>Notify Me</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={styles.borrowButton}
+        onPress={() =>
+          router.push({
+            pathname: "/borrow-confirmation",
+            params: {
+              itemName: item.name,
+              listerName: item.lister.name
+            },
+          })
+        }
+      >
+        <Text style={styles.borrowText}>Borrow Now</Text>
+      </TouchableOpacity>
+
     </ScrollView>
   );
 }
@@ -279,7 +265,7 @@ const styles = StyleSheet.create({
 
   // --------- BUTTONS ---------
   borrowButton: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#438732ff",
     padding: 16,
     margin: 20,
     borderRadius: 12,

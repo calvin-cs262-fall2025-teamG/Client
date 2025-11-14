@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   SafeAreaView,
   TextInput,
@@ -21,8 +22,10 @@ interface Message {
 
 export default function ChatThread() {
   const router = useRouter();
-  const { name } = useLocalSearchParams();
-  
+  const { name, avatar } = useLocalSearchParams();
+  const avatarNumber = avatar ? Number(avatar) : null;
+
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -36,38 +39,47 @@ export default function ChatThread() {
       isUser: true,
       timestamp: "Yesterday 3:30 PM",
     },
-    // ... rest of messages
   ]);
 
   const [inputText, setInputText] = useState("");
 
   const handleSend = () => {
-    if (inputText.trim()) {
-      const newMessage: Message = {
-        id: messages.length + 1,
-        text: inputText,
-        isUser: true,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages([...messages, newMessage]);
-      setInputText("");
-    }
+    if (!inputText.trim()) return;
+
+    const newMessage: Message = {
+      id: messages.length + 1,
+      text: inputText,
+      isUser: true,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setMessages([...messages, newMessage]);
+    setInputText("");
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
+
         <View style={styles.headerCenter}>
+          {avatarNumber && (
+            <Image
+              source={avatarNumber}
+              style={{ width: 32, height: 32, borderRadius: 16, marginBottom: 4 }}
+            />
+          )}
+
           <Text style={styles.headerTitle}>{name || "Chat"}</Text>
           <Text style={styles.headerSubtitle}>Active now</Text>
         </View>
+
         <TouchableOpacity style={styles.moreButton}>
           <Text style={styles.moreIcon}>⋯</Text>
         </TouchableOpacity>
@@ -81,40 +93,41 @@ export default function ChatThread() {
           style={styles.messages}
           contentContainerStyle={styles.messagesContent}
         >
-          {messages.map((message) => (
-            <View key={message.id}>
+          {messages.map((msg) => (
+            <View key={msg.id}>
               <View
                 style={[
                   styles.messageBubble,
-                  message.isUser
+                  msg.isUser
                     ? styles.messageBubbleRight
                     : styles.messageBubbleLeft,
                 ]}
               >
                 <Text
-                  style={
-                    message.isUser ? styles.messageTextRight : styles.messageText
-                  }
+                  style={msg.isUser ? styles.messageTextRight : styles.messageText}
                 >
-                  {message.text}
+                  {msg.text}
                 </Text>
               </View>
+
               <Text
                 style={[
                   styles.timestamp,
-                  message.isUser ? styles.timestampRight : styles.timestampLeft,
+                  msg.isUser ? styles.timestampRight : styles.timestampLeft,
                 ]}
               >
-                {message.timestamp}
+                {msg.timestamp}
               </Text>
             </View>
           ))}
         </ScrollView>
 
+        {/* INPUT FIELD */}
         <View style={styles.inputContainer}>
           <TouchableOpacity style={styles.plusButton}>
             <Text style={styles.plusIcon}>➕</Text>
           </TouchableOpacity>
+
           <TextInput
             value={inputText}
             onChangeText={setInputText}
@@ -123,8 +136,12 @@ export default function ChatThread() {
             style={styles.textInput}
             multiline
           />
+
           <TouchableOpacity
-            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            style={[
+              styles.sendButton,
+              !inputText.trim() && styles.sendButtonDisabled,
+            ]}
             onPress={handleSend}
             disabled={!inputText.trim()}
           >
@@ -139,6 +156,7 @@ export default function ChatThread() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f9fafb" },
   keyboardView: { flex: 1 },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -147,22 +165,40 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  backButton: { color: "#fff", fontSize: 24, fontWeight: "600", paddingRight: 12 },
+  backButton: { color: "#fff", fontSize: 24, fontWeight: "600" },
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   headerSubtitle: { color: "#d1fae5", fontSize: 12, marginTop: 2 },
-  moreButton: { paddingLeft: 12 },
+  moreButton: { paddingLeft: 14 },
   moreIcon: { color: "#fff", fontSize: 24, fontWeight: "bold" },
+
   messages: { flex: 1 },
   messagesContent: { padding: 16, paddingBottom: 8 },
-  messageBubble: { padding: 12, borderRadius: 16, marginBottom: 4, maxWidth: "75%" },
-  messageBubbleLeft: { alignSelf: "flex-start", backgroundColor: "#e5e7eb", borderBottomLeftRadius: 4 },
-  messageBubbleRight: { alignSelf: "flex-end", backgroundColor: "#15803d", borderBottomRightRadius: 4 },
+
+  messageBubble: {
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 4,
+    maxWidth: "75%",
+  },
+  messageBubbleLeft: {
+    alignSelf: "flex-start",
+    backgroundColor: "#e5e7eb",
+    borderBottomLeftRadius: 4,
+  },
+  messageBubbleRight: {
+    alignSelf: "flex-end",
+    backgroundColor: "#15803d",
+    borderBottomRightRadius: 4,
+  },
+
   messageText: { color: "#111827", fontSize: 15, lineHeight: 20 },
   messageTextRight: { color: "#fff", fontSize: 15, lineHeight: 20 },
+
   timestamp: { fontSize: 11, color: "#9ca3af", marginBottom: 12 },
   timestampLeft: { alignSelf: "flex-start", marginLeft: 4 },
   timestampRight: { alignSelf: "flex-end", marginRight: 4 },
+
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -174,6 +210,7 @@ const styles = StyleSheet.create({
   },
   plusButton: { padding: 8, marginRight: 4 },
   plusIcon: { fontSize: 20, color: "#15803d" },
+
   textInput: {
     flex: 1,
     backgroundColor: "#f3f4f6",
@@ -184,6 +221,7 @@ const styles = StyleSheet.create({
     color: "#000",
     maxHeight: 100,
   },
+
   sendButton: {
     marginLeft: 8,
     backgroundColor: "#15803d",
