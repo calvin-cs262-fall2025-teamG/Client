@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter, Stack } from "expo-router"; 
+import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import PageContainer from "./components/PageContainer";
 
 export default function EditItem() {
@@ -40,7 +40,7 @@ export default function EditItem() {
 
     await AsyncStorage.setItem("userItems", JSON.stringify(updated));
 
-    router.replace("/(tabs)/profile");
+    router.push("/(tabs)/profile");
   };
 
   const deleteItem = async () => {

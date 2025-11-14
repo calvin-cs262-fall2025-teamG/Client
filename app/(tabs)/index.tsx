@@ -113,7 +113,12 @@ export default function Index() {
         />
 
         <View ref={searchBarRef} style={styles.searchBar}>
-          <Ionicons name="search" size={18} color="#6b7280" style={{ marginRight: 8 }} />
+          <Ionicons
+            name="search"
+            size={18}
+            color="#6b7280"
+            style={{ marginRight: 8 }}
+          />
 
           <TextInput
             ref={searchInputRef}
@@ -139,11 +144,7 @@ export default function Index() {
 
         <View style={styles.iconGroup}>
           <TouchableOpacity onPress={() => router.push("/bookmark")}>
-            <Ionicons name="bookmark-outline" size={24} color="#1f2937" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => router.push("/cart")}>
-            <Ionicons name="cart-outline" size={24} color="#1f2937" />
+            <Ionicons name="bookmark" size={24} color="#3b1b0d" />
           </TouchableOpacity>
         </View>
       </View>
@@ -186,7 +187,9 @@ export default function Index() {
       {/* MAIN CONTENT */}
       <ScrollView
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* TABS */}
         <View style={styles.tabContainer}>
@@ -199,7 +202,12 @@ export default function Index() {
               }}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
                 {tab}
               </Text>
             </TouchableOpacity>
@@ -239,6 +247,7 @@ export default function Index() {
                 >
                   {item.name}
                 </Text>
+                
 
                 <Text
                   style={[
@@ -250,7 +259,6 @@ export default function Index() {
                 </Text>
               </View>
             </TouchableOpacity>
-
           ))}
         </View>
       </ScrollView>
@@ -452,5 +460,13 @@ const styles = StyleSheet.create({
   statusBorrowed: {
     backgroundColor: "#f73e3eaf", // red
   },
-
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  bookmarkIcon: {
+    marginLeft: 8,
+  },
 });
