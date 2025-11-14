@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   SafeAreaView,
   TextInput,
@@ -10,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
@@ -23,21 +23,22 @@ interface Message {
 export default function ChatThread() {
   const router = useRouter();
   const { name, avatar } = useLocalSearchParams();
-  const avatarNumber = avatar ? Number(avatar) : null;
 
+  // Convert avatar param back to a proper require() number
+  const avatarNumber = avatar ? Number(Array.isArray(avatar) ? avatar[0] : avatar) : null;
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hey! I saw your listing for the Core 100 textbook. Is it still available?",
+      text: "Hey! Is the KHvR lobby work to meet later?",
       isUser: false,
-      timestamp: "Yesterday 3:24 PM",
+      timestamp: "2 weeks ago • 3:24 PM",
     },
     {
       id: 2,
-      text: "Yes it is! Are you interested?",
+      text: "Yes that's perfect! I'll see you at 7.",
       isUser: true,
-      timestamp: "Yesterday 3:30 PM",
+      timestamp: "2 weeks ago • 3:30 PM",
     },
   ]);
 
@@ -62,49 +63,50 @@ export default function ChatThread() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
+     {/* HEADER */}
+<View style={styles.header}>
+  <TouchableOpacity onPress={() => router.back()}>
+    <Text style={styles.backButton}>←</Text>
+  </TouchableOpacity>
 
-        <View style={styles.headerCenter}>
-          {avatarNumber && (
-            <Image
-              source={avatarNumber}
-              style={{ width: 32, height: 32, borderRadius: 16, marginBottom: 4 }}
-            />
-          )}
+  {/* Avatar + Name */}
+  <View style={styles.headerUserBlock}>
+    {avatarNumber && (
+      <Image source={avatarNumber} style={styles.headerAvatar} />
+    )}
+    <View>
+      <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+      <Text style={styles.headerSubtitle}>Active now</Text>
+    </View>
+  </View>
 
-          <Text style={styles.headerTitle}>{name || "Chat"}</Text>
-          <Text style={styles.headerSubtitle}>Active now</Text>
-        </View>
+  <View style={{ width: 24 }} />
+</View>
 
-        <TouchableOpacity style={styles.moreButton}>
-          <Text style={styles.moreIcon}>⋯</Text>
-        </TouchableOpacity>
-      </View>
 
+      {/* BODY */}
       <KeyboardAvoidingView
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           style={styles.messages}
           contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
         >
           {messages.map((msg) => (
             <View key={msg.id}>
               <View
                 style={[
                   styles.messageBubble,
-                  msg.isUser
-                    ? styles.messageBubbleRight
-                    : styles.messageBubbleLeft,
+                  msg.isUser ? styles.userBubble : styles.listerBubble,
                 ]}
               >
                 <Text
-                  style={msg.isUser ? styles.messageTextRight : styles.messageText}
+                  style={[
+                    styles.messageText,
+                    msg.isUser && styles.messageTextUser,
+                  ]}
                 >
                   {msg.text}
                 </Text>
@@ -122,30 +124,26 @@ export default function ChatThread() {
           ))}
         </ScrollView>
 
-        {/* INPUT FIELD */}
+        {/* INPUT BAR */}
         <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.plusButton}>
-            <Text style={styles.plusIcon}>➕</Text>
-          </TouchableOpacity>
-
           <TextInput
             value={inputText}
             onChangeText={setInputText}
-            placeholder="Type a message..."
-            placeholderTextColor="#9ca3af"
+            placeholder="Message..."
+            placeholderTextColor="#b5b5b5"
             style={styles.textInput}
             multiline
           />
 
           <TouchableOpacity
+            onPress={handleSend}
+            disabled={!inputText.trim()}
             style={[
               styles.sendButton,
               !inputText.trim() && styles.sendButtonDisabled,
             ]}
-            onPress={handleSend}
-            disabled={!inputText.trim()}
           >
-            <Text style={styles.sendText}>📨</Text>
+            <Text style={styles.sendIcon}>↑</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -153,81 +151,140 @@ export default function ChatThread() {
   );
 }
 
+//
+// STYLES
+//
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
-  keyboardView: { flex: 1 },
+  container: { flex: 1, backgroundColor: "#fefefe" },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#15803d",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  // HEADER
+header: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingVertical: 12,
+  paddingHorizontal: 14,
+  backgroundColor: "#f97316",
+},
+
+headerUserBlock: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  flex: 1,
+},
+
+headerAvatar: {
+  width: 38,
+  height: 38,
+  borderRadius: 19,
+  borderWidth: 2,
+  borderColor: "#fff",
+},
+
+headerTitle: {
+  color: "#fff",
+  fontSize: 17,
+  fontWeight: "700",
+},
+
+headerSubtitle: {
+  color: "#ffe6d5",
+  fontSize: 12,
+  marginTop: 1,
+},
+  backButton: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "600",
+    paddingRight: 10,
   },
-  backButton: { color: "#fff", fontSize: 24, fontWeight: "600" },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  headerSubtitle: { color: "#d1fae5", fontSize: 12, marginTop: 2 },
-  moreButton: { paddingLeft: 14 },
-  moreIcon: { color: "#fff", fontSize: 24, fontWeight: "bold" },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+  },
 
+  // MESSAGES
   messages: { flex: 1 },
-  messagesContent: { padding: 16, paddingBottom: 8 },
+  messagesContent: { padding: 16, paddingBottom: 30 },
 
   messageBubble: {
     padding: 12,
-    borderRadius: 16,
-    marginBottom: 4,
+    borderRadius: 20,
     maxWidth: "75%",
+    marginBottom: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-  messageBubbleLeft: {
-    alignSelf: "flex-start",
-    backgroundColor: "#e5e7eb",
-    borderBottomLeftRadius: 4,
-  },
-  messageBubbleRight: {
+
+  userBubble: {
     alignSelf: "flex-end",
-    backgroundColor: "#15803d",
-    borderBottomRightRadius: 4,
+    backgroundColor: "#f97316", // ORANGE BUBBLE
+    borderBottomRightRadius: 6,
   },
 
-  messageText: { color: "#111827", fontSize: 15, lineHeight: 20 },
-  messageTextRight: { color: "#fff", fontSize: 15, lineHeight: 20 },
+  listerBubble: {
+    alignSelf: "flex-start",
+    backgroundColor: "#e5e7eb", // Light gray
+    borderBottomLeftRadius: 6,
+  },
 
-  timestamp: { fontSize: 11, color: "#9ca3af", marginBottom: 12 },
-  timestampLeft: { alignSelf: "flex-start", marginLeft: 4 },
-  timestampRight: { alignSelf: "flex-end", marginRight: 4 },
+  messageText: {
+    color: "#1a1a1a",
+    fontSize: 15,
+    lineHeight: 20,
+  },
 
+  messageTextUser: {
+    color: "#fff",
+  },
+
+  timestamp: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginBottom: 14,
+  },
+  timestampLeft: { alignSelf: "flex-start", marginLeft: 6 },
+  timestampRight: { alignSelf: "flex-end", marginRight: 6 },
+
+  // INPUT BAR
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
+    padding: 12,
     backgroundColor: "#fff",
-    padding: 8,
-    paddingBottom: 12,
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
   },
-  plusButton: { padding: 8, marginRight: 4 },
-  plusIcon: { fontSize: 20, color: "#15803d" },
 
   textInput: {
     flex: 1,
     backgroundColor: "#f3f4f6",
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 15,
-    color: "#000",
     maxHeight: 100,
   },
 
   sendButton: {
-    marginLeft: 8,
-    backgroundColor: "#15803d",
-    borderRadius: 20,
-    padding: 10,
+    marginLeft: 10,
+    backgroundColor: "#f97316",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  sendButtonDisabled: { backgroundColor: "#9ca3af" },
-  sendText: { fontSize: 18 },
+  sendButtonDisabled: {
+    backgroundColor: "#d6d6d6",
+  },
+  sendIcon: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
 });
