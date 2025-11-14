@@ -92,7 +92,7 @@ export default function Chat() {
         />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search Messages"
+          placeholder="Search messages"
           placeholderTextColor="#9ca3af"
         />
       </View>

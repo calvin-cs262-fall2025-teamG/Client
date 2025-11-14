@@ -15,17 +15,6 @@ export default function RootLayout() {
           headerTitleStyle: { fontWeight: "bold" },
         }}
       />
-      <Stack.Screen
-        name="cart"
-        options={{
-          title: "Cart",
-          headerTitleAlign: "left",
-          headerStyle: { backgroundColor: "white" },
-          headerTintColor: "#3b1b0d",
-          headerBackButtonDisplayMode: "minimal",
-          headerTitleStyle: { fontWeight: "bold" },
-        }}
-      />
     </Stack>
   );
 }
