@@ -8,7 +8,14 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type BookmarkItem = { id: string; title: string; image?: string };
+export type BookmarkItem = {
+  id: string;
+  title: string;
+  image?: any;
+  count?: number;
+  status?: "none" | "borrowed";
+  category?: string;
+};
 
 type BookmarkContextValue = {
   ids: Set<string>;

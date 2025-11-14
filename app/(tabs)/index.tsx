@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useBookmarksUnsafe } from "../../context/BookmarksContext";
 import {
   Image,
   View,
@@ -33,16 +34,35 @@ interface Item {
 
 export default function Index() {
   const router = useRouter();
+  const bookmarkCtx = useBookmarksUnsafe();
 
+  const {
+    isSaved = () => false,
+    toggle = () => { },
+    ids = new Set(),
+  } = bookmarkCtx || {};
+  
   const [activeTab, setActiveTab] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
 
-
   const searchInputRef = useRef<TextInput>(null);
   const searchBarRef = useRef<View>(null);
+
+  const presetItems: Item[] = [
+    { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular", status: "none" },
+    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books", status: "borrowed" },
+    { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home", status: "none" },
+    { id: 4, name: "Keurig", count: 180, image: keurig, category: "Home", status: "none" },
+    { id: 5, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
+    { id: 6, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
+    { id: 7, name: "Vacuum", count: 156, image: vacuum, category: "Home", status: "borrowed" },
+  ];
+
+  // Get bookmark count from context
+  const bookmarkCount = ids.size;
 
   useEffect(() => {
     const loadSearches = async () => {
@@ -87,15 +107,16 @@ export default function Index() {
     setRefreshing(false);
   };
 
-  const presetItems: Item[] = [
-    { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular", status: "none" },
-    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books", status: "borrowed" },
-    { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home", status: "none" },
-    { id: 4, name: "Keurig", count: 180, image: keurig, category: "Home", status: "none" },
-    { id: 5, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
-    { id: 6, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
-    { id: 7, name: "Vacuum", count: 156, image: vacuum, category: "Home", status: "borrowed" },
-  ];
+  const handleBookmarkToggle = (item: Item) => {
+toggle({
+  id: String(item.id),
+  title: item.name,
+  image: item.image,
+  count: item.count,
+  status: item.status,
+  category: item.category,
+});
+  };
 
   const filteredItems = presetItems.filter((item) => {
     const matchesCategory = activeTab === "Popular" || item.category === activeTab;
@@ -143,8 +164,18 @@ export default function Index() {
         </View>
 
         <View style={styles.iconGroup}>
-          <TouchableOpacity onPress={() => router.push("/bookmark")}>
+          <TouchableOpacity 
+            onPress={() => router.push("/bookmark")}
+            style={styles.bookmarkHeaderContainer}
+          >
             <Ionicons name="bookmark" size={24} color="#3b1b0d" />
+            {bookmarkCount > 0 && (
+              <View style={styles.bookmarkBadge}>
+                <Text style={styles.bookmarkBadgeText}>
+                  {bookmarkCount > 99 ? '99+' : bookmarkCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -216,50 +247,76 @@ export default function Index() {
 
         {/* ITEMS GRID */}
         <View style={styles.recommendedGrid}>
-          {filteredItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.recommendedItem}
-              onPress={() => router.push(`/item/${item.id}`)}
-            >
-              <View style={styles.recommendedImageContainer}>
-                {item.status === "borrowed" && (
-                  <View style={[styles.statusBadge, styles.statusBorrowed]}>
-                    <Text style={styles.statusText}>Borrowed</Text>
-                  </View>
-                )}
+          {filteredItems.map((item) => {
+            const isBookmarked = isSaved(String(item.id));
+            
+            return (
+              <View key={item.id} style={styles.recommendedItem}>
+                {/* IMAGE + BOOKMARK */}
+                <View style={styles.recommendedImageContainer}>
+                  {/* Bookmark Icon */}
+                  <TouchableOpacity
+                    style={styles.bookmarkIconContainer}
+                    onPress={() => handleBookmarkToggle(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                      size={22}
+                      color="#3b1b0d"
+                    />
+                  </TouchableOpacity>
 
-                <Image
-                  source={item.image}
-                  style={[
-                    styles.recommendedImage,
-                    item.status === "borrowed" && { opacity: 0.55 },
-                  ]}
-                />
-              </View>
+                  {/* Navigate via image */}
+                  <TouchableOpacity
+                    onPress={() => router.push(`/item/${item.id}`)}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={item.image}
+                      style={[
+                        styles.recommendedImage,
+                        item.status === "borrowed" && { opacity: 0.55 },
+                      ]}
+                    />
+                  </TouchableOpacity>
 
-              <View style={styles.recommendedInfo}>
-                <Text
-                  style={[
-                    styles.recommendedName,
-                    item.status === "borrowed" && { opacity: 0.7 },
-                  ]}
+                  {/* Borrowed badge */}
+                  {item.status === "borrowed" && (
+                    <View style={[styles.statusBadge, styles.statusBorrowed]}>
+                      <Text style={styles.statusText}>Borrowed</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Navigate via info section */}
+                <TouchableOpacity
+                  onPress={() => router.push(`/item/${item.id}`)}
+                  activeOpacity={0.8}
+                  style={styles.recommendedInfo}
                 >
-                  {item.name}
-                </Text>
-                
+                  <Text
+                    style={[
+                      styles.recommendedName,
+                      item.status === "borrowed" && { opacity: 0.7 },
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
 
-                <Text
-                  style={[
-                    styles.countText,
-                    item.status === "borrowed" && { opacity: 0.7 },
-                  ]}
-                >
-                  {item.count}
-                </Text>
+                  <Text
+                    style={[
+                      styles.countText,
+                      item.status === "borrowed" && { opacity: 0.7 },
+                    ]}
+                  >
+                    {item.count}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -310,6 +367,31 @@ const styles = StyleSheet.create({
   iconGroup: {
     flexDirection: "row",
     gap: 14,
+  },
+
+  bookmarkHeaderContainer: {
+    position: "relative",
+  },
+
+  bookmarkBadge: {
+    position: "absolute",
+    top: -6,
+    right: -8,
+    backgroundColor: "#f97316",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+
+  bookmarkBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
 
   // RECENT DROPDOWN
@@ -458,15 +540,27 @@ const styles = StyleSheet.create({
   },
 
   statusBorrowed: {
-    backgroundColor: "#f73e3eaf", // red
+    backgroundColor: "#f73e3eaf",
   },
+
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
   },
+
   bookmarkIcon: {
     marginLeft: 8,
+  },
+
+  bookmarkIconContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    padding: 6,
+    borderRadius: 20,
   },
 });
