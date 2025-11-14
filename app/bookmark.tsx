@@ -94,14 +94,22 @@ export default function BookmarkScreen() {
                   </Text>
 
                   {item.count !== undefined && (
-                    <Text
-                      style={[
-                        styles.count,
-                        item.status === "borrowed" && { opacity: 0.7 },
-                      ]}
-                    >
-                      {item.count}
-                    </Text>
+                    <View style={styles.countRow}>
+                      <Ionicons
+                        name={saved ? "bookmark" : "bookmark-outline"}
+                        size={14}
+                        color="#3b1b0d"
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text
+                        style={[
+                          styles.count,
+                          item.status === "borrowed" && { opacity: 0.7 },
+                        ]}
+                      >
+                        {item.count}
+                      </Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               </View>
@@ -219,5 +227,10 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "600",
     fontSize: 12,
+  },
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
   },
 });
