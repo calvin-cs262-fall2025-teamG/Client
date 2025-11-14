@@ -6,7 +6,6 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CloseButton from "./CloseButton";
 
 export default function PageContainer({
   children,
@@ -19,7 +18,6 @@ export default function PageContainer({
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <CloseButton style={styles.closeButton} />
 
         <ScrollView contentContainerStyle={styles.container}>
           {children}

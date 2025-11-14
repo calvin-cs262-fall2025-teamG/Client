@@ -44,7 +44,7 @@ export default function Chat() {
       id: 2,
       name: "Helen Lee",
       avatar: helenImage,
-      lastMessage: "Is the tractor still available?",
+      lastMessage: "How long can I borrow the chair for?",
       time: "1h",
       unread: 1,
     },

@@ -102,7 +102,7 @@ const presetItems: Record<number, ItemDetails> = {
   },
 };
 
-export default function ItemDetails() {
+export default function ItemData() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
