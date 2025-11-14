@@ -31,6 +31,13 @@ export default function RootLayout() {
         />
 
         <Stack.Screen
+          name="borrow-confirmation"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
           name="chat-thread"
           options={{
             headerShown: false,
