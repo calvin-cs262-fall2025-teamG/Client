@@ -43,7 +43,7 @@ const presetItems = [
   { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular", status: "none" },
     { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books", status: "borrowed" },
     { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home", status: "none" },
-    { id: 4, name: "Keurig", count: 180, image: keurig, category: "Home", status: "none" },
+    { id: 4, name: "Keurig", count: 180, image: keurig, category: "Home", status: "borrowed" },
     { id: 5, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
     { id: 6, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
     { id: 7, name: "Vacuum", count: 156, image: vacuum, category: "Home", status: "borrowed" },
@@ -66,7 +66,7 @@ const presetItems = [
     { id: 24, name: "Vacuum", count: 156, image: vacuum3, category: "Home", status: "none" },
     { id: 25, name: "Vacuum", count: 156, image: vacuum4, category: "Home", status: "borrowed" },
     { id: 26, name: "Vacuum", count: 156, image: vacuum5, category: "Home", status: "borrowed" },
-    { id: 27, name: "Vacuum", count: 156, image: vacuum6, category: "Home", status: "none" },,
+    { id: 27, name: "Vacuum", count: 156, image: vacuum6, category: "Home", status: "none" },
 ];
 
 const banner = require("../../assets/images/banner.png");
