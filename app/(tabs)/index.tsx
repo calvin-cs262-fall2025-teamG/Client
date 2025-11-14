@@ -41,7 +41,7 @@ export default function Index() {
     toggle = () => { },
     ids = new Set(),
   } = bookmarkCtx || {};
-  
+
   const [activeTab, setActiveTab] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -108,14 +108,14 @@ export default function Index() {
   };
 
   const handleBookmarkToggle = (item: Item) => {
-toggle({
-  id: String(item.id),
-  title: item.name,
-  image: item.image,
-  count: item.count,
-  status: item.status,
-  category: item.category,
-});
+    toggle({
+      id: String(item.id),
+      title: item.name,
+      image: item.image,
+      count: item.count,
+      status: item.status,
+      category: item.category,
+    });
   };
 
   const filteredItems = presetItems.filter((item) => {
@@ -164,7 +164,7 @@ toggle({
         </View>
 
         <View style={styles.iconGroup}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push("/bookmark")}
             style={styles.bookmarkHeaderContainer}
           >
@@ -249,7 +249,7 @@ toggle({
         <View style={styles.recommendedGrid}>
           {filteredItems.map((item) => {
             const isBookmarked = isSaved(String(item.id));
-            
+
             return (
               <View key={item.id} style={styles.recommendedItem}>
                 {/* IMAGE + BOOKMARK */}
