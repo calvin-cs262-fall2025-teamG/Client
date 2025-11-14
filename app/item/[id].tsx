@@ -48,7 +48,7 @@ const presetItems: Record<number, ItemDetails> = {
   },
   4: {
     name: "Keurig",
-    status: "none",
+    status: "borrowed",
     image: require("../../assets/images/keurig.png"),
     count: 180,
     lister: { name: "Bryn L.", avatar: require("../../assets/images/bryn.png"), rating: 4.8 },
