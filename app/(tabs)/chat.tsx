@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -19,19 +19,11 @@ const chloeImage = require("../../assets/images/chloe.png");
 const gregImage = require("../../assets/images/greg.png");
 const brynImage = require("../../assets/images/bryn.png");
 
-interface ChatPreview {
-  id: number;
-  name: string;
-  avatar: any;
-  lastMessage: string;
-  time: string;
-  unread?: number;
-}
-
 export default function Chat() {
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const chats: ChatPreview[] = [
+  const chats = [
     {
       id: 1,
       name: "Bryn Lamppa",
@@ -78,28 +70,32 @@ export default function Chat() {
     },
   ];
 
+  // 🔍 FILTER CHATS LIVE
+  const filteredChats = useMemo(() => {
+    return chats.filter((chat) =>
+      chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Removed orange header */}
 
-      {/* Search Bar */}
+      {/* SEARCH BAR */}
       <View style={styles.searchContainer}>
-        <Ionicons
-          name="search"
-          size={16}
-          color="#6b7280"
-          style={styles.searchIcon}
-        />
+        <Ionicons name="search" size={16} color="#6b7280" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search messages"
           placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
       </View>
 
-      {/* Chat List */}
+      {/* CHAT LIST */}
       <ScrollView style={styles.chatList}>
-        {chats.map((chat) => (
+        {filteredChats.map((chat) => (
           <TouchableOpacity
             key={chat.id}
             style={styles.chatItem}
@@ -110,9 +106,7 @@ export default function Chat() {
               })
             }
           >
-            <View style={styles.avatarContainer}>
-              <Image source={chat.avatar} style={styles.avatarImage} />
-            </View>
+            <Image source={chat.avatar} style={styles.avatarImage} />
 
             <View style={styles.chatContent}>
               <View style={styles.chatHeader}>
@@ -124,6 +118,7 @@ export default function Chat() {
                 <Text style={styles.lastMessage} numberOfLines={1}>
                   {chat.lastMessage}
                 </Text>
+
                 {chat.unread && (
                   <View style={styles.unreadBadge}>
                     <Text style={styles.unreadText}>{chat.unread}</Text>
@@ -133,6 +128,12 @@ export default function Chat() {
             </View>
           </TouchableOpacity>
         ))}
+
+        {filteredChats.length === 0 && (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text style={{ color: "#6b7280" }}>No chats found.</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -142,11 +143,13 @@ export const options = {
   headerShown: false,
 };
 
+// STYLES
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#f9fafb",
   },
+
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -158,23 +161,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginHorizontal: 16,
     shadowColor: "#000",
+    shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 3,
   },
   searchIcon: {
     marginRight: 8,
-    fontSize: 16,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: "#111827",
   },
+
   chatList: {
     flex: 1,
   },
+
   chatItem: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -182,56 +185,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-  },
-  avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    overflow: "hidden",
-    backgroundColor: "#f3f4f6",
-    justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
   },
+
   avatarImage: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    resizeMode: "cover",
+    marginRight: 12,
   },
+
   chatContent: {
     flex: 1,
-    justifyContent: "center",
   },
+
   chatHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
   },
+
   chatName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
   },
+
   chatTime: {
     fontSize: 12,
     color: "#6b7280",
   },
+
   messageRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    marginTop: 4,
   },
+
   lastMessage: {
     flex: 1,
     fontSize: 14,
     color: "#6b7280",
   },
-  unreadMessage: {
-    color: "#111827",
-    fontWeight: "500",
-  },
+
   unreadBadge: {
+    marginLeft: 8,
     backgroundColor: "#f97316",
     borderRadius: 10,
     minWidth: 20,
@@ -239,11 +236,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 6,
-    marginLeft: 8,
   },
+
   unreadText: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });
