@@ -95,8 +95,8 @@ export default function Index() {
     { id: 21, name: "Laptop Stand", count: 120, image: laptopstand, category: "Popular", status: "none" },
     { id: 22, name: "Garden Hose", count: 110, image: gardenhose, category: "Tools", status: "none" },
     { id: 23, name: "Vacuum", count: 156, image: vacuum2, category: "Home", status: "none" },
-    { id: 24, name: "Vacuum", count: 156, image: vacuum3, category: "Home", status: "borrowed" },
-    { id: 25, name: "Vacuum", count: 156, image: vacuum4, category: "Home", status: "none" },
+    { id: 24, name: "Vacuum", count: 156, image: vacuum3, category: "Home", status: "none" },
+    { id: 25, name: "Vacuum", count: 156, image: vacuum4, category: "Home", status: "borrowed" },
     { id: 26, name: "Vacuum", count: 156, image: vacuum5, category: "Home", status: "borrowed" },
     { id: 27, name: "Vacuum", count: 156, image: vacuum6, category: "Home", status: "none" },
   ];

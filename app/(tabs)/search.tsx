@@ -33,30 +33,40 @@ const smartwatch = require("../../assets/images/smartwatch.jpg");
 const pressurewasher = require("../../assets/images/pressurewasher.jpg");
 const laptopstand = require("../../assets/images/laptopstand.jpg");
 const gardenhose = require("../../assets/images/hose.jpg");
+const vacuum2 = require("../../assets/images/vacuum2.jpg");
+const vacuum3 = require("../../assets/images/vacuum3.jpg");
+const vacuum4 = require("../../assets/images/vacuum4.jpg");
+const vacuum5 = require("../../assets/images/vacuum5.jpg");
+const vacuum6 = require("../../assets/images/vacuum6.jpg");
 
 const presetItems = [
-  { id: 1, name: "USB-C Charger", image: charger, category: "Popular", status: "none" },
-  { id: 2, name: "Core 100 Book", image: corebook, category: "Books", status: "borrowed" },
-  { id: 3, name: "Office Chair", image: chair, category: "Home", status: "none" },
-  { id: 4, name: "Keurig", image: keurig, category: "Home", status: "none" },
-  { id: 5, name: "Tool Set", image: tools, category: "Tools", status: "none" },
-  { id: 6, name: "Garden Tractor", image: tractor, category: "Tools", status: "none" },
-  { id: 7, name: "Vacuum", image: vacuum, category: "Home", status: "borrowed" },
-  { id: 8, name: "Desk Lamp", image: desklamp, category: "Home", status: "none" },
-  { id: 9, name: "Bluetooth Speaker", image: speaker, category: "Popular", status: "none" },
-  { id: 10, name: "Mountain Bike", image: bike, category: "Tools", status: "none" },
-  { id: 11, name: "Cookware Set", image: cookset, category: "Home", status: "borrowed" },
-  { id: 12, name: "Yoga Mat", image: yogamat, category: "Popular", status: "none" },
-  { id: 13, name: "Wireless Headphones", image: wirelessbuds, category: "Popular", status: "none" },
-  { id: 14, name: "Standing Desk", image: standingdesk, category: "Home", status: "none" },
-  { id: 15, name: "Electric Kettle", image: electrickettle, category: "Home", status: "none" },
-  { id: 16, name: "Camping Tent", image: campingtent, category: "Tools", status: "none" },
-  { id: 17, name: "Electric Drill", image: electricdrill, category: "Tools", status: "borrowed" },
-  { id: 18, name: "Cookbook", image: cookbook, category: "Books", status: "none" },
-  { id: 19, name: "Smartwatch", image: smartwatch, category: "Popular", status: "none" },
-  { id: 20, name: "Pressure Washer", image: pressurewasher, category: "Tools", status: "none" },
-  { id: 21, name: "Laptop Stand", image: laptopstand, category: "Popular", status: "none" },
-  { id: 22, name: "Garden Hose", image: gardenhose, category: "Tools", status: "none" },
+  { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular", status: "none" },
+    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books", status: "borrowed" },
+    { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home", status: "none" },
+    { id: 4, name: "Keurig", count: 180, image: keurig, category: "Home", status: "none" },
+    { id: 5, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
+    { id: 6, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
+    { id: 7, name: "Vacuum", count: 156, image: vacuum, category: "Home", status: "borrowed" },
+    { id: 8, name: "Desk Lamp", count: 120, image: desklamp, category: "Home", status: "none" },
+    { id: 9, name: "Bluetooth Speaker", count: 95, image: speaker, category: "Popular", status: "none" },
+    { id: 10, name: "Mountain Bike", count: 110, image: bike, category: "Tools", status: "none" },
+    { id: 11, name: "Cookware Set", count: 85, image: cookset, category: "Home", status: "borrowed" },
+    { id: 12, name: "Yoga Mat", count: 70, image: yogamat, category: "Popular", status: "none" },
+    { id: 13, name: "Wireless Headphones", count: 130, image: wirelessbuds, category: "Popular", status: "none" },
+    { id: 14, name: "Standing Desk", count: 90, image: standingdesk, category: "Home", status: "none" },
+    { id: 15, name: "Electric Kettle", count: 85, image: electrickettle, category: "Home", status: "none" },
+    { id: 16, name: "Camping Tent", count: 120, image: campingtent, category: "Tools", status: "none" },
+    { id: 17, name: "Electric Drill", count: 140, image: electricdrill, category: "Tools", status: "borrowed" },
+    { id: 18, name: "Cookbook", count: 110, image: cookbook, category: "Books", status: "none" },
+    { id: 19, name: "Smartwatch", count: 150, image: smartwatch, category: "Popular", status: "none" },
+    { id: 20, name: "Pressure Washer", count: 100, image: pressurewasher, category: "Tools", status: "none" },
+    { id: 21, name: "Laptop Stand", count: 120, image: laptopstand, category: "Popular", status: "none" },
+    { id: 22, name: "Garden Hose", count: 110, image: gardenhose, category: "Tools", status: "none" },
+    { id: 23, name: "Vacuum", count: 156, image: vacuum2, category: "Home", status: "none" },
+    { id: 24, name: "Vacuum", count: 156, image: vacuum3, category: "Home", status: "none" },
+    { id: 25, name: "Vacuum", count: 156, image: vacuum4, category: "Home", status: "borrowed" },
+    { id: 26, name: "Vacuum", count: 156, image: vacuum5, category: "Home", status: "borrowed" },
+    { id: 27, name: "Vacuum", count: 156, image: vacuum6, category: "Home", status: "none" },,
 ];
 
 const banner = require("../../assets/images/banner.png");
