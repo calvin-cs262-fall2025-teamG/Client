@@ -22,6 +22,21 @@ const tools = require("../../assets/images/tools.jpg");
 const tractor = require("../../assets/images/tractor.jpg");
 const vacuum = require("../../assets/images/vacuum.jpg");
 const keurig = require("../../assets/images/keurig.png");
+const desklamp = require("../../assets/images/desklamp.jpeg");
+const speaker = require("../../assets/images/speaker.jpg");
+const bike = require("../../assets/images/bike.jpg");
+const cookset = require("../../assets/images/cookset.jpg");
+const yogamat = require("../../assets/images/yogamat.jpg");
+const wirelessbuds = require("../../assets/images/wirelessbuds.jpg");
+const standingdesk = require("../../assets/images/standingdesk.jpg");
+const electrickettle = require("../../assets/images/electrickettle.jpg");
+const campingtent = require("../../assets/images/campingtent.jpg");
+const electricdrill = require("../../assets/images/drill.jpg");
+const cookbook = require("../../assets/images/cookbook.jpg");
+const smartwatch = require("../../assets/images/smartwatch.jpg");
+const pressurewasher = require("../../assets/images/pressurewasher.jpg");
+const laptopstand = require("../../assets/images/laptopstand.jpg");
+const gardenhose = require("../../assets/images/hose.jpg");
 
 interface Item {
   id: number;
@@ -59,6 +74,21 @@ export default function Index() {
     { id: 5, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
     { id: 6, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
     { id: 7, name: "Vacuum", count: 156, image: vacuum, category: "Home", status: "borrowed" },
+    { id: 8, name: "Desk Lamp", count: 120, image: desklamp, category: "Home", status: "none" },
+    { id: 9, name: "Bluetooth Speaker", count: 95, image: speaker, category: "Popular", status: "none" },
+    { id: 10, name: "Mountain Bike", count: 110, image: bike, category: "Tools", status: "none" },
+    { id: 11, name: "Cookware Set", count: 85, image: cookset, category: "Home", status: "borrowed" },
+    { id: 12, name: "Yoga Mat", count: 70, image: yogamat, category: "Popular", status: "none" },
+    { id: 13, name: "Wireless Headphones", count: 130, image: wirelessbuds, category: "Popular", status: "none" },
+    { id: 14, name: "Standing Desk", count: 90, image: standingdesk, category: "Home", status: "none" },
+    { id: 15, name: "Electric Kettle", count: 85, image: electrickettle, category: "Home", status: "none" },
+    { id: 16, name: "Camping Tent", count: 120, image: campingtent, category: "Tools", status: "none" },
+    { id: 17, name: "Electric Drill", count: 140, image: electricdrill, category: "Tools", status: "borrowed" },
+    { id: 18, name: "Cookbook", count: 110, image: cookbook, category: "Books", status: "none" },
+    { id: 19, name: "Smartwatch", count: 150, image: smartwatch, category: "Popular", status: "none" },
+    { id: 20, name: "Pressure Washer", count: 100, image: pressurewasher, category: "Tools", status: "none" },
+    { id: 21, name: "Laptop Stand", count: 120, image: laptopstand, category: "Popular", status: "none" },
+    { id: 22, name: "Garden Hose", count: 110, image: gardenhose, category: "Tools", status: "none" },
   ];
 
   // Get bookmark count from context
@@ -305,14 +335,22 @@ export default function Index() {
                     {item.name}
                   </Text>
 
-                  <Text
-                    style={[
-                      styles.countText,
-                      item.status === "borrowed" && { opacity: 0.7 },
-                    ]}
-                  >
-                    {item.count}
-                  </Text>
+                  <View style={styles.countRow}>
+                    <Ionicons
+                      name="bookmark"
+                      size={14}
+                      color="#3b1b0d"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      style={[
+                        styles.countText,
+                        item.status === "borrowed" && { opacity: 0.7 },
+                      ]}
+                    >
+                      {item.count}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             );
@@ -562,5 +600,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.85)",
     padding: 6,
     borderRadius: 20,
+  },
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
   },
 });

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import {
   View,
   Text,
   StyleSheet,
+  RefreshControl,
   Image,
   ScrollView,
   SafeAreaView,
@@ -61,13 +61,17 @@ export default function Profile() {
         </View>
       </View>
 
-      <Text style={[styles.sectionHeaderText, { marginTop: 12, marginLeft: 12 }]}>
+      <Text
+        style={[styles.sectionHeaderText, { marginTop: 12, marginLeft: 12 }]}
+      >
         Your Listings
       </Text>
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View style={styles.recommendedGrid}>
           <TouchableOpacity
@@ -85,7 +89,9 @@ export default function Profile() {
               <View style={styles.recommendedImageContainer}>
                 <Image
                   source={
-                    typeof item.image === "string" ? { uri: item.image } : item.image
+                    typeof item.image === "string"
+                      ? { uri: item.image }
+                      : item.image
                   }
                   style={styles.recommendedImage}
                   resizeMode="cover"
@@ -104,7 +110,6 @@ export default function Profile() {
                     })
                   }
                 >
-
                   <Ionicons name="pencil" size={16} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -113,7 +118,16 @@ export default function Profile() {
                 <Text style={styles.recommendedName} numberOfLines={1}>
                   {item.name}
                 </Text>
-                <Text style={styles.countTextSmall}>{item.count}</Text>
+
+                <View style={styles.countRow}>
+                  <Ionicons
+                    name="bookmark"
+                    size={14}
+                    color="#3b1b0d"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text>{item.count}</Text>
+                </View>
               </View>
             </View>
           ))}
@@ -239,23 +253,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6b7280",
   },
-createItemCard: {
-  justifyContent: "center",
-  alignItems: "center",
-  paddingVertical: 20,
-},
+  createItemCard: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 20,
+  },
 
-createItemInner: {
-  justifyContent: "center",
-  alignItems: "center",
-  paddingVertical: 20,
-},
+  createItemInner: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 20,
+  },
 
-createItemText: {
-  marginTop: 8,
-  fontSize: 15,
-  fontWeight: "600",
-  color: "#f97316",
-},
-
+  createItemText: {
+    marginTop: 8,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#f97316",
+  },
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
 });
