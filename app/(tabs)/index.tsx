@@ -37,6 +37,11 @@ const smartwatch = require("../../assets/images/smartwatch.jpg");
 const pressurewasher = require("../../assets/images/pressurewasher.jpg");
 const laptopstand = require("../../assets/images/laptopstand.jpg");
 const gardenhose = require("../../assets/images/hose.jpg");
+const vacuum2 = require("../../assets/images/vacuum2.jpg");
+const vacuum3 = require("../../assets/images/vacuum3.jpg");
+const vacuum4 = require("../../assets/images/vacuum4.jpg");
+const vacuum5 = require("../../assets/images/vacuum5.jpg");
+const vacuum6 = require("../../assets/images/vacuum6.jpg");
 
 interface Item {
   id: number;
@@ -89,6 +94,11 @@ export default function Index() {
     { id: 20, name: "Pressure Washer", count: 100, image: pressurewasher, category: "Tools", status: "none" },
     { id: 21, name: "Laptop Stand", count: 120, image: laptopstand, category: "Popular", status: "none" },
     { id: 22, name: "Garden Hose", count: 110, image: gardenhose, category: "Tools", status: "none" },
+    { id: 23, name: "Vacuum", count: 156, image: vacuum2, category: "Home", status: "none" },
+    { id: 24, name: "Vacuum", count: 156, image: vacuum3, category: "Home", status: "borrowed" },
+    { id: 23, name: "Vacuum", count: 156, image: vacuum4, category: "Home", status: "none" },
+    { id: 24, name: "Vacuum", count: 156, image: vacuum5, category: "Home", status: "borrowed" },
+    { id: 25, name: "Vacuum", count: 156, image: vacuum6, category: "Home", status: "none" },
   ];
 
   // Get bookmark count from context
