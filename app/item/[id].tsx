@@ -160,9 +160,6 @@ export default function ItemData() {
         </View>
       )}
 
-      {/* COUNT */}
-      <Text style={styles.count}>{item.count} neighbors</Text>
-
       {/* LISTER PROFILE */}
       <View style={styles.listerCard}>
         <Image source={item.lister.avatar} style={styles.avatar} />
