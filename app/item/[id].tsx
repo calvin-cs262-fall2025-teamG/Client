@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -5,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -102,14 +104,22 @@ const presetItems: Record<number, ItemDetails> = {
   },
 };
 
+const NOTIFY_KEY = "heyneighbor:notifyMe";
+
 export default function ItemData() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  const numericId = Number(id);
+  // handle id being string or string[]
+  const numericId = Array.isArray(id) ? Number(id[0]) : Number(id);
+
+  // item data must be created BEFORE using it in effects
   const item = presetItems[numericId];
 
-  if (!item) {
+  // notify state must exist BEFORE useEffects
+  const [isNotified, setIsNotified] = React.useState(false);
+
+  if (!item || Number.isNaN(numericId)) {
     return (
       <View style={styles.center}>
         <Text style={{ fontSize: 18 }}>Item not found.</Text>
@@ -117,20 +127,93 @@ export default function ItemData() {
     );
   }
 
+  // derive status
+  const status: "borrowed" | "none" = item.status ?? "none";
+
+  // check if this item was already subscribed
+  useEffect(() => {
+    const checkInitialNotify = async () => {
+      const raw = await AsyncStorage.getItem(NOTIFY_KEY);
+      if (!raw) return;
+
+      const ids: number[] = JSON.parse(raw);
+      if (ids.includes(numericId)) {
+        setIsNotified(true);
+      }
+    };
+
+    checkInitialNotify();
+  }, [numericId]);
+
+  // show "Good news!" if item is now available
+  useEffect(() => {
+    const checkNotify = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(NOTIFY_KEY);
+        if (!raw) return;
+
+        const ids: number[] = JSON.parse(raw);
+
+        if (ids.includes(numericId) && status === "none") {
+          Alert.alert("Good news!", `${item.name} is now available to borrow.`);
+
+          const filtered = ids.filter((x) => x !== numericId);
+          await AsyncStorage.setItem(NOTIFY_KEY, JSON.stringify(filtered));
+          setIsNotified(false);
+        }
+      } catch (err) {
+        console.log("Error checking notify list:", err);
+      }
+    };
+
+    checkNotify();
+  }, [numericId, status, item.name]);
+
+
+  const handleNotifyMe = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(NOTIFY_KEY);
+      const ids: number[] = raw ? JSON.parse(raw) : [];
+
+      if (!ids.includes(numericId)) {
+        // Add subscribe
+        ids.push(numericId);
+        await AsyncStorage.setItem(NOTIFY_KEY, JSON.stringify(ids));
+        setIsNotified(true);
+
+        Alert.alert(
+          "Notification set",
+          `We'll notify you when ${item.name} becomes available.`
+        );
+      } else {
+        // Unsubscribe if clicked again
+        const updated = ids.filter((x) => x !== numericId);
+        await AsyncStorage.setItem(NOTIFY_KEY, JSON.stringify(updated));
+        setIsNotified(false);
+
+        Alert.alert(
+          "Notification removed",
+          `You will no longer be notified about ${item.name}.`
+        );
+      }
+    } catch (err) {
+      console.log("Error saving notify-me:", err);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
-
       {/* ITEM IMAGE */}
       <Image
         source={item.image}
-        style={[styles.image, item.status === "borrowed" && { opacity: 0.55 }]}
+        style={[styles.image, status === "borrowed" && { opacity: 0.55 }]}
       />
 
       {/* NAME */}
       <Text style={styles.name}>{item.name}</Text>
 
       {/* BADGE */}
-      {item.status === "borrowed" && (
+      {status === "borrowed" && (
         <View style={[styles.badge, styles.borrowed]}>
           <Text style={styles.badgeText}>BORROWED</Text>
         </View>
@@ -158,26 +241,39 @@ export default function ItemData() {
         >
           <Text style={styles.viewProfileText}>Chat</Text>
         </TouchableOpacity>
-
       </View>
 
       {/* ACTION BUTTONS */}
+      {status === "none" ? (
+        <TouchableOpacity
+          style={styles.borrowButton}
+          onPress={() =>
+            router.push({
+              pathname: "/borrow-confirmation",
+              params: {
+                itemName: item.name,
+                listerName: item.lister.name,
+                image: item.image, // optional: if you want image on confirmation
+              },
+            })
+          }
+        >
+          <Text style={styles.borrowText}>Borrow Now</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.notifyButton,
+            isNotified && styles.notifyButtonDisabled
+          ]}
+          onPress={handleNotifyMe}
+        >
+          <Text style={styles.notifyText}>
+            {isNotified ? "Notifying you" : "Notify Me"}
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.borrowButton}
-        onPress={() =>
-          router.push({
-            pathname: "/borrow-confirmation",
-            params: {
-              itemName: item.name,
-              listerName: item.lister.name
-            },
-          })
-        }
-      >
-        <Text style={styles.borrowText}>Borrow Now</Text>
-      </TouchableOpacity>
-
+      )}
     </ScrollView>
   );
 }
@@ -281,4 +377,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   notifyText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  notifyButtonDisabled: {
+    opacity: 0.6,
+  }
 });
