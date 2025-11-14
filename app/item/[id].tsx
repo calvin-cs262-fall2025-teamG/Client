@@ -181,6 +181,61 @@ const presetItems: Record<number, ItemDetails> = {
     count: 110,
     lister: { name: "Adam S.", avatar: require("../../assets/images/greg.png"), rating: 4.6 },
   },
+    23: {
+    name: "Vacuum",
+    status: "none",
+    image: require("../../assets/images/vacuum2.jpg"),
+    count: 156,
+    lister: {
+      name: "Julia R.",
+      avatar: require("../../assets/images/laila.png"),
+      rating: 4.7,
+    },
+  },
+  24: {
+    name: "Vacuum",
+    status: "none",
+    image: require("../../assets/images/vacuum3.jpg"),
+    count: 156,
+    lister: {
+      name: "Marcus T.",
+      avatar: require("../../assets/images/jacob.png"),
+      rating: 4.6,
+    },
+  },
+  25: {
+    name: "Vacuum",
+    status: "borrowed",
+    image: require("../../assets/images/vacuum4.jpg"),
+    count: 156,
+    lister: {
+      name: "Ava J.",
+      avatar: require("../../assets/images/chloe.png"),
+      rating: 4.9,
+    },
+  },
+  26: {
+    name: "Vacuum",
+    status: "borrowed",
+    image: require("../../assets/images/vacuum5.jpg"),
+    count: 156,
+    lister: {
+      name: "James L.",
+      avatar: require("../../assets/images/greg.png"),
+      rating: 4.8,
+    },
+  },
+  27: {
+    name: "Vacuum",
+    status: "none",
+    image: require("../../assets/images/vacuum6.jpg"),
+    count: 156,
+    lister: {
+      name: "Ella M.",
+      avatar: require("../../assets/images/helen.png"),
+      rating: 4.8,
+    },
+  },
 };
 
 const NOTIFY_KEY = "heyneighbor:notifyMe";
