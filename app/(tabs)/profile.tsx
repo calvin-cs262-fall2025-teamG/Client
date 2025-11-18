@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
-import {
-  View,
-  Text,
-  StyleSheet,
-  RefreshControl,
-  Image,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+    Alert,
+    Image,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { useAuth } from "../../context/AuthContext";
 
 const roseImage = require("../../assets/images/rose.png");
 
@@ -27,6 +29,7 @@ export default function Profile() {
   const [listings, setListings] = useState<Item[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  const { user, logout, sendCode } = useAuth();
 
   const loadItems = async () => {
     const stored = await AsyncStorage.getItem("userItems");
@@ -46,6 +49,40 @@ export default function Profile() {
     setRefreshing(false);
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          onPress: () => {},
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          onPress: async () => {
+            await logout();
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
+  const handleRequestNewCode = async () => {
+    if (!user?.email) return;
+    try {
+      await sendCode(user.email);
+      Alert.alert("Success", "A new verification code has been sent to your email");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to send code"
+      );
+    }
+  };
+
   useEffect(() => {
     loadItems();
   }, []);
@@ -56,9 +93,16 @@ export default function Profile() {
       <View style={styles.profileTop}>
         <Image source={roseImage} style={styles.profileImage} />
         <View style={styles.profileInfo}>
-          <Text style={styles.name}>Rose Campbell</Text>
+          <Text style={styles.name}>{user?.name || "User"}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
           <Text style={styles.neighborsCount}>152 Neighbors</Text>
         </View>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out" size={20} color="#ef4444" />
+        </TouchableOpacity>
       </View>
 
       <Text
@@ -252,6 +296,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 16,
     color: "#6b7280",
+  },
+
+  email: {
+    fontSize: 12,
+    color: "#9ca3af",
+    marginTop: 2,
+  },
+
+  settingsButton: {
+    padding: 8,
+    marginLeft: "auto",
   },
   createItemCard: {
     justifyContent: "center",
