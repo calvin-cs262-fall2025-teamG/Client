@@ -1,13 +1,14 @@
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { login } from '../lib/supabase';
 
 const LoginScreen = () => {
   const [username, setUsername] = useState('');
@@ -17,6 +18,8 @@ const LoginScreen = () => {
   const [is_empty_passphrase, set_is_empty_passphrase] = useState(false);
   const [is_incorrect_username, set_is_incorrect_username] = useState(false);
   const [is_incorrect_passphrase, set_is_incorrect_passphrase] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   const r_style = StyleSheet.create({
     ue: {
@@ -41,38 +44,47 @@ const LoginScreen = () => {
     },
   });
   
-  const handleLogin = () => {
-    // TODO: add a way to keep users signed in, i.e. through some kind of automatic auth;
-    let signed_in = false;
+  const handleLogin = async () => {
+    setIsLoading(true);
+    setErrorMessage('');
     
-    // handle empty fields
-    let m_is_empty_username   = !username;
-    let m_is_empty_passphrase = !passphrase;
-    let m_is_incorrect_username = false;
-    let m_is_incorrect_passphrase = false;
-    if(!signed_in){
-      // you can't deny the absolute truth!
-      // send username and password
-      // server does internal check
-      if(!m_is_empty_username && !m_is_empty_passphrase){
-        m_is_incorrect_username   = username   !== "Simon";
-        m_is_incorrect_passphrase = passphrase !== "Aaa";
-      }
-      if(m_is_incorrect_username || m_is_incorrect_passphrase){
-        m_is_incorrect_username   = true;
-        m_is_incorrect_passphrase = true;
-      }
-      
-      // update useState;
-      set_is_empty_username(m_is_empty_username);
-      set_is_empty_passphrase(m_is_empty_passphrase);
-      set_is_incorrect_username(m_is_incorrect_username);
-      set_is_incorrect_passphrase(m_is_incorrect_passphrase);
+    // Reset error states
+    set_is_empty_username(false);
+    set_is_empty_passphrase(false);
+    set_is_incorrect_username(false);
+    set_is_incorrect_passphrase(false);
+
+    // Validate empty fields
+    if (!username) {
+      set_is_empty_username(true);
+      setIsLoading(false);
+      return;
     }
-    // if not signed in, make them start over!
-    if(!(m_is_empty_username || m_is_empty_passphrase || m_is_incorrect_username || m_is_incorrect_passphrase)){
-      // then login if it succeeds
-      router.replace("/home");
+    if (!passphrase) {
+      set_is_empty_passphrase(true);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Call Supabase login
+      const result = await login(username, passphrase);
+
+      if (result.success) {
+        // Login successful, navigate to home
+        router.replace('/home');
+      } else {
+        // Show error
+        setErrorMessage(result.error || 'Login failed');
+        set_is_incorrect_username(true);
+        set_is_incorrect_passphrase(true);
+      }
+    } catch (error: any) {
+      setErrorMessage('An unexpected error occurred');
+      set_is_incorrect_username(true);
+      set_is_incorrect_passphrase(true);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -81,7 +93,10 @@ const LoginScreen = () => {
       <Text style={styles.title}>Hello, Neybr!</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
       <Text style={styles.subtitle}>Use your Calvin credentials</Text>
-      <Text style={styles.subtitle}>(wip: this currently uses a fake passphrase)</Text>
+      
+      {errorMessage ? (
+        <Text style={styles.errorText}>{errorMessage}</Text>
+      ) : null}
       
       <Text style={[
         // @ts-ignore
@@ -98,9 +113,10 @@ const LoginScreen = () => {
           styles.input,
           is_empty_username ? styles.redInput : undefined,
         ]}
-        placeholder="Calvin username"
+        placeholder="Username"
         placeholderTextColor="#aaa"
         autoCapitalize="none"
+        editable={!isLoading}
         value={username}
         onChangeText={setUsername}
       />
@@ -119,15 +135,28 @@ const LoginScreen = () => {
           styles.input,
           is_empty_passphrase ? styles.redInput : undefined,
         ]}
-        placeholder="Calvin passphrase"
+        placeholder="Password"
         placeholderTextColor="#aaa"
         secureTextEntry
+        editable={!isLoading}
         value={passphrase}
         onChangeText={setPassphrase}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Log In</Text>
+      <TouchableOpacity 
+        style={[styles.button, isLoading ? styles.buttonDisabled : null]} 
+        onPress={handleLogin}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Log In</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push('../register')}>
+        <Text style={styles.link}>Don't have an account? Sign up</Text>
       </TouchableOpacity>
     </View>
   );
@@ -180,6 +209,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
   },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
   buttonText: {
     color: '#fff',
     textAlign: 'center',
@@ -191,5 +223,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     fontSize: 16,
+  },
+  errorText: {
+    color: '#c00726ff',
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: 'center',
   },
 });
