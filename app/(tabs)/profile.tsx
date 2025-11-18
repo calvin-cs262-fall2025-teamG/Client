@@ -120,7 +120,7 @@ export default function Profile() {
         <View style={styles.recommendedGrid}>
           <TouchableOpacity
             style={[styles.recommendedItem, styles.createItemCard]}
-            onPress={() => router.push("/(tabs)/list")}
+            onPress={() => router.push("../(tabs)/list")}
           >
             <View style={styles.createItemInner}>
               <Ionicons name="add-circle" size={40} color="#f97316" />
@@ -145,7 +145,7 @@ export default function Profile() {
                   style={styles.editFloatingButton}
                   onPress={() =>
                     router.push({
-                      pathname: "/edit-item",
+                      pathname: "../edit-item",
                       params: {
                         id: item.id.toString(),
                         name: item.name,

@@ -93,26 +93,47 @@ Body: { email: string }
 - Return user object: `{ user_id, email, name, profile_picture? }`
 
 ## Database Schema Addition
+First, we need to exppand out `Users` table:
+```sql
+-- Users
+CREATE TABLE app_user (
+    user_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    profile_picture VARCHAR(255)
+    email VARCHAR(255) NOT NULL UNIQUE,
+    code_id INT,
+    FOREIGN KEY (code_id) REFERENCES verification_code(code_id),
+);
+```
 
-Add this table to your `heyneighbor_schema.sql`:
-
+Then we should add this table to our `heyneighbor_schema.sql`:
 ```sql
 -- Authentication Verification Codes
-CREATE TABLE VerificationCode (
+CREATE TABLE verification_code (
     code_id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
     code VARCHAR(6) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
     verified BOOLEAN DEFAULT FALSE
 );
+```
 
--- Update app_user table to include email
-ALTER TABLE app_user ADD COLUMN email VARCHAR(255) UNIQUE;
+Apparently we can automate the cleanup process if we want to.
+```sql
+-- Cleanup stored procedure for expired codes (optional but recommended)
+CREATE PROCEDURE sp_cleanup_expired_codes
+AS
+BEGIN
+    DELETE FROM VerificationCode 
+    WHERE expires_at < CURRENT_TIMESTAMP 
+    AND verified = FALSE
+    AND DATEDIFF(HOUR, expires_at, CURRENT_TIMESTAMP) > 24;
+END;
+
+-- Schedule this to run daily using Azure SQL Agent or Azure Automation
+-- EXEC sp_cleanup_expired_codes;
 ```
 
 ## Setup Instructions
-
 ### 1. Update API Base URL
 In `lib/api.ts`, replace:
 ```typescript
