@@ -57,7 +57,6 @@ export default function Profile() {
         <Image source={roseImage} style={styles.profileImage} />
         <View style={styles.profileInfo}>
           <Text style={styles.name}>Rose Campbell</Text>
-          <Text style={styles.neighborsCount}>152 Neighbors</Text>
         </View>
       </View>
 
