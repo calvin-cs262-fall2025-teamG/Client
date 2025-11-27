@@ -54,7 +54,7 @@ export default function EditItem() {
           let items = stored ? JSON.parse(stored) : [];
 
           const updated = items.filter((item: any) => item.id !== id);
-          await AsyncStorage.setItem("userItems", JSON.stringify(updated))
+          await AsyncStorage.setItem("userItems", JSON.stringify(updated));
 
           router.replace("/(tabs)/profile");
         },
