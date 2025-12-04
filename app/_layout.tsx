@@ -1,49 +1,62 @@
 import React from "react";
 import { Stack } from "expo-router";
 import { BookmarksProvider } from "../context/BookmarksContext";
+import { AuthProvider } from "../context/AuthContext";
 
 export default function RootLayout() {
   return (
-    <BookmarksProvider>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <AuthProvider>
+      <BookmarksProvider>
+        <Stack>
+          {/* Auth group (login) */}
+          <Stack.Screen
+            name="(auth)"
+            options={{ headerShown: false }}
+          />
 
-        <Stack.Screen
-          name="bookmark"
-          options={{
-            title: "Bookmarks",
-            headerStyle: { backgroundColor: "white" },
-            headerTintColor: "#3b1b0d",
-            headerBackButtonDisplayMode: "minimal",
-            headerTitleStyle: { fontWeight: "bold" },
-          }}
-        />
+          {/* Main tabs group */}
+          <Stack.Screen
+            name="(tabs)"
+            options={{ headerShown: false }}
+          />
 
-        <Stack.Screen
-          name="item/[id]"
-          options={{
-            title: "Item Info",
-            headerStyle: { backgroundColor: "white" },
-            headerTintColor: "#3b1b0d",
-            headerBackButtonDisplayMode: "minimal",
-            headerTitleStyle: { fontWeight: "bold" },
-          }}
-        />
+          <Stack.Screen
+            name="bookmark"
+            options={{
+              title: "Bookmarks",
+              headerStyle: { backgroundColor: "white" },
+              headerTintColor: "#3b1b0d",
+              headerBackButtonDisplayMode: "minimal",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
 
-        <Stack.Screen
-          name="borrow-confirmation"
-          options={{
-            headerShown: false,
-          }}
-        />
+          <Stack.Screen
+            name="item/[id]"
+            options={{
+              title: "Item Info",
+              headerStyle: { backgroundColor: "white" },
+              headerTintColor: "#3b1b0d",
+              headerBackButtonDisplayMode: "minimal",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
 
-        <Stack.Screen
-          name="chat-thread"
-          options={{
-            headerShown: false,
-          }}
-        />
-      </Stack>
-    </BookmarksProvider>
+          <Stack.Screen
+            name="borrow-confirmation"
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="chat-thread"
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack>
+      </BookmarksProvider>
+    </AuthProvider>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../context/AuthContext";
 
 const roseImage = require("../../assets/images/rose.png");
 
@@ -26,7 +27,13 @@ interface Item {
 export default function Profile() {
   const [listings, setListings] = useState<Item[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const { logout } = useAuth();
   const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/(auth)/login");
+  };
 
   const loadItems = async () => {
     const stored = await AsyncStorage.getItem("userItems");
@@ -58,6 +65,11 @@ export default function Profile() {
         <View style={styles.profileInfo}>
           <Text style={styles.name}>Rose Campbell</Text>
         </View>
+
+        {/* Logout button in the header */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
       </View>
 
       <Text
@@ -239,6 +251,7 @@ const styles = StyleSheet.create({
 
   profileInfo: {
     marginLeft: 16,
+    flex: 1,
   },
 
   name: {
@@ -252,6 +265,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6b7280",
   },
+
   createItemCard: {
     justifyContent: "center",
     alignItems: "center",
@@ -270,9 +284,26 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#f97316",
   },
+
   countRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 2,
+  },
+
+  logoutButton: {
+    marginLeft: "auto",
+    marginRight: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#9ca3af",
+  },
+
+  logoutText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
   },
 });
