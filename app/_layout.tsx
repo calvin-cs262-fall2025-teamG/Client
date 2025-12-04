@@ -7,19 +7,26 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <BookmarksProvider>
-        <Stack>
-          {/* Auth group (login) */}
+        <Stack initialRouteName="index">
+          {/* 👇 New onboarding entry screen */}
+          <Stack.Screen
+            name="index"
+            options={{ headerShown: false }}
+          />
+
+          {/* Auth flow (login / signup) */}
           <Stack.Screen
             name="(auth)"
             options={{ headerShown: false }}
           />
 
-          {/* Main tabs group */}
+          {/* Main app with bottom tabs */}
           <Stack.Screen
             name="(tabs)"
             options={{ headerShown: false }}
           />
 
+          {/* Existing extra screens */}
           <Stack.Screen
             name="bookmark"
             options={{
