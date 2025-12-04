@@ -1,4 +1,3 @@
-// app/(auth)/login.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -17,7 +16,8 @@ import { useAuth } from "../../context/AuthContext";
 
 const logo = require("../../assets/images/logo.png");
 
-export default function Login() {
+export default function LoginScreen() {
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState(""); // still local-only for now
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function Login() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
     setError(null);
 
     if (!email.toLowerCase().endsWith("@calvin.edu")) {
@@ -34,9 +34,14 @@ export default function Login() {
       return;
     }
 
+    if (!password) {
+      setError("Please enter a password");
+      return;
+    }
+
     try {
       setLoading(true);
-      // currently just client-side login; backend can come later
+      // For now, both Login and Sign up just call the same login(email)
       await login(email);
       router.replace("/(tabs)");
     } catch (err: any) {
@@ -49,6 +54,8 @@ export default function Login() {
 
   const isButtonDisabled = !email || !password || loading;
 
+  const isLogin = mode === "login";
+
   return (
     <KeyboardAvoidingView
       style={styles.screen}
@@ -58,10 +65,41 @@ export default function Login() {
         {/* Logo + Title */}
         <View style={styles.header}>
           <Image source={logo} style={styles.logo} />
-          <Text style={styles.title}>Hey, Neighbor!</Text>
-          <Text style={styles.subtitle}>
-            Log in with your Calvin email to start borrowing and lending.
-          </Text>
+          <Text style={styles.appName}>Hey, Neighbor!</Text>
+        </View>
+
+        {/* Mode Toggle */}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity
+            style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
+            onPress={() => setMode("login")}
+          >
+            <Text
+              style={[
+                styles.toggleText,
+                isLogin && styles.toggleTextActive,
+              ]}
+            >
+              Log in
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              !isLogin && styles.toggleButtonActive,
+            ]}
+            onPress={() => setMode("signup")}
+          >
+            <Text
+              style={[
+                styles.toggleText,
+                !isLogin && styles.toggleTextActive,
+              ]}
+            >
+              Sign up
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Inputs */}
@@ -95,7 +133,7 @@ export default function Login() {
             />
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={isLogin ? "Your password" : "Create a password"}
               placeholderTextColor="#9ca3af"
               secureTextEntry
               value={password}
@@ -113,21 +151,24 @@ export default function Login() {
             styles.button,
             isButtonDisabled && { opacity: 0.6 },
           ]}
-          onPress={handleLogin}
+          onPress={handleSubmit}
           disabled={isButtonDisabled}
           activeOpacity={0.85}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Sign in</Text>
+            <Text style={styles.buttonText}>
+              {isLogin ? "Log in" : "Sign up"}
+            </Text>
           )}
         </TouchableOpacity>
 
-        {/* Tiny helper text */}
+        {/* Helper text */}
         <Text style={styles.footerText}>
-          For now, any @calvin.edu email will sign you in.  
-          Passwords and verification will be added in a later version.
+          Right now, both “Log in” and “Sign up” just use your @calvin.edu
+          email on this device. Later, this can connect to the Hey, Neighbor!
+          backend and real accounts.
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -154,27 +195,52 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 18,
   },
   logo: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
+    width: 110,
+    height: 110,
+    borderRadius: 24,
     marginBottom: 10,
   },
-  title: {
+  appName: {
     fontSize: 26,
     fontWeight: "800",
-    color: "#111827",
+    color: "#341801ff",
   },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 14,
+  toggleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#f3f4f6",
+    borderRadius: 999,
+    padding: 3,
+    marginTop: 12,
+    marginBottom: 14,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toggleButtonActive: {
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: "600",
     color: "#6b7280",
-    textAlign: "center",
+  },
+  toggleTextActive: {
+    color: "#f97316",
   },
   inputGroup: {
-    marginTop: 12,
+    marginTop: 4,
   },
   label: {
     fontSize: 13,
