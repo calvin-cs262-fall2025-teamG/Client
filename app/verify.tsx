@@ -20,7 +20,7 @@ export default function VerificationCodeScreen({
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { verifyAndLogin, sendCode } = useAuth();
 
   // Countdown timer

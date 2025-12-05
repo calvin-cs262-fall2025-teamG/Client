@@ -1,46 +1,77 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
-
-const chargerImage = require("../assets/images/charger.jpg");
-const chairImage = require("../assets/images/chair.jpg");
-const tractorImage = require("../assets/images/tractor.jpg");
+import { useAuth } from "../context/AuthContext";
+import { getAllUsers, getBorrowRequestsByUserId, getItemById, User } from "../lib/api";
 
 type CartItem = {
-  id: string;
+  id: number;
   name: string;
-  price: number;
+  owner: string;
   quantity: number;
-  image: any;
+  image_url?: string;
+  request_status: string;
+  request_id?: number;
 };
 
 export default function CartScreen() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: "1",
-      name: "USB-C Charger",
-      price: 10.99,
-      quantity: 1,
-      image: chargerImage,
-    },
-    { id: "2", name: "Office Chair", price: 59.99, quantity: 2, image: chairImage },
-    {
-      id: "3",
-      name: "Garden Tractor",
-      price: 249.99,
-      quantity: 1,
-      image: tractorImage,
-    },
-  ]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const incrementQuantity = (id: string) => {
+  // Load borrow requests from database on mount
+  useEffect(() => {
+    const loadRequests = async () => {
+      try {
+        if (!user?.user_id) return;
+        
+        // Get all borrow requests for current user
+        const requests = await getBorrowRequestsByUserId(user.user_id);
+        
+        // Get all users to map user_id to name
+        const users = await getAllUsers();
+        const userMap: Record<number, User> = {};
+        users.forEach((u) => {
+          userMap[u.user_id] = u;
+        });
+
+        // Build cart items from requests
+        const items: CartItem[] = [];
+        for (const request of requests) {
+          const item = await getItemById(request.item_id);
+          if (item) {
+            const owner = userMap[item.owner_id];
+            items.push({
+              id: item.item_id,
+              name: item.name,
+              owner: owner?.name || "Unknown",
+              quantity: 1,
+              image_url: item.image_url,
+              request_status: request.status,
+              request_id: request.request_id,
+            });
+          }
+        }
+        setCartItems(items);
+      } catch (error) {
+        console.error("Failed to load requests:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRequests();
+  }, [user]);
+
+  const incrementQuantity = (id: number) => {
     setCartItems((items) =>
       items.map((item) =>
         item.id === id ? { ...item, quantity: item.quantity + 1 } : item
@@ -48,7 +79,7 @@ export default function CartScreen() {
     );
   };
 
-  const decrementQuantity = (id: string) => {
+  const decrementQuantity = (id: number) => {
     setCartItems((items) =>
       items.map((item) =>
         item.id === id && item.quantity > 1
@@ -58,17 +89,30 @@ export default function CartScreen() {
     );
   };
 
-  const removeItem = (id: string) => {
+  const removeItem = (id: number) => {
     setCartItems((items) => items.filter((item) => item.id !== id));
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved":
+        return "#10b981";
+      case "pending":
+        return "#f59e0b";
+      case "rejected":
+        return "#ef4444";
+      default:
+        return "#6b7280";
+    }
+  };
+
   const totalPrice = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total) => total + 1,
     0
   );
 
   const checkout = () => {
-    Alert.alert("Checkout", `Your total is $${totalPrice.toFixed(2)}.`, [
+    Alert.alert("Checkout", `You have ${cartItems.length} borrow requests.`, [
       { text: "OK" },
     ]);
   };
@@ -76,52 +120,50 @@ export default function CartScreen() {
   const renderItem = ({ item }: { item: CartItem }) => (
     <View style={styles.cartItem}>
       <View style={styles.imageContainer}>
-        <Image source={item.image} style={styles.cartImage} />
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.cartImage} />
+        ) : (
+          <View style={[styles.cartImage, { backgroundColor: "#e5e7eb" }]} />
+        )}
       </View>
       <View style={styles.infoContainer}>
         <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemPrice}>
-          ${(item.price * item.quantity).toFixed(2)}
-        </Text>
-        <View style={styles.quantityControls}>
-          <TouchableOpacity
-            onPress={() => decrementQuantity(item.id)}
-            style={styles.quantityButton}
-          >
-            <Text style={styles.quantityButtonText}>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.quantityText}>{item.quantity}</Text>
-          <TouchableOpacity
-            onPress={() => incrementQuantity(item.id)}
-            style={styles.quantityButton}
-          >
-            <Text style={styles.quantityButtonText}>+</Text>
-          </TouchableOpacity>
+        <Text style={styles.ownerText}>From: {item.owner}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.request_status) }]}>
+          <Text style={styles.statusText}>{item.request_status.toUpperCase()}</Text>
         </View>
         <TouchableOpacity onPress={() => removeItem(item.id)}>
-          <Text style={styles.removeButton}>Remove</Text>
+          <Text style={styles.removeButton}>Remove Request</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#3b1b0d" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Your Cart</Text>
+      <Text style={styles.header}>Borrow Requests</Text>
       {cartItems.length === 0 ? (
-        <Text style={styles.emptyText}>Your cart is empty.</Text>
+        <Text style={styles.emptyText}>You have no active borrow requests.</Text>
       ) : (
         <FlatList
           data={cartItems}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
       <View style={styles.footer}>
-        <Text style={styles.total}>Total: ${totalPrice.toFixed(2)}</Text>
+        <Text style={styles.total}>Total Requests: {cartItems.length}</Text>
         <TouchableOpacity style={styles.checkoutButton} onPress={checkout}>
-          <Text style={styles.checkoutButtonText}>Checkout</Text>
+          <Text style={styles.checkoutButtonText}>View Details</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -163,6 +205,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   itemName: { fontSize: 18, fontWeight: "600", color: "#111827" },
+  ownerText: { fontSize: 13, color: "#6b7280", marginTop: 4 },
+  statusBadge: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  statusText: { fontSize: 12, fontWeight: "600", color: "#fff" },
   itemPrice: { fontSize: 16, fontWeight: "600", color: "#4b5563" },
   quantityControls: {
     flexDirection: "row",

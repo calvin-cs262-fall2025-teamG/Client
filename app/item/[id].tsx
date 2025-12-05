@@ -1,258 +1,127 @@
-import React, { useEffect } from "react";
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+/**
+ * Item Detail Screen
+ * 
+ * FILE NAME: [id].tsx
+ * The brackets [id] indicate this is a dynamic route in Expo Router.
+ * When a user navigates to /item/5, this component receives id=5 as a parameter.
+ * 
+ * NAVIGATION:
+ * - Accessed from: index.tsx (home feed), search.tsx, bookmark.tsx
+ * - Route pattern: /item/:id (where :id is the item_id from the database)
+ * - Example: router.push(`/item/3`) opens this screen with item_id=3
+ * 
+ * FUNCTIONALITY:
+ * - Fetches item details from database via getItemById(id)
+ * - Displays item image, name, status (borrowed/available), and owner info
+ * - Shows owner's profile picture, name, and rating
+ * - Provides "Borrow Now" button for available items
+ * - Provides "Notify Me" button for borrowed items
+ * - Allows chatting with the owner via chat button
+ * 
+ * DATA FLOW:
+ * 1. Component receives numeric ID from route params
+ * 2. Calls getItemById() to fetch item from database (mock or Azure)
+ * 3. Calls getAllUsers() to get owner information
+ * 4. Renders item details with owner profile
+ * 5. Handles borrow requests and notifications via AsyncStorage
+ */
 
-// -------- ITEM + LISTER DATA ----------
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { getAllUsers, getItemById } from "../../lib/api";
+
+/**
+ * ItemDetails type definition
+ * Represents the structured data for displaying an item and its owner
+ */
 type ItemDetails = {
   name: string;
   status: "borrowed" | "none";
-  image: any;
-  count: number;
+  image: any; // Can be local require() or { uri: string }
+  count: number; // Bookmark/interest count (currently unused)
   lister: {
     name: string;
-    avatar: any;
-    rating: number;
+    avatar: any; // Owner's profile picture as { uri: string }
+    rating: number; // Owner's rating (1.0 - 5.0)
   };
 };
 
-const presetItems: Record<number, ItemDetails> = {
-  1: {
-    name: "USB-C Charger",
-    status: "none",
-    image: require("../../assets/images/charger.jpg"),
-    count: 254,
-    lister: { name: "Laila M.", avatar: require("../../assets/images/laila.png"), rating: 4.9 },
-  },
-  2: {
-    name: "Core 100 Book",
-    status: "borrowed",
-    image: require("../../assets/images/corebook.jpg"),
-    count: 243,
-    lister: { name: "Rose C.", avatar: require("../../assets/images/rose.png"), rating: 4.7 },
-  },
-  3: {
-    name: "Office Chair",
-    status: "none",
-    image: require("../../assets/images/chair.jpg"),
-    count: 180,
-    lister: { name: "Chloe K.", avatar: require("../../assets/images/chloe.png"), rating: 5.0 },
-  },
-  4: {
-    name: "Keurig",
-    status: "borrowed",
-    image: require("../../assets/images/keurig.png"),
-    count: 180,
-    lister: { name: "Bryn L.", avatar: require("../../assets/images/bryn.png"), rating: 4.8 },
-  },
-  5: {
-    name: "Tool Set",
-    status: "none",
-    image: require("../../assets/images/tools.jpg"),
-    count: 156,
-    lister: { name: "Jacob W.", avatar: require("../../assets/images/jacob.png"), rating: 4.6 },
-  },
-  6: {
-    name: "Garden Tractor",
-    status: "none",
-    image: require("../../assets/images/tractor.jpg"),
-    count: 180,
-    lister: { name: "Helen P.", avatar: require("../../assets/images/helen.png"), rating: 4.9 },
-  },
-  7: {
-    name: "Vacuum",
-    status: "borrowed",
-    image: require("../../assets/images/vacuum.jpg"),
-    count: 156,
-    lister: { name: "Greg G.", avatar: require("../../assets/images/greg.png"), rating: 4.8 },
-  },
-
-  //  NEW ITEMS
-  8: {
-    name: "Desk Lamp",
-    status: "none",
-    image: require("../../assets/images/desklamp.jpeg"),
-    count: 120,
-    lister: { name: "Sarah T.", avatar: require("../../assets/images/chloe.png"), rating: 4.8 },
-  },
-  9: {
-    name: "Bluetooth Speaker",
-    status: "none",
-    image: require("../../assets/images/speaker.jpg"),
-    count: 95,
-    lister: { name: "Evan S.", avatar: require("../../assets/images/jacob.png"), rating: 4.7 },
-  },
-  10: {
-    name: "Mountain Bike",
-    status: "none",
-    image: require("../../assets/images/bike.jpg"),
-    count: 110,
-    lister: { name: "Matt D.", avatar: require("../../assets/images/greg.png"), rating: 4.6 },
-  },
-  11: {
-    name: "Cookware Set",
-    status: "borrowed",
-    image: require("../../assets/images/cookset.jpg"),
-    count: 85,
-    lister: { name: "Kelly P.", avatar: require("../../assets/images/rose.png"), rating: 4.9 },
-  },
-  12: {
-    name: "Yoga Mat",
-    status: "none",
-    image: require("../../assets/images/yogamat.jpg"),
-    count: 70,
-    lister: { name: "Mia L.", avatar: require("../../assets/images/laila.png"), rating: 4.8 },
-  },
-  13: {
-    name: "Wireless Headphones",
-    status: "none",
-    image: require("../../assets/images/wirelessbuds.jpg"),
-    count: 130,
-    lister: { name: "Tori W.", avatar: require("../../assets/images/bryn.png"), rating: 4.7 },
-  },
-  14: {
-    name: "Standing Desk",
-    status: "none",
-    image: require("../../assets/images/standingdesk.jpg"),
-    count: 90,
-    lister: { name: "Ben J.", avatar: require("../../assets/images/chloe.png"), rating: 4.5 },
-  },
-  15: {
-    name: "Electric Kettle",
-    status: "none",
-    image: require("../../assets/images/electrickettle.jpg"),
-    count: 85,
-    lister: { name: "Nora Q.", avatar: require("../../assets/images/helen.png"), rating: 4.8 },
-  },
-  16: {
-    name: "Camping Tent",
-    status: "none",
-    image: require("../../assets/images/campingtent.jpg"),
-    count: 120,
-    lister: { name: "Derek P.", avatar: require("../../assets/images/jacob.png"), rating: 4.7 },
-  },
-  17: {
-    name: "Electric Drill",
-    status: "borrowed",
-    image: require("../../assets/images/drill.jpg"),
-    count: 140,
-    lister: { name: "Sam G.", avatar: require("../../assets/images/greg.png"), rating: 4.8 },
-  },
-  18: {
-    name: "Cookbook",
-    status: "none",
-    image: require("../../assets/images/cookbook.jpg"),
-    count: 110,
-    lister: { name: "Emily R.", avatar: require("../../assets/images/rose.png"), rating: 4.9 },
-  },
-  19: {
-    name: "Smartwatch",
-    status: "none",
-    image: require("../../assets/images/smartwatch.jpg"),
-    count: 150,
-    lister: { name: "Owen T.", avatar: require("../../assets/images/laila.png"), rating: 4.8 },
-  },
-  20: {
-    name: "Pressure Washer",
-    status: "none",
-    image: require("../../assets/images/pressurewasher.jpg"),
-    count: 100,
-    lister: { name: "Caleb Z.", avatar: require("../../assets/images/jacob.png"), rating: 4.7 },
-  },
-  21: {
-    name: "Laptop Stand",
-    status: "none",
-    image: require("../../assets/images/laptopstand.jpg"),
-    count: 120,
-    lister: { name: "Hannah K.", avatar: require("../../assets/images/chloe.png"), rating: 4.8 },
-  },
-  22: {
-    name: "Garden Hose",
-    status: "none",
-    image: require("../../assets/images/hose.jpg"),
-    count: 110,
-    lister: { name: "Adam S.", avatar: require("../../assets/images/greg.png"), rating: 4.6 },
-  },
-    23: {
-    name: "Vacuum",
-    status: "none",
-    image: require("../../assets/images/vacuum2.jpg"),
-    count: 156,
-    lister: {
-      name: "Julia R.",
-      avatar: require("../../assets/images/laila.png"),
-      rating: 4.7,
-    },
-  },
-  24: {
-    name: "Vacuum",
-    status: "none",
-    image: require("../../assets/images/vacuum3.jpg"),
-    count: 156,
-    lister: {
-      name: "Marcus T.",
-      avatar: require("../../assets/images/jacob.png"),
-      rating: 4.6,
-    },
-  },
-  25: {
-    name: "Vacuum",
-    status: "borrowed",
-    image: require("../../assets/images/vacuum4.jpg"),
-    count: 156,
-    lister: {
-      name: "Ava J.",
-      avatar: require("../../assets/images/chloe.png"),
-      rating: 4.9,
-    },
-  },
-  26: {
-    name: "Vacuum",
-    status: "borrowed",
-    image: require("../../assets/images/vacuum5.jpg"),
-    count: 156,
-    lister: {
-      name: "James L.",
-      avatar: require("../../assets/images/greg.png"),
-      rating: 4.8,
-    },
-  },
-  27: {
-    name: "Vacuum",
-    status: "none",
-    image: require("../../assets/images/vacuum6.jpg"),
-    count: 156,
-    lister: {
-      name: "Ella M.",
-      avatar: require("../../assets/images/helen.png"),
-      rating: 4.8,
-    },
-  },
-};
-
+// AsyncStorage key for storing notification preferences
 const NOTIFY_KEY = "heyneighbor:notifyMe";
 
-export default function ItemData() {
-  const { id } = useLocalSearchParams();
+/**
+ * ItemDetailScreen Component
+ * 
+ * Main component that displays detailed information about a single item.
+ * Automatically fetches item data from the database when mounted.
+ */
+export default function ItemDetailScreen() {
+  const { id } = useLocalSearchParams(); // Get the item ID from the URL
   const router = useRouter();
 
-  // handle id being string or string[]
+  // Convert id parameter to number (handles string or string[] from router)
   const numericId = Array.isArray(id) ? Number(id[0]) : Number(id);
 
-  // item data must be created BEFORE using it in effects
-  const item = presetItems[numericId];
+  // Component state
+  const [loading, setLoading] = useState(true); // Loading state for API call
+  const [item, setItem] = useState<ItemDetails | null>(null); // Item data from database
+  const [isNotified, setIsNotified] = useState(false); // Whether user subscribed to notifications
 
-  // notify state must exist BEFORE useEffects
-  const [isNotified, setIsNotified] = React.useState(false);
+  /**
+   * Load item data from database on mount
+   * Fetches item details and owner information via API
+   */
+  useEffect(() => {
+    const loadItem = async () => {
+      try {
+        const dbItem = await getItemById(numericId);
+        if (dbItem) {
+          const users = await getAllUsers();
+          const owner = users.find((u) => u.user_id === dbItem.owner_id);
+          
+          setItem({
+            name: dbItem.name,
+            status: dbItem.request_status === "borrowed" ? "borrowed" : "none",
+            image: dbItem.image_url ? { uri: dbItem.image_url } : undefined,
+            count: 0,
+            lister: {
+              name: owner?.name || "Unknown",
+              avatar: owner?.profile_picture ? { uri: owner.profile_picture } : undefined,
+              rating: 4.5,
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load item:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    loadItem();
+  }, [numericId]);
+
+  // Show loading spinner while fetching data
+  if (loading) {
+    return (
+      <View style={[styles.center, { backgroundColor: "#f9fafb" }]}>
+        <ActivityIndicator size="large" color="#f97316" />
+      </View>
+    );
+  }
+
+  // Show error if item not found or invalid ID
   if (!item || Number.isNaN(numericId)) {
     return (
       <View style={styles.center}>
@@ -261,10 +130,13 @@ export default function ItemData() {
     );
   }
 
-  // derive status
+  // Derive current availability status
   const status: "borrowed" | "none" = item.status ?? "none";
 
-  // check if this item was already subscribed
+  /**
+   * Check if user previously subscribed to notifications for this item
+   * Runs on mount and when item ID changes
+   */
   useEffect(() => {
     const checkInitialNotify = async () => {
       const raw = await AsyncStorage.getItem(NOTIFY_KEY);
@@ -279,7 +151,10 @@ export default function ItemData() {
     checkInitialNotify();
   }, [numericId]);
 
-  // show "Good news!" if item is now available
+  /**
+   * Show notification alert when a borrowed item becomes available
+   * Automatically removes item from notification list after showing alert
+   */
   useEffect(() => {
     const checkNotify = async () => {
       try {
@@ -303,7 +178,10 @@ export default function ItemData() {
     checkNotify();
   }, [numericId, status, item.name]);
 
-
+  /**
+   * Handle notification subscription toggle
+   * Adds or removes item from user's notification list in AsyncStorage
+   */
   const handleNotifyMe = async () => {
     try {
       const raw = await AsyncStorage.getItem(NOTIFY_KEY);

@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarksUnsafe } from "../../context/BookmarksContext";
-import {
-  Image,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  TextInput,
-  RefreshControl,
-} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    Image,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { useBookmarksUnsafe } from "../../context/BookmarksContext";
+import { getAllItems } from "../../lib/api";
 
 const charger = require("../../assets/images/charger.jpg");
 const corebook = require("../../assets/images/corebook.jpg");
@@ -47,7 +49,8 @@ interface Item {
   id: number;
   name: string;
   count: number;
-  image: any;
+  image?: any;
+  image_url?: string;
   category: string;
   status: "none" | "borrowed";
 }
@@ -67,6 +70,8 @@ export default function Index() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
+  const [dbItems, setDbItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const searchInputRef = useRef<TextInput>(null);
   const searchBarRef = useRef<View>(null);
@@ -103,6 +108,29 @@ export default function Index() {
 
   // Get bookmark count from context
   const bookmarkCount = ids.size;
+
+  // Load items from database
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        const items = await getAllItems();
+        const mappedItems: Item[] = items.map((item) => ({
+          id: item.item_id,
+          name: item.name,
+          count: 0, // Could track bookmark count
+          image_url: item.image_url,
+          category: item.category === "Electronics" ? "Popular" : item.category === "Furniture" ? "Home" : item.category,
+          status: item.request_status === "borrowed" ? "borrowed" : "none",
+        }));
+        setDbItems(mappedItems);
+      } catch (error) {
+        console.error("Failed to load items:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadItems();
+  }, []);
 
   useEffect(() => {
     const loadSearches = async () => {
@@ -142,8 +170,26 @@ export default function Index() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    const saved = await AsyncStorage.getItem("recentSearches");
-    if (saved) setRecentSearches(JSON.parse(saved));
+    try {
+      const [items, saved] = await Promise.all([
+        getAllItems(),
+        AsyncStorage.getItem("recentSearches"),
+      ]);
+      
+      const mappedItems: Item[] = items.map((item) => ({
+        id: item.item_id,
+        name: item.name,
+        count: 0,
+        image_url: item.image_url,
+        category: item.category === "Electronics" ? "Popular" : item.category === "Furniture" ? "Home" : item.category,
+        status: item.request_status === "borrowed" ? "borrowed" : "none",
+      }));
+      setDbItems(mappedItems);
+      
+      if (saved) setRecentSearches(JSON.parse(saved));
+    } catch (error) {
+      console.error("Failed to refresh:", error);
+    }
     setRefreshing(false);
   };
 
@@ -158,11 +204,22 @@ export default function Index() {
     });
   };
 
-  const filteredItems = presetItems.filter((item) => {
+  // Merge database items with preset items
+  const allItems = [...dbItems, ...presetItems];
+
+  const filteredItems = allItems.filter((item) => {
     const matchesCategory = activeTab === "Popular" || item.category === activeTab;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#f97316" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -314,7 +371,7 @@ export default function Index() {
                     activeOpacity={0.8}
                   >
                     <Image
-                      source={item.image}
+                      source={item.image_url ? { uri: item.image_url } : item.image}
                       style={[
                         styles.recommendedImage,
                         item.status === "borrowed" && { opacity: 0.55 },

@@ -1,16 +1,19 @@
-import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  SafeAreaView,
-} from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+    ActivityIndicator,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { useAuth } from "../../context/AuthContext";
+import { getAllUsers, getChatsByUserId, User } from "../../lib/api";
 
 const jacobImage = require("../../assets/images/jacob.png");
 const helenImage = require("../../assets/images/helen.png");
@@ -19,56 +22,86 @@ const chloeImage = require("../../assets/images/chloe.png");
 const gregImage = require("../../assets/images/greg.png");
 const brynImage = require("../../assets/images/bryn.png");
 
+type ChatItem = {
+  id: number;
+  name: string;
+  avatar: any;
+  lastMessage: string;
+  time: string;
+  unread?: number;
+  userId: number;
+};
+
+// Helper to format timestamps
+const formatTime = (timestamp: number): string => {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / (60 * 1000));
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+
+  if (minutes < 60) return `${minutes}m`;
+  if (hours < 24) return `${hours}h`;
+  return `${days}d`;
+};
+
+// Map user IDs to local avatar images
+const avatarMap: Record<number, any> = {
+  1: brynImage,
+  2: helenImage,
+  3: brynImage,
+  4: lailaImage,
+  5: chloeImage,
+};
+
 export default function Chat() {
   const router = useRouter();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const chats = [
-    {
-      id: 1,
-      name: "Bryn Lamppa",
-      avatar: brynImage,
-      lastMessage: "Perfect! I need the book for CS 262 😄",
-      time: "2m",
-      unread: 2,
-    },
-    {
-      id: 2,
-      name: "Helen Lee",
-      avatar: helenImage,
-      lastMessage: "How long can I borrow the chair for?",
-      time: "1h",
-      unread: 1,
-    },
-    {
-      id: 3,
-      name: "Laila Smith",
-      avatar: lailaImage,
-      lastMessage: "Thanks for the quick response!",
-      time: "3h",
-    },
-    {
-      id: 4,
-      name: "Chloe Kottwitz",
-      avatar: chloeImage,
-      lastMessage: "Can we meet tomorrow at 3pm?",
-      time: "5h",
-    },
-    {
-      id: 5,
-      name: "Gregory Goodfellow",
-      avatar: gregImage,
-      lastMessage: "The couch looks great!",
-      time: "1d",
-    },
-    {
-      id: 6,
-      name: "Jacob Lanning",
-      avatar: jacobImage,
-      lastMessage: "When can I borrow it?",
-      time: "2d",
-    },
-  ];
+  // Load chats from API
+  useEffect(() => {
+    const loadChats = async () => {
+      try {
+        if (!user?.user_id) return;
+
+        const [userChats, allUsers] = await Promise.all([
+          getChatsByUserId(user.user_id),
+          getAllUsers(),
+        ]);
+
+        const userMap: Record<number, User> = {};
+        allUsers.forEach((u) => {
+          userMap[u.user_id] = u;
+        });
+
+        const chatItems: ChatItem[] = userChats.map((chat) => {
+          const otherUserId = chat.user1_id === user.user_id ? chat.user2_id : chat.user1_id;
+          const otherUser = userMap[otherUserId];
+          
+          return {
+            id: chat.chat_id,
+            name: otherUser?.name || "Unknown User",
+            avatar: avatarMap[otherUserId] || brynImage,
+            lastMessage: chat.last_message || "No messages yet",
+            time: chat.last_message_time ? formatTime(chat.last_message_time) : "",
+            unread: chat.unread_count,
+            userId: otherUserId,
+          };
+        });
+
+        setChats(chatItems);
+      } catch (error) {
+        console.error("Failed to load chats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChats();
+  }, [user]);
 
   // 🔍 FILTER CHATS LIVE
   const filteredChats = useMemo(() => {
@@ -77,6 +110,14 @@ export default function Chat() {
       chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#f97316" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
