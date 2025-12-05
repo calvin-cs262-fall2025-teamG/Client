@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,7 +20,8 @@ const logo = require("../../assets/images/logo.png");
 export default function LoginScreen() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // still local-only for now
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState(""); 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -39,9 +41,13 @@ export default function LoginScreen() {
       return;
     }
 
+    if (mode === "signup" && !name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+
     try {
       setLoading(true);
-      // For now, both Login and Sign up just call the same login(email)
       await login(email);
       router.replace("/(tabs)");
     } catch (err: any) {
@@ -52,7 +58,7 @@ export default function LoginScreen() {
     }
   };
 
-  const isButtonDisabled = !email || !password || loading;
+  const isButtonDisabled = !email || !password || (mode === "signup" && !name.trim()) || loading;
 
   const isLogin = mode === "login";
 
@@ -61,116 +67,152 @@ export default function LoginScreen() {
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={styles.card}>
-        {/* Logo + Title */}
-        <View style={styles.header}>
-          <Image source={logo} style={styles.logo} />
-          <Text style={styles.appName}>Hey, Neighbor!</Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.card}>
+          {/* Logo + Title */}
+          <View style={styles.header}>
+            <Image source={logo} style={styles.logo} />
+            <Text style={styles.appName}>Hey, Neighbor!</Text>
+          </View>
 
-        {/* Mode Toggle */}
-        <View style={styles.toggleContainer}>
-          <TouchableOpacity
-            style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
-            onPress={() => setMode("login")}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                isLogin && styles.toggleTextActive,
-              ]}
+          {/* Mode Toggle */}
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
+              onPress={() => {
+                setMode("login");
+                setError(null);
+              }}
             >
-              Log in
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.toggleText,
+                  isLogin && styles.toggleTextActive,
+                ]}
+              >
+                Log in
+              </Text>
+            </TouchableOpacity>
 
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                !isLogin && styles.toggleButtonActive,
+              ]}
+              onPress={() => {
+                setMode("signup");
+                setError(null);
+              }}
+            >
+              <Text
+                style={[
+                  styles.toggleText,
+                  !isLogin && styles.toggleTextActive,
+                ]}
+              >
+                Sign up
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Inputs */}
+          <View style={styles.inputGroup}>
+            {/* Name field - only show for signup */}
+            {!isLogin && (
+              <>
+                <Text style={styles.label}>Full Name</Text>
+                <View style={styles.inputRow}>
+                  <Ionicons
+                    name="person-outline"
+                    size={18}
+                    color="#6b7280"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Your full name"
+                    placeholderTextColor="#9ca3af"
+                    autoCapitalize="words"
+                    value={name}
+                    onChangeText={setName}
+                  />
+                </View>
+              </>
+            )}
+
+            <Text style={[styles.label, !isLogin && { marginTop: 14 }]}>
+              Calvin email
+            </Text>
+            <View style={styles.inputRow}>
+              <Ionicons
+                name="mail-outline"
+                size={18}
+                color="#6b7280"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="you@calvin.edu"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+
+            <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
+            <View style={styles.inputRow}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={18}
+                color="#6b7280"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={isLogin ? "Your password" : "Create a password"}
+                placeholderTextColor="#9ca3af"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+            </View>
+          </View>
+
+          {/* Error message */}
+          {error && <Text style={styles.errorText}>{error}</Text>}
+
+          {/* Button */}
           <TouchableOpacity
             style={[
-              styles.toggleButton,
-              !isLogin && styles.toggleButtonActive,
+              styles.button,
+              isButtonDisabled && { opacity: 0.6 },
             ]}
-            onPress={() => setMode("signup")}
+            onPress={handleSubmit}
+            disabled={isButtonDisabled}
+            activeOpacity={0.85}
           >
-            <Text
-              style={[
-                styles.toggleText,
-                !isLogin && styles.toggleTextActive,
-              ]}
-            >
-              Sign up
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {isLogin ? "Log in" : "Sign up"}
+              </Text>
+            )}
           </TouchableOpacity>
+
+          {/* Helper text */}
+          <Text style={styles.footerText}>
+            Later, this can connect to the Hey, Neighbor!
+            backend and real accounts.
+          </Text>
         </View>
-
-        {/* Inputs */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Calvin email</Text>
-          <View style={styles.inputRow}>
-            <Ionicons
-              name="mail-outline"
-              size={18}
-              color="#6b7280"
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="you@calvin.edu"
-              placeholderTextColor="#9ca3af"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
-
-          <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
-          <View style={styles.inputRow}>
-            <Ionicons
-              name="lock-closed-outline"
-              size={18}
-              color="#6b7280"
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder={isLogin ? "Your password" : "Create a password"}
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-          </View>
-        </View>
-
-        {/* Error message */}
-        {error && <Text style={styles.errorText}>{error}</Text>}
-
-        {/* Button */}
-        <TouchableOpacity
-          style={[
-            styles.button,
-            isButtonDisabled && { opacity: 0.6 },
-          ]}
-          onPress={handleSubmit}
-          disabled={isButtonDisabled}
-          activeOpacity={0.85}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>
-              {isLogin ? "Log in" : "Sign up"}
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Helper text */}
-        <Text style={styles.footerText}>
-          Right now, both “Log in” and “Sign up” just use your @calvin.edu
-          email on this device. Later, this can connect to the Hey, Neighbor!
-          backend and real accounts.
-        </Text>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -179,8 +221,12 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#f9fafb",
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
+    paddingVertical: 20,
   },
   card: {
     backgroundColor: "#ffffff",
