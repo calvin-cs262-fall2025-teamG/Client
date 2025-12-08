@@ -35,7 +35,7 @@ export default function EditItem() {
     let items = stored ? JSON.parse(stored) : [];
 
     const updated = items.map((item: any) =>
-      item.id == id ? { ...item, name: title, image: imageUri } : item
+      item.id === id ? { ...item, name: title, image: imageUri } : item
     );
 
     await AsyncStorage.setItem("userItems", JSON.stringify(updated));
@@ -53,8 +53,8 @@ export default function EditItem() {
           const stored = await AsyncStorage.getItem("userItems");
           let items = stored ? JSON.parse(stored) : [];
 
-          const updated = items.filter((item: any) => item.id != id);
-          await AsyncStorage.setItem("userItems", JSON.stringify(updated));
+          const updated = items.filter((item: any) => item.id !== id);
+          await AsyncStorage.setItem("userItems", JSON.stringify(updated))
 
           router.replace("/(tabs)/profile");
         },
