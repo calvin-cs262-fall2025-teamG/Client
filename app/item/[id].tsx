@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -181,7 +181,7 @@ const presetItems: Record<number, ItemDetails> = {
     count: 110,
     lister: { name: "Adam S.", avatar: require("../../assets/images/greg.png"), rating: 4.6 },
   },
-    23: {
+  23: {
     name: "Vacuum",
     status: "none",
     image: require("../../assets/images/vacuum2.jpg"),
@@ -247,22 +247,11 @@ export default function ItemData() {
   // handle id being string or string[]
   const numericId = Array.isArray(id) ? Number(id[0]) : Number(id);
 
-  // item data must be created BEFORE using it in effects
   const item = presetItems[numericId];
+  const [isNotified, setIsNotified] = useState(false);
 
-  // notify state must exist BEFORE useEffects
-  const [isNotified, setIsNotified] = React.useState(false);
-
-  if (!item || Number.isNaN(numericId)) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ fontSize: 18 }}>Item not found.</Text>
-      </View>
-    );
-  }
-
-  // derive status
-  const status: "borrowed" | "none" = item.status ?? "none";
+  // derive status safely even if item is undefined
+  const status: "borrowed" | "none" = item?.status ?? "none";
 
   // check if this item was already subscribed
   useEffect(() => {
@@ -276,12 +265,16 @@ export default function ItemData() {
       }
     };
 
-    checkInitialNotify();
+    if (!Number.isNaN(numericId)) {
+      checkInitialNotify();
+    }
   }, [numericId]);
 
   // show "Good news!" if item is now available
   useEffect(() => {
     const checkNotify = async () => {
+      if (!item) return;
+
       try {
         const raw = await AsyncStorage.getItem(NOTIFY_KEY);
         if (!raw) return;
@@ -300,9 +293,19 @@ export default function ItemData() {
       }
     };
 
-    checkNotify();
-  }, [numericId, status, item.name]);
+    if (!Number.isNaN(numericId)) {
+      checkNotify();
+    }
+  }, [numericId, status, item]);
 
+  // ❗ early return is now AFTER hooks, so hooks run on every render
+  if (!item || Number.isNaN(numericId)) {
+    return (
+      <View style={styles.center}>
+        <Text style={{ fontSize: 18 }}>Item not found.</Text>
+      </View>
+    );
+  }
 
   const handleNotifyMe = async () => {
     try {
@@ -310,7 +313,6 @@ export default function ItemData() {
       const ids: number[] = raw ? JSON.parse(raw) : [];
 
       if (!ids.includes(numericId)) {
-        // Add subscribe
         ids.push(numericId);
         await AsyncStorage.setItem(NOTIFY_KEY, JSON.stringify(ids));
         setIsNotified(true);
@@ -320,7 +322,6 @@ export default function ItemData() {
           `We'll notify you when ${item.name} becomes available.`
         );
       } else {
-        // Unsubscribe if clicked again
         const updated = ids.filter((x) => x !== numericId);
         await AsyncStorage.setItem(NOTIFY_KEY, JSON.stringify(updated));
         setIsNotified(false);
@@ -387,7 +388,7 @@ export default function ItemData() {
               params: {
                 itemName: item.name,
                 listerName: item.lister.name,
-                image: item.image, // optional: if you want image on confirmation
+                image: item.image,
               },
             })
           }
@@ -398,7 +399,7 @@ export default function ItemData() {
         <TouchableOpacity
           style={[
             styles.notifyButton,
-            isNotified && styles.notifyButtonDisabled
+            isNotified && styles.notifyButtonDisabled,
           ]}
           onPress={handleNotifyMe}
         >
@@ -406,7 +407,6 @@ export default function ItemData() {
             {isNotified ? "Notifying you" : "Notify Me"}
           </Text>
         </TouchableOpacity>
-
       )}
     </ScrollView>
   );
@@ -513,5 +513,5 @@ const styles = StyleSheet.create({
   notifyText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   notifyButtonDisabled: {
     opacity: 0.6,
-  }
+  },
 });
