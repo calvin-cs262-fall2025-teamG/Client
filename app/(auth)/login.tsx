@@ -26,11 +26,12 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, signup } = useAuth(); // ✅ Get both login and signup
 
   const handleSubmit = async () => {
     setError(null);
 
+    // Validate Calvin email
     if (!email.toLowerCase().endsWith("@calvin.edu")) {
       setError("Please use your @calvin.edu email.");
       return;
@@ -48,7 +49,15 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      await login(email);
+
+      // ✅ Call signup or login based on mode
+      if (mode === "signup") {
+        await signup(email, password, name);
+      } else {
+        await login(email, password);
+      }
+
+      // Navigate to main app
       router.replace("/(tabs)");
     } catch (err: any) {
       console.error(err);
@@ -59,7 +68,6 @@ export default function LoginScreen() {
   };
 
   const isButtonDisabled = !email || !password || (mode === "signup" && !name.trim()) || loading;
-
   const isLogin = mode === "login";
 
   return (
@@ -208,8 +216,9 @@ export default function LoginScreen() {
 
           {/* Helper text */}
           <Text style={styles.footerText}>
-            Later, this can connect to the Hey, Neighbor!
-            backend and real accounts.
+            {isLogin 
+              ? "Use your @calvin.edu email to log in" 
+              : "Create an account with your @calvin.edu email"}
           </Text>
         </View>
       </ScrollView>
