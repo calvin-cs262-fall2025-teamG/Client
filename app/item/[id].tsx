@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { items as itemsApi } from "../../services/api";
 
 const imageMap: Record<string, any> = {
+  // item images
   "bike.jpg": require("../../assets/images/bike.jpg"),
   "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
   "chair.jpg": require("../../assets/images/chair.jpg"),
@@ -24,7 +25,6 @@ const imageMap: Record<string, any> = {
   "desklamp.jpeg": require("../../assets/images/desklamp.jpeg"),
   "drill.jpg": require("../../assets/images/drill.jpg"),
   "electrickettle.jpg": require("../../assets/images/electrickettle.jpg"),
-  "greg.png": require("../../assets/images/greg.png"),
   "hose.jpg": require("../../assets/images/hose.jpg"),
   "keurig.png": require("../../assets/images/keurig.png"),
   "laptopstand.jpg": require("../../assets/images/laptopstand.jpg"),
@@ -42,7 +42,16 @@ const imageMap: Record<string, any> = {
   "vacuum6.jpg": require("../../assets/images/vacuum6.jpg"),
   "wirelessbuds.jpg": require("../../assets/images/wirelessbuds.jpg"),
   "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
+
+  // avatar images
+  "greg.png": require("../../assets/images/greg.png"),
+  "jacob.png": require("../../assets/images/jacob.png"),
+  "helen.png": require("../../assets/images/helen.png"),
+  "rose.png": require("../../assets/images/rose.png"),
+  "bryn.png": require("../../assets/images/bryn.png"),
+  "laila.png": require("../../assets/images/laila.png"),
 };
+
 
 interface ItemDetails {
   item_id: number;
@@ -78,13 +87,22 @@ export default function ItemDetail() {
 
       try {
         const data: any = await itemsApi.getById(numericId);
+
         console.log("ITEM DETAILS RAW:", JSON.stringify(data, null, 2));
+
+        console.log("owner_avatar raw:", data.owner_avatar);
+        console.log("owner_avatar normalized:", (data.owner_avatar ?? "").trim().toLowerCase());
+
+        console.log("profile_picture raw:", data.profile_picture);
+        console.log("profile_picture normalized:", (data.profile_picture ?? "").trim().toLowerCase());
+
         setItem(data);
       } catch (error) {
         console.error("Failed to load item:", error);
       } finally {
         setLoading(false);
       }
+
     };
 
     loadItem();
@@ -113,7 +131,8 @@ export default function ItemDetail() {
 
   const isBorrowed = item.request_status !== "available";
   const localImage = item.image_url ? imageMap[item.image_url] : undefined;
-  const localOwnerAvatar = item.owner_avatar ? imageMap[item.owner_avatar] : undefined;
+  const ownerKey = (item.owner_avatar ?? "").trim().toLowerCase();
+  const localOwnerAvatar = ownerKey ? imageMap[ownerKey] : undefined;
 
 
   return (
@@ -158,68 +177,68 @@ export default function ItemDetail() {
             </View>
           )}
 
-        <View style={styles.listerInfo}>
-          <Text style={styles.listerName}>
-            {item.owner_name || `User ${item.owner_id}`}
-          </Text>
-          {item.owner_rating && (
-            <Text style={styles.rating}>⭐ {item.owner_rating}</Text>
-          )}
-        </View>
+          <View style={styles.listerInfo}>
+            <Text style={styles.listerName}>
+              {item.owner_name || `User ${item.owner_id}`}
+            </Text>
+            {item.owner_rating && (
+              <Text style={styles.rating}>⭐ {item.owner_rating}</Text>
+            )}
+          </View>
 
-        <TouchableOpacity
-          style={styles.viewProfileButton}
-          onPress={() =>
-            router.push({
-              pathname: "/chat-thread",
-              params: {
-                id: item.owner_id,
-                name: item.owner_name || `User ${item.owner_id}`,
-              },
-            })
-          }
-        >
-          <Text style={styles.viewProfileText}>Chat</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ACTION BUTTONS */}
-      {!isBorrowed ? (
-        <TouchableOpacity
-          style={styles.borrowButton}
-          onPress={() =>
-            Alert.alert(
-              "Borrow Request",
-              `Send a borrow request for ${item.name}?`,
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Send Request",
-                  onPress: () => {
-                    // Navigate to chat with the owner
-                    router.push({
-                      pathname: "/chat-thread",
-                      params: {
-                        id: item.owner_id,
-                        name: item.owner_name || `User ${item.owner_id}`,
-                      },
-                    });
-                  },
+          <TouchableOpacity
+            style={styles.viewProfileButton}
+            onPress={() =>
+              router.push({
+                pathname: "/chat-thread",
+                params: {
+                  id: item.owner_id,
+                  name: item.owner_name || `User ${item.owner_id}`,
                 },
-              ]
-            )
-          }
-        >
-          <Text style={styles.borrowText}>Request to Borrow</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.borrowedContainer}>
-          <Text style={styles.borrowedText}>
-            This item is currently borrowed
-          </Text>
+              })
+            }
+          >
+            <Text style={styles.viewProfileText}>Chat</Text>
+          </TouchableOpacity>
         </View>
-      )}
-    </ScrollView>
+
+        {/* ACTION BUTTONS */}
+        {!isBorrowed ? (
+          <TouchableOpacity
+            style={styles.borrowButton}
+            onPress={() =>
+              Alert.alert(
+                "Borrow Request",
+                `Send a borrow request for ${item.name}?`,
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Send Request",
+                    onPress: () => {
+                      // Navigate to chat with the owner
+                      router.push({
+                        pathname: "/chat-thread",
+                        params: {
+                          id: item.owner_id,
+                          name: item.owner_name || `User ${item.owner_id}`,
+                        },
+                      });
+                    },
+                  },
+                ]
+              )
+            }
+          >
+            <Text style={styles.borrowText}>Request to Borrow</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.borrowedContainer}>
+            <Text style={styles.borrowedText}>
+              This item is currently borrowed
+            </Text>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView >
   );
 }

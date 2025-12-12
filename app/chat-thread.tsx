@@ -13,8 +13,18 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { messages as messagesApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { messages as messagesApi, users as usersApi } from "../services/api";
+
+const avatarMap: Record<string, any> = {
+  "helen.png": require("../assets/images/helen.png"),
+  "jacob.png": require("../assets/images/jacob.png"),
+  "greg.png": require("../assets/images/greg.png"),
+  "rose.png": require("../assets/images/rose.png"),
+  "bryn.png": require("../assets/images/bryn.png"),
+  "laila.png": require("../assets/images/laila.png"),
+  "chloe.png": require("../assets/images/chloe.png"),
+};
 
 interface Message {
   message_id: number;
@@ -26,6 +36,8 @@ interface Message {
 }
 
 export default function ChatThread() {
+  const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
+
   const { id, name } = useLocalSearchParams<{
     id?: string;
     name?: string;
@@ -51,7 +63,7 @@ export default function ChatThread() {
 
     try {
       const allMessages: any = await messagesApi.getAll();
-      
+
       // Filter messages between these two users
       const filtered = allMessages.filter(
         (msg: Message) =>
@@ -78,6 +90,24 @@ export default function ChatThread() {
     }, 100);
   }, [messages]);
 
+  useEffect(() => {
+    const loadOtherUser = async () => {
+      if (!otherUserId) return;
+
+      try {
+        const u: any = await usersApi.getById(otherUserId);
+        console.log("OTHER USER profile_picture:", u?.profile_picture);
+        setOtherAvatar(u?.profile_picture ?? null);
+      } catch (e) {
+        console.error("Failed to load other user:", e);
+      }
+    };
+
+    loadOtherUser();
+  }, [otherUserId]);
+
+
+
   const handleSend = async () => {
     if (!inputText.trim() || !user?.user_id || !otherUserId || sending) return;
 
@@ -92,7 +122,7 @@ export default function ChatThread() {
 
       // Reload messages to get the new one
       await loadMessages();
-      
+
       setInputText("");
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -105,17 +135,13 @@ export default function ChatThread() {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    
-    // Calculate difference in days
+
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfMessageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const diffMs = startOfToday.getTime() - startOfMessageDay.getTime();
     const diffDays = Math.floor(diffMs / 86400000);
 
-    const timeStr = date.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    const timeStr = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
     if (diffDays === 0) return `Today • ${timeStr}`;
     if (diffDays === 1) return `Yesterday • ${timeStr}`;
@@ -131,10 +157,24 @@ export default function ChatThread() {
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={styles.backButton}>←</Text>
           </TouchableOpacity>
+
           <View style={styles.headerUserBlock}>
-            <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+            {otherAvatar && avatarMap[otherAvatar] ? (
+              <Image source={avatarMap[otherAvatar]} style={styles.headerAvatar} />
+            ) : (
+              <View style={[styles.headerAvatar, { backgroundColor: "#ffffff55" }]} />
+            )}
+
+
+            <View>
+              <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+              <Text style={styles.headerSubtitle}>Active now</Text>
+            </View>
           </View>
+
+          <View style={{ width: 24 }} />
         </View>
+
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f97316" />
           <Text style={styles.loadingText}>Loading messages...</Text>
@@ -143,6 +183,7 @@ export default function ChatThread() {
     );
   }
 
+
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
@@ -150,13 +191,19 @@ export default function ChatThread() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
-
         <View style={styles.headerUserBlock}>
+          {otherAvatar && avatarMap[otherAvatar] ? (
+            <Image source={avatarMap[otherAvatar]} style={styles.headerAvatar} />
+          ) : (
+            <View style={[styles.headerAvatar, { backgroundColor: "#ffffff55" }]} />
+          )}
+
           <View>
             <Text style={styles.headerTitle}>{name || "Chat"}</Text>
             <Text style={styles.headerSubtitle}>Active now</Text>
           </View>
         </View>
+
 
         <View style={{ width: 24 }} />
       </View>

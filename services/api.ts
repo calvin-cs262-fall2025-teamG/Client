@@ -19,7 +19,7 @@ export async function apiRequest<T>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
-  
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -47,7 +47,7 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ email, name }),
     }),
-  
+
   login: (email: string) =>
     apiRequest('/auth/login', {
       method: 'POST',
@@ -57,9 +57,9 @@ export const auth = {
 
 export const items = {
   getAll: () => apiRequest('/items'),
-  
+
   getById: (id: number) => apiRequest(`/items/${id}`),
-  
+
   create: (data: {
     name: string;
     description?: string;
@@ -74,7 +74,7 @@ export const items = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: number, data: {
     name?: string;
     description?: string;
@@ -88,7 +88,7 @@ export const items = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: number) =>
     apiRequest(`/items/${id}`, {
       method: 'DELETE',
@@ -97,9 +97,9 @@ export const items = {
 
 export const messages = {
   getAll: () => apiRequest('/messages'),
-  
+
   getUserMessages: (userId: number) => apiRequest(`/messages/user/${userId}`),
-  
+
   create: (data: {
     sender_id: number;
     receiver_id: number;
@@ -111,3 +111,8 @@ export const messages = {
       body: JSON.stringify(data),
     }),
 };
+
+export const users = {
+  getById: (id: number) => apiRequest(`/users/${id}`),
+};
+
