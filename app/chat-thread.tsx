@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,118 +10,208 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { messages as messagesApi } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 interface Message {
-  id: number;
-  text: string;
-  isUser: boolean;
-  timestamp: string;
+  message_id: number;
+  sender_id: number;
+  receiver_id: number;
+  item_id?: number;
+  content: string;
+  sent_at: string;
 }
 
 export default function ChatThread() {
+  const { id, name } = useLocalSearchParams<{
+    id?: string;
+    name?: string;
+  }>();
+
   const router = useRouter();
-  const { name, avatar } = useLocalSearchParams();
+  const { user } = useAuth();
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  // Convert avatar param back to a proper require() number
-  const avatarNumber = avatar ? Number(Array.isArray(avatar) ? avatar[0] : avatar) : null;
+  const otherUserId = id ? Number(id) : null;
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      text: "Hey! Is the KHvR lobby work to meet later?",
-      isUser: false,
-      timestamp: "2 weeks ago • 3:24 PM",
-    },
-    {
-      id: 2,
-      text: "Yes that's perfect! I'll see you at 7.",
-      isUser: true,
-      timestamp: "2 weeks ago • 3:30 PM",
-    },
-  ]);
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  // Load messages between current user and other user
+  const loadMessages = async () => {
+    if (!user?.user_id || !otherUserId) {
+      setLoading(false);
+      return;
+    }
 
-    const newMessage: Message = {
-      id: messages.length + 1,
-      text: inputText,
-      isUser: true,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
+    try {
+      const allMessages: any = await messagesApi.getAll();
+      
+      // Filter messages between these two users
+      const filtered = allMessages.filter(
+        (msg: Message) =>
+          (msg.sender_id === user.user_id && msg.receiver_id === otherUserId) ||
+          (msg.sender_id === otherUserId && msg.receiver_id === user.user_id)
+      );
 
-    setMessages([...messages, newMessage]);
-    setInputText("");
+      setMessages(filtered);
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadMessages();
+  }, [user, otherUserId]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!inputText.trim() || !user?.user_id || !otherUserId || sending) return;
+
+    setSending(true);
+
+    try {
+      const newMessage = await messagesApi.create({
+        sender_id: user.user_id,
+        receiver_id: otherUserId,
+        content: inputText.trim(),
+      });
+
+      // Reload messages to get the new one
+      await loadMessages();
+      
+      setInputText("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Format timestamp
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    
+    // Calculate difference in days
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMessageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffMs = startOfToday.getTime() - startOfMessageDay.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    const timeStr = date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    if (diffDays === 0) return `Today • ${timeStr}`;
+    if (diffDays === 1) return `Yesterday • ${timeStr}`;
+    if (diffDays < 7) return `${diffDays} days ago • ${timeStr}`;
+    if (diffDays < 14) return `1 week ago • ${timeStr}`;
+    return `${Math.floor(diffDays / 7)} weeks ago • ${timeStr}`;
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.backButton}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerUserBlock}>
+            <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#f97316" />
+          <Text style={styles.loadingText}>Loading messages...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-     {/* HEADER */}
-<View style={styles.header}>
-  <TouchableOpacity onPress={() => router.back()}>
-    <Text style={styles.backButton}>←</Text>
-  </TouchableOpacity>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backButton}>←</Text>
+        </TouchableOpacity>
 
-  {/* Avatar + Name */}
-  <View style={styles.headerUserBlock}>
-    {avatarNumber && (
-      <Image source={avatarNumber} style={styles.headerAvatar} />
-    )}
-    <View>
-      <Text style={styles.headerTitle}>{name || "Chat"}</Text>
-      <Text style={styles.headerSubtitle}>Active now</Text>
-    </View>
-  </View>
+        <View style={styles.headerUserBlock}>
+          <View>
+            <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+            <Text style={styles.headerSubtitle}>Active now</Text>
+          </View>
+        </View>
 
-  <View style={{ width: 24 }} />
-</View>
-
+        <View style={{ width: 24 }} />
+      </View>
 
       {/* BODY */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={styles.messages}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.map((msg) => (
-            <View key={msg.id}>
-              <View
-                style={[
-                  styles.messageBubble,
-                  msg.isUser ? styles.userBubble : styles.listerBubble,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.messageText,
-                    msg.isUser && styles.messageTextUser,
-                  ]}
-                >
-                  {msg.text}
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.timestamp,
-                  msg.isUser ? styles.timestampRight : styles.timestampLeft,
-                ]}
-              >
-                {msg.timestamp}
-              </Text>
+          {messages.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No messages yet</Text>
+              <Text style={styles.emptySub}>Send a message to start the conversation</Text>
             </View>
-          ))}
+          ) : (
+            messages.map((msg) => {
+              const isUser = msg.sender_id === user?.user_id;
+
+              return (
+                <View key={msg.message_id}>
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      isUser ? styles.userBubble : styles.listerBubble,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.messageText,
+                        isUser && styles.messageTextUser,
+                      ]}
+                    >
+                      {msg.content}
+                    </Text>
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.timestamp,
+                      isUser ? styles.timestampRight : styles.timestampLeft,
+                    ]}
+                  >
+                    {formatTime(msg.sent_at)}
+                  </Text>
+                </View>
+              );
+            })
+          )}
         </ScrollView>
 
         {/* INPUT BAR */}
@@ -133,17 +223,22 @@ export default function ChatThread() {
             placeholderTextColor="#b5b5b5"
             style={styles.textInput}
             multiline
+            editable={!sending}
           />
 
           <TouchableOpacity
             onPress={handleSend}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() || sending}
             style={[
               styles.sendButton,
-              !inputText.trim() && styles.sendButtonDisabled,
+              (!inputText.trim() || sending) && styles.sendButtonDisabled,
             ]}
           >
-            <Text style={styles.sendIcon}>↑</Text>
+            {sending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.sendIcon}>↑</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -151,63 +246,73 @@ export default function ChatThread() {
   );
 }
 
-//
-// STYLES
-//
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fefefe" },
-
-  // HEADER
-header: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingVertical: 12,
-  paddingHorizontal: 14,
-  backgroundColor: "#f97316",
-},
-
-headerUserBlock: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-  flex: 1,
-},
-
-headerAvatar: {
-  width: 38,
-  height: 38,
-  borderRadius: 19,
-  borderWidth: 2,
-  borderColor: "#fff",
-},
-
-headerTitle: {
-  color: "#fff",
-  fontSize: 17,
-  fontWeight: "700",
-},
-
-headerSubtitle: {
-  color: "#ffe6d5",
-  fontSize: 12,
-  marginTop: 1,
-},
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6b7280",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 100,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#4b5563",
+  },
+  emptySub: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#9ca3af",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#f97316",
+  },
+  headerUserBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  headerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  headerSubtitle: {
+    color: "#ffe6d5",
+    fontSize: 12,
+    marginTop: 1,
+  },
   backButton: {
     color: "#fff",
     fontSize: 28,
     fontWeight: "600",
     paddingRight: 10,
   },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-
-  // MESSAGES
   messages: { flex: 1 },
   messagesContent: { padding: 16, paddingBottom: 30 },
-
   messageBubble: {
     padding: 12,
     borderRadius: 20,
@@ -218,29 +323,24 @@ headerSubtitle: {
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-
   userBubble: {
     alignSelf: "flex-end",
-    backgroundColor: "#f97316", // ORANGE BUBBLE
+    backgroundColor: "#f97316",
     borderBottomRightRadius: 6,
   },
-
   listerBubble: {
     alignSelf: "flex-start",
-    backgroundColor: "#e5e7eb", // Light gray
+    backgroundColor: "#e5e7eb",
     borderBottomLeftRadius: 6,
   },
-
   messageText: {
     color: "#1a1a1a",
     fontSize: 15,
     lineHeight: 20,
   },
-
   messageTextUser: {
     color: "#fff",
   },
-
   timestamp: {
     fontSize: 11,
     color: "#9ca3af",
@@ -248,8 +348,6 @@ headerSubtitle: {
   },
   timestampLeft: { alignSelf: "flex-start", marginLeft: 6 },
   timestampRight: { alignSelf: "flex-end", marginRight: 6 },
-
-  // INPUT BAR
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -258,7 +356,6 @@ headerSubtitle: {
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
   },
-
   textInput: {
     flex: 1,
     backgroundColor: "#f3f4f6",
@@ -268,7 +365,6 @@ headerSubtitle: {
     fontSize: 15,
     maxHeight: 100,
   },
-
   sendButton: {
     marginLeft: 10,
     backgroundColor: "#f97316",

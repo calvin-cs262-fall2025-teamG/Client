@@ -1,155 +1,266 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Button,
   Image,
   StyleSheet,
   Alert,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import PageContainer from "./components/PageContainer";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { items } from "../services/api";
 
 export default function EditItem() {
   const router = useRouter();
-  const { id, name, image } = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    id?: string;
+    name?: string;
+    title?: string;
+    description?: string;
+    image?: string;
+  }>();
 
-  const [title, setTitle] = useState(name as string);
-  const [imageUri, setImageUri] = useState(image as string);
+  const id = params.id ? Number(params.id) : null;
 
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 0.7,
-    });
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+  // Load item from API on mount
+  useEffect(() => {
+    const loadItem = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const item: any = await items.getById(id);
+        setTitle(item.name || "");
+        setDescription(item.description || "");
+        setImageUrl(item.image_url || "");
+      } catch (error) {
+        console.error("Failed to load item:", error);
+        Alert.alert("Error", "Could not load item details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadItem();
+  }, [id]);
+
+  const handleSave = async () => {
+    if (!id) {
+      Alert.alert("Error", "Invalid item ID.");
+      return;
+    }
+
+    if (!title.trim()) {
+      Alert.alert("Missing title", "Please give your item a name.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await items.update(id, {
+        name: title.trim(),
+        description: description.trim(),
+        image_url: imageUrl.trim() || undefined,
+      });
+
+      Alert.alert("Success", "Item updated successfully!", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (error) {
+      console.error("Failed to save edits:", error);
+      Alert.alert("Error", "Could not save changes. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const saveEdit = async () => {
-    const stored = await AsyncStorage.getItem("userItems");
-    let items = stored ? JSON.parse(stored) : [];
+  const handleDelete = async () => {
+    if (!id) {
+      Alert.alert("Error", "Invalid item ID.");
+      return;
+    }
 
-    const updated = items.map((item: any) =>
-      item.id === id ? { ...item, name: title, image: imageUri } : item
-    );
-
-    await AsyncStorage.setItem("userItems", JSON.stringify(updated));
-
-    router.push("/(tabs)/profile");
-  };
-
-  const deleteItem = async () => {
-    Alert.alert("Delete Item", "Are you sure you want to delete this item?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          const stored = await AsyncStorage.getItem("userItems");
-          let items = stored ? JSON.parse(stored) : [];
-
-          const updated = items.filter((item: any) => item.id !== id);
-          await AsyncStorage.setItem("userItems", JSON.stringify(updated))
-
-          router.replace("/(tabs)/profile");
+    Alert.alert(
+      "Delete item?",
+      "This will permanently remove the item from your listings.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setSaving(true);
+            try {
+              await items.delete(id);
+              Alert.alert("Deleted", "Item removed successfully.", [
+                { text: "OK", onPress: () => router.back() },
+              ]);
+            } catch (error) {
+              console.error("Failed to delete item:", error);
+              Alert.alert("Error", "Could not delete the item.");
+              setSaving(false);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#f97316" />
+          <Text style={styles.loadingText}>Loading item...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!id) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>Invalid item ID</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: "Edit Item",
-          headerBackTitle: "",
-        }}
-      />
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.heading}>Edit item</Text>
 
-      <PageContainer>
-        <Text style={styles.header}>Edit Item</Text>
+        {/* Image preview */}
+        {imageUrl && (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        )}
 
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-        </TouchableOpacity>
-
+        <Text style={styles.label}>Title *</Text>
         <TextInput
           value={title}
           onChangeText={setTitle}
+          placeholder="Vacuum, Keurig, tool set..."
           style={styles.input}
-          placeholder="Edit item name"
-          placeholderTextColor="#6b7280"
+          editable={!saving}
         />
 
-        <TouchableOpacity style={styles.button} onPress={saveEdit}>
-          <Text style={styles.buttonText}>Save Changes</Text>
-        </TouchableOpacity>
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Short description of the item, condition, etc."
+          multiline
+          style={[styles.input, styles.multiline]}
+          editable={!saving}
+        />
 
-        <TouchableOpacity style={styles.deleteButton} onPress={deleteItem}>
-          <Text style={styles.deleteButtonText}>Delete Item</Text>
-        </TouchableOpacity>
-      </PageContainer>
-    </>
+        <Text style={styles.label}>Image URL</Text>
+        <TextInput
+          value={imageUrl}
+          onChangeText={setImageUrl}
+          placeholder="https://example.com/image.jpg"
+          style={styles.input}
+          editable={!saving}
+          autoCapitalize="none"
+        />
+
+        <View style={styles.buttonRow}>
+          <Button
+            title={saving ? "Saving..." : "Save changes"}
+            onPress={handleSave}
+            disabled={saving}
+          />
+        </View>
+
+        <View style={styles.buttonRow}>
+          <Button
+            color="red"
+            title={saving ? "Deleting..." : "Delete item"}
+            onPress={handleDelete}
+            disabled={saving}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 20,
-    color: "#111827",
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
   },
-  imagePicker: {
-    height: 250,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 12,
+  container: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  centerContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
-    overflow: "hidden",
+    padding: 20,
   },
-  imagePreview: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 10,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6b7280",
+  },
+  errorText: {
+    fontSize: 18,
+    color: "#ef4444",
+    fontWeight: "600",
+  },
+  heading: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 12,
+    marginBottom: 4,
   },
   input: {
-    backgroundColor: "#f9fafb",
     borderWidth: 1,
     borderColor: "#e5e7eb",
     borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    color: "#111827",
-    marginBottom: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: "#fff",
   },
-  button: {
-    backgroundColor: "#f97316",
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
+  multiline: {
+    minHeight: 90,
+    textAlignVertical: "top",
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  image: {
+    width: "100%",
+    height: 220,
+    borderRadius: 14,
+    marginBottom: 16,
+    backgroundColor: "#e5e7eb",
   },
-  deleteButton: {
+  buttonRow: {
     marginTop: 12,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    backgroundColor: "#ef4444",
-  },
-  deleteButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
