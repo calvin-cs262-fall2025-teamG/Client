@@ -16,6 +16,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { messages as messagesApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
+const avatarMap: Record<string, any> = {
+  "helen.png": require("../../assets/images/helen.png"),
+  "jacob.png": require("../../assets/images/jacob.png"),
+  "greg.png": require("../../assets/images/greg.png"),
+  "rose.png": require("../../assets/images/rose.png"),
+  "bryn.png": require("../../assets/images/bryn.png"),
+  "laila.png": require("../../assets/images/laila.png"),
+  "chloe.png": require("../../assets/images/chloe.png"),
+};
+
 interface ChatPreview {
   message_id: number;
   other_user_id: number;
@@ -137,9 +147,9 @@ export default function Chat() {
                 })
               }
             >
-              {chat.other_user_avatar ? (
+              {chat.other_user_avatar && avatarMap[chat.other_user_avatar] ? (
                 <Image
-                  source={{ uri: chat.other_user_avatar }}
+                  source={avatarMap[chat.other_user_avatar]}
                   style={styles.avatarImage}
                 />
               ) : (

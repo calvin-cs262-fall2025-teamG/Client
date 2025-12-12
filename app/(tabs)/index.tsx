@@ -16,6 +16,37 @@ import {
   ActivityIndicator,
 } from "react-native";
 
+const imageMap: Record<string, any> = {
+  "banner.png": require("../../assets/images/banner.png"),
+  "bike.jpg": require("../../assets/images/bike.jpg"),
+  "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
+  "chair.jpg": require("../../assets/images/chair.jpg"),
+  "charger.jpg": require("../../assets/images/charger.jpg"),
+  "cookbook.jpg": require("../../assets/images/cookbook.jpg"),
+  "cookset.jpg": require("../../assets/images/cookset.jpg"),
+  "corebook.jpg": require("../../assets/images/corebook.jpg"),
+  "desklamp.jpeg": require("../../assets/images/desklamp.jpeg"),
+  "drill.jpg": require("../../assets/images/drill.jpg"),
+  "electrickettle.jpg": require("../../assets/images/electrickettle.jpg"),
+  "hose.jpg": require("../../assets/images/hose.jpg"),
+  "keurig.png": require("../../assets/images/keurig.png"),
+  "laptopstand.jpg": require("../../assets/images/laptopstand.jpg"),
+  "pressurewasher.jpg": require("../../assets/images/pressurewasher.jpg"),
+  "smartwatch.jpg": require("../../assets/images/smartwatch.jpg"),
+  "speaker.jpg": require("../../assets/images/speaker.jpg"),
+  "standingdesk.jpg": require("../../assets/images/standingdesk.jpg"),
+  "tools.jpg": require("../../assets/images/tools.jpg"),
+  "tractor.jpg": require("../../assets/images/tractor.jpg"),
+  "vacuum.jpg": require("../../assets/images/vacuum.jpg"),
+  "vacuum2.jpg": require("../../assets/images/vacuum2.jpg"),
+  "vacuum3.jpg": require("../../assets/images/vacuum3.jpg"),
+  "vacuum4.jpg": require("../../assets/images/vacuum4.jpg"),
+  "vacuum5.jpg": require("../../assets/images/vacuum5.jpg"),
+  "vacuum6.jpg": require("../../assets/images/vacuum6.jpg"),
+  "wirelessbuds.jpg": require("../../assets/images/wirelessbuds.jpg"),
+  "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
+};
+
 interface Item {
   item_id: number;
   name: string;
@@ -34,7 +65,7 @@ export default function Index() {
 
   const {
     isSaved = () => false,
-    toggle = () => {},
+    toggle = () => { },
     ids = new Set<number>(),
   } = bookmarkCtx || {};
 
@@ -74,8 +105,8 @@ export default function Index() {
     toggle({
       id: String(item.item_id),
       title: item.name,
-      image: item.image_url ? { uri: item.image_url } : null,
-      count: 0, // Can add a count field later if needed
+      image: item.image_url && imageMap[item.image_url] ? imageMap[item.image_url] : null,
+      count: 0,
       status: item.request_status === "available" ? "none" : "borrowed",
       category: item.category || "Other",
     });
@@ -83,7 +114,7 @@ export default function Index() {
 
   const filteredItems = items.filter((item) => {
     const matchesCategory =
-      activeTab === "Popular" || 
+      activeTab === "Popular" ||
       (item.category && item.category.toLowerCase() === activeTab.toLowerCase());
 
     const q = searchQuery.trim().toLowerCase();
@@ -234,15 +265,16 @@ export default function Index() {
                       onPress={() => router.push(`/item/${item.item_id}`)}
                       activeOpacity={0.8}
                     >
-                      {item.image_url ? (
+                      {item.image_url && imageMap[item.image_url] ? (
                         <Image
-                          source={{ uri: item.image_url }}
+                          source={imageMap[item.image_url]}
                           style={[
                             styles.recommendedImage,
                             isBorrowed && { opacity: 0.55 },
                           ]}
                         />
                       ) : (
+
                         <View style={[styles.recommendedImage, styles.placeholderImage]}>
                           <Ionicons name="image-outline" size={40} color="#9ca3af" />
                         </View>
