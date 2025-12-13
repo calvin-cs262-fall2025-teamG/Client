@@ -31,12 +31,20 @@ export default function EditProfile() {
   const router = useRouter();
   const { user, setUser } = useAuth();
 
+  console.log("👤 User in edit-profile:", user);
+  console.log("📷 Profile picture:", user?.profile_picture);
+
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
 
-  const avatarUrl = localImageUri || user?.avatar_url || null;
+  const avatarUrl = localImageUri
+    || (user?.profile_picture?.startsWith('http')
+      ? user.profile_picture
+      : user?.profile_picture
+        ? `${BASE_URL}/uploads/${user.profile_picture}`
+        : null);
 
   const handleChangePhoto = async () => {
     try {
@@ -75,10 +83,7 @@ export default function EditProfile() {
     try {
       setUploading(true);
 
-      // Create form data
       const formData = new FormData();
-
-      // Get file extension
       const uriParts = uri.split(".");
       const fileType = uriParts[uriParts.length - 1];
 
@@ -88,9 +93,8 @@ export default function EditProfile() {
         type: `image/${fileType}`,
       } as any);
 
-      // Upload to backend
       const response = await fetch(
-        `${BASE_URL}/users/${user!.user_id}/profile-picture`,  // ← Use BASE_URL
+        `${BASE_URL}/users/${user!.user_id}/profile-picture`,
         {
           method: "POST",
           body: formData,
@@ -106,7 +110,13 @@ export default function EditProfile() {
         throw new Error(`Upload failed: ${response.status}`);
       }
 
-      const updatedUser = await response.json();
+      const uploadResponse = await response.json();
+
+      // Update the database with the new profile picture filename
+      const updatedUser = await usersApi.update(user!.user_id, {
+        profile_picture: uploadResponse.filename
+      });
+
       setUser(updatedUser as any);
 
       Alert.alert("Success", "Profile picture updated!");
@@ -121,6 +131,13 @@ export default function EditProfile() {
 
   const handleSave = async () => {
     console.log("🔘 Save button clicked!");
+    console.log("👤 Current user:", user);
+    console.log("👤 User ID:", user?.user_id);
+
+    if (!user?.user_id) {
+      Alert.alert("Error", "User session expired. Please log in again.");
+      return;
+    }
 
     if (!name.trim()) {
       Alert.alert("Name required", "Please enter your name.");
@@ -131,18 +148,17 @@ export default function EditProfile() {
 
     try {
       setSaving(true);
-
-      const updated = await usersApi.update(user!.user_id, {
+      const updated = await usersApi.update(user.user_id, {
         name: name.trim(),
       });
-
       console.log("✅ Update successful:", updated);
       setUser(updated as any);
 
+      Alert.alert("Success", "Profile updated!");
       router.back();
-    } catch (err) {
-      console.error("❌ Error updating profile:", err);
-      Alert.alert("Error", "Failed to update profile.");
+    } catch (error) {
+      console.error("❌ Error updating profile:", error);
+      Alert.alert("Error", "Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
     }

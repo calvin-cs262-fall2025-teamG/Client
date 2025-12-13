@@ -151,8 +151,11 @@ export default function ListItem() {
         disabled={uploading}
       >
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-        ) : (
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.imagePreview}
+            resizeMode="cover"
+          />) : (
           <View style={styles.addPhotoBox}>
             <Text style={styles.addPhotoText}>Add a Photo</Text>
             <Text style={styles.subText}>Tap to upload from your gallery</Text>
@@ -234,6 +237,7 @@ const styles = StyleSheet.create({
   imagePreview: {
     width: "100%",
     height: "100%",
+    resizeMode: "cover",
   },
   input: {
     backgroundColor: "#f9fafb",

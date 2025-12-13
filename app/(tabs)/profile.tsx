@@ -99,7 +99,7 @@ export default function Profile() {
   );
 
   const displayName = fullUser?.name ?? user?.name ?? "New User";
-  const avatarUrl = fullUser?.avatar_url ?? user?.avatar_url ?? null;
+const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
 
   // placeholder until you build real neighbor logic
   const neighborsCount = 0;
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   },
 
   recommendedName: {
-    fontSize: 22,
+    fontSize: 15,
     fontWeight: "800",
     marginBottom: 6,
     color: "#111827",

@@ -28,6 +28,7 @@ export default function EditItem() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +45,7 @@ export default function EditItem() {
         const item: any = await items.getById(id);
         setTitle(item.name || "");
         setDescription(item.description || "");
+        setCategory(item.category || "");
         setImageUrl(item.image_url || "");
       } catch (error) {
         console.error("Failed to load item:", error);
@@ -73,7 +75,7 @@ export default function EditItem() {
       await items.update(id, {
         name: title.trim(),
         description: description.trim(),
-        image_url: imageUrl.trim() || undefined,
+        category: category.trim() || undefined,
       });
 
       Alert.alert("Success", "Item updated successfully!", [
@@ -146,7 +148,7 @@ export default function EditItem() {
         <Text style={styles.heading}>Edit item</Text>
 
         {/* Image preview */}
-        {imageUrl && (
+        {imageUrl && imageUrl.startsWith('http') && (
           <Image
             source={{ uri: imageUrl }}
             style={styles.image}
@@ -163,6 +165,15 @@ export default function EditItem() {
           editable={!saving}
         />
 
+        <Text style={styles.label}>Category</Text>
+        <TextInput
+          value={category}
+          onChangeText={setCategory}
+          placeholder="Tools, Home, Books, etc."
+          style={styles.input}
+          editable={!saving}
+        />
+
         <Text style={styles.label}>Description</Text>
         <TextInput
           value={description}
@@ -171,16 +182,6 @@ export default function EditItem() {
           multiline
           style={[styles.input, styles.multiline]}
           editable={!saving}
-        />
-
-        <Text style={styles.label}>Image URL</Text>
-        <TextInput
-          value={imageUrl}
-          onChangeText={setImageUrl}
-          placeholder="https://example.com/image.jpg"
-          style={styles.input}
-          editable={!saving}
-          autoCapitalize="none"
         />
 
         <View style={styles.buttonRow}>
@@ -255,7 +256,8 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 220,
+    height: undefined,
+    aspectRatio: 1,
     borderRadius: 14,
     marginBottom: 16,
     backgroundColor: "#e5e7eb",
