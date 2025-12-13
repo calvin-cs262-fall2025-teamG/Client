@@ -78,6 +78,7 @@ export default function TabLayout() {
             icon(focused, "person-circle", "person-circle-outline", color),
         }}
       />
+
     </Tabs>
   );
 }
