@@ -6,8 +6,7 @@ export default function ListerProfile() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{name}'s Profile</Text>
-
+      <Text style={styles.title}>{`${name}'s Profile`}</Text>
       <Image
         source={require("../../assets/images/laila.png")}
         style={styles.avatar}

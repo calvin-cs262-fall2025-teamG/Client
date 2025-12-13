@@ -7,9 +7,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 const charger = require("../../assets/images/charger.jpg");
 const corebook = require("../../assets/images/corebook.jpg");
