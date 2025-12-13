@@ -265,16 +265,30 @@ export default function Index() {
                       onPress={() => router.push(`/item/${item.item_id}`)}
                       activeOpacity={0.8}
                     >
-                      {item.image_url && imageMap[item.image_url] ? (
-                        <Image
-                          source={imageMap[item.image_url]}
-                          style={[
-                            styles.recommendedImage,
-                            isBorrowed && { opacity: 0.55 },
-                          ]}
-                        />
+                      {item.image_url ? (
+                        // Check if it's a local asset or remote URL
+                        imageMap[item.image_url] ? (
+                          <Image
+                            source={imageMap[item.image_url]}
+                            style={[
+                              styles.recommendedImage,
+                              isBorrowed && { opacity: 0.55 },
+                            ]}
+                          />
+                        ) : item.image_url.startsWith('http') ? (
+                          <Image
+                            source={{ uri: item.image_url }}
+                            style={[
+                              styles.recommendedImage,
+                              isBorrowed && { opacity: 0.55 },
+                            ]}
+                          />
+                        ) : (
+                          <View style={[styles.recommendedImage, styles.placeholderImage]}>
+                            <Ionicons name="image-outline" size={40} color="#9ca3af" />
+                          </View>
+                        )
                       ) : (
-
                         <View style={[styles.recommendedImage, styles.placeholderImage]}>
                           <Ionicons name="image-outline" size={40} color="#9ca3af" />
                         </View>

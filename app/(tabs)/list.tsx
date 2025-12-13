@@ -6,67 +6,150 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import PageContainer from "../components/PageContainer"; // 👈 replaces CloseButton + layout
+import { useAuth } from "../../context/AuthContext";
+import { items as itemsApi } from "../../services/api";
+import PageContainer from "../components/PageContainer";
+import Constants from "expo-constants";
+
+function getHost() {
+  const hostUri =
+    (Constants.expoConfig as any)?.hostUri ??
+    (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
+  const host = hostUri?.split(":")?.[0];
+  return host || "localhost";
+}
+
+const BASE_URL = `http://${getHost()}:3001`;
 
 export default function ListItem() {
   const router = useRouter();
+  const { user } = useAuth();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        alert("Permission required to select images.");
+        Alert.alert("Permission required", "Please grant photo library access.");
       }
     })();
   }, []);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
-      quality: 0.8,
+      quality: 0.7,
     });
 
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageUri) return null;
+
+    try {
+      const formData = new FormData();
+
+      const uriParts = imageUri.split(".");
+      const fileType = uriParts[uriParts.length - 1];
+
+      formData.append("photo", {
+        uri: imageUri,
+        name: `item_${Date.now()}.${fileType}`,
+        type: `image/${fileType}`,
+      } as any);
+
+      const response = await fetch(`${BASE_URL}/items/upload`, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Image upload failed");
+      }
+
+      const data = await response.json();
+      return data.filename;
+    } catch (error) {
+      console.error("Upload error:", error);
+      throw error;
+    }
   };
 
   const handleSubmit = async () => {
-    if (!title || !imageUri) {
-      alert("Please add a title and photo.");
+    if (!title.trim()) {
+      Alert.alert("Title required", "Please add a title for your item.");
       return;
     }
 
-    const newItem = {
-      id: Date.now(),
-      name: title,
-      description,
-      image: imageUri,
-      count: 0,
-      category: "User",
-    };
+    if (!user?.user_id) {
+      Alert.alert("Error", "You must be logged in to list an item.");
+      return;
+    }
 
-    const stored = await AsyncStorage.getItem("userItems");
-    const parsed = stored ? JSON.parse(stored) : [];
-    const updated = [newItem, ...parsed];
+    try {
+      setUploading(true);
 
-    await AsyncStorage.setItem("userItems", JSON.stringify(updated));
+      // Upload image first (if exists)
+      let imageFilename = null;
+      if (imageUri) {
+        imageFilename = await uploadImage();
+      }
 
-    router.push("/profile");
+      // Create item in database
+      await itemsApi.create({
+        name: title.trim(),
+        description: description.trim() || undefined,
+        image_url: imageFilename || undefined,
+        category: category.trim() || "Other",
+        owner_id: user.user_id,
+        request_status: "available",
+        start_date: new Date().toISOString(),  // ← Add this
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // ← Add this (30 days from now)
+      });
+
+      Alert.alert("Success", "Your item has been listed!", [
+        { text: "OK", onPress: () => router.push("/(tabs)/profile") },
+      ]);
+
+      // Clear form
+      setTitle("");
+      setDescription("");
+      setCategory("");
+      setImageUri(null);
+    } catch (error) {
+      console.error("Failed to create item:", error);
+      Alert.alert("Error", "Failed to list item. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
-
 
   return (
     <PageContainer>
       <Text style={styles.header}>List an Item to Share</Text>
 
-      <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+      <TouchableOpacity
+        style={styles.imagePicker}
+        onPress={pickImage}
+        disabled={uploading}
+      >
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.imagePreview} />
         ) : (
@@ -83,6 +166,16 @@ export default function ListItem() {
         value={title}
         onChangeText={setTitle}
         style={styles.input}
+        editable={!uploading}
+      />
+
+      <TextInput
+        placeholder="Category (e.g., 'Tools', 'Home', 'Books')"
+        placeholderTextColor="#6b7280"
+        value={category}
+        onChangeText={setCategory}
+        style={styles.input}
+        editable={!uploading}
       />
 
       <TextInput
@@ -92,10 +185,19 @@ export default function ListItem() {
         onChangeText={setDescription}
         style={[styles.input, styles.textArea]}
         multiline
+        editable={!uploading}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Post Item</Text>
+      <TouchableOpacity
+        style={[styles.button, uploading && styles.buttonDisabled]}
+        onPress={handleSubmit}
+        disabled={uploading}
+      >
+        {uploading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Post Item</Text>
+        )}
       </TouchableOpacity>
     </PageContainer>
   );
@@ -153,6 +255,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     marginTop: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     color: "#fff",
