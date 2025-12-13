@@ -20,8 +20,21 @@ export default function BookmarkScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Bookmarks</Text>
+
+        {/* spacer for centering */}
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView style={styles.container}>
         {items.length === 0 ? (
+          /* Empty state */
           <View style={styles.emptyContainer}>
             <Ionicons name="bookmark-outline" size={60} color="#9ca3af" />
             <Text style={styles.emptyText}>No bookmarks yet</Text>
@@ -36,16 +49,20 @@ export default function BookmarkScreen() {
 
               return (
                 <View key={item.id} style={styles.card}>
-                  {/* Floating DELETE Button */}
+                  {/* Delete button */}
                   <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => remove(item.id)}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
-                    <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                    <Ionicons
+                      name="trash-outline"
+                      size={22}
+                      color="#ef4444"
+                    />
                   </TouchableOpacity>
 
-                  {/* Floating Bookmark Toggle */}
+                  {/* Bookmark toggle */}
                   <TouchableOpacity
                     style={styles.bookmarkIconContainer}
                     onPress={() => toggle(item)}
@@ -58,19 +75,21 @@ export default function BookmarkScreen() {
                     />
                   </TouchableOpacity>
 
-                  {/* ITEM IMAGE */}
+                  {/* Item image */}
                   <TouchableOpacity
                     onPress={() => router.push(`/item/${item.id}`)}
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                   >
-                    <Image
-                      source={item.image}
-                      style={[
-                        styles.image,
-                        item.status === "borrowed" && { opacity: 0.55 },
-                      ]}
-                    />
+                    {item.image ? (
+                      <Image source={item.image} style={styles.image} />
+                    ) : (
+                      <View style={[styles.image, styles.imagePlaceholder]}>
+                        <Ionicons name="image-outline" size={26} color="#9ca3af" />
+                        <Text style={styles.placeholderText}>No Image</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
+
 
                   {/* Borrowed badge */}
                   {item.status === "borrowed" && (
@@ -79,40 +98,25 @@ export default function BookmarkScreen() {
                     </View>
                   )}
 
-                  {/* Name + Count */}
+                  {/* Info */}
                   <TouchableOpacity
                     onPress={() => router.push(`/item/${item.id}`)}
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                     style={styles.info}
                   >
-                    <Text
-                      style={[
-                        styles.name,
-                        item.status === "borrowed" && { opacity: 0.7 },
-                      ]}
-                      numberOfLines={1}
-                    >
+                    <Text style={styles.name} numberOfLines={1}>
                       {item.title}
                     </Text>
 
-                    {item.count !== undefined && (
-                      <View style={styles.countRow}>
-                        <Ionicons
-                          name={saved ? "bookmark" : "bookmark-outline"}
-                          size={14}
-                          color="#3b1b0d"
-                          style={{ marginRight: 4 }}
-                        />
-                        <Text
-                          style={[
-                            styles.count,
-                            item.status === "borrowed" && { opacity: 0.7 },
-                          ]}
-                        >
-                          {item.count}
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.countRow}>
+                      <Ionicons
+                        name="bookmark"
+                        size={14}
+                        color="#3b1b0d"
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.count}>{item.count ?? 0}</Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
               );
@@ -124,10 +128,29 @@ export default function BookmarkScreen() {
   );
 }
 
+/* ---------------- STYLES ---------------- */
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#f9fafb",
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
   },
 
   container: {
@@ -179,6 +202,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
   },
 
+  imagePlaceholder: { 
+    alignItems: "center", 
+    justifyContent: "center", 
+    gap: 6 
+  },
+  
+  placeholderText: { 
+    color: "#9ca3af", 
+    fontWeight: "600" 
+  },
+
   info: {
     padding: 12,
   },
@@ -190,23 +224,26 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   count: {
     fontSize: 13,
     color: "#6b7280",
   },
 
-  /* floating delete button */
   deleteButton: {
     position: "absolute",
     bottom: 8,
     right: 8,
     zIndex: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "rgba(255,255,255,0.85)",
     padding: 6,
     borderRadius: 20,
   },
 
-  /* floating bookmark button */
   bookmarkIconContainer: {
     position: "absolute",
     top: 8,
@@ -232,13 +269,8 @@ const styles = StyleSheet.create({
   },
 
   badgeText: {
-    color: "white",
+    color: "#fff",
     fontWeight: "600",
     fontSize: 12,
-  },
-  countRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
   },
 });

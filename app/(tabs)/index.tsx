@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarksUnsafe } from "../../context/BookmarksContext";
+import { useBookmarks } from "../../context/BookmarksContext";
 import { items as itemsApi } from "../../services/api";
 import {
   Image,
@@ -10,11 +10,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../context/AuthContext";
 
 const imageMap: Record<string, any> = {
   "banner.png": require("../../assets/images/banner.png"),
@@ -61,13 +62,7 @@ interface Item {
 
 export default function Index() {
   const router = useRouter();
-  const bookmarkCtx = useBookmarksUnsafe();
-
-  const {
-    isSaved = () => false,
-    toggle = () => { },
-    ids = new Set<number>(),
-  } = bookmarkCtx || {};
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,9 +70,11 @@ export default function Index() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const searchInputRef = useRef<TextInput | null>(null);
+  const { byId, isSaved, toggle } = useBookmarks();
+  const bookmarkCount = Object.keys(byId).length;
 
-  const bookmarkCount = ids.size;
+
+  const searchInputRef = useRef<TextInput | null>(null);
 
   // Load items from API
   const loadItems = async () => {
@@ -103,9 +100,9 @@ export default function Index() {
 
   const handleBookmarkToggle = (item: Item) => {
     toggle({
-      id: String(item.item_id),
+      id: item.item_id,
       title: item.name,
-      image: item.image_url && imageMap[item.image_url] ? imageMap[item.image_url] : null,
+      image_url: item.image_url ?? null,
       count: 0,
       status: item.request_status === "available" ? "none" : "borrowed",
       category: item.category || "Other",
@@ -239,30 +236,59 @@ export default function Index() {
         ) : (
           <View style={styles.recommendedGrid}>
             {filteredItems.map((item) => {
-              const isBookmarked = isSaved(String(item.item_id));
+              const isBookmarked = isSaved(item.item_id);
               const isBorrowed = item.request_status !== "available";
 
               return (
                 <View key={item.item_id} style={styles.recommendedItem}>
                   {/* IMAGE + BOOKMARK */}
                   <View style={styles.recommendedImageContainer}>
-                    {/* Bookmark Icon */}
-                    <TouchableOpacity
-                      style={styles.bookmarkIconContainer}
-                      onPress={() => handleBookmarkToggle(item)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={isBookmarked ? "bookmark" : "bookmark-outline"}
-                        size={22}
-                        color="#3b1b0d"
-                      />
-                    </TouchableOpacity>
+                    {/* Edit icon for own items, bookmark for others */}
+                    {item.owner_id === user?.user_id ? (
+                      <TouchableOpacity
+                        style={styles.editIconContainer}
+                        onPress={() => router.push({
+                          pathname: "/edit-item",
+                          params: { id: item.item_id }
+                        })}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name="pencil"
+                          size={16}
+                          color="#fff"
+                        />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.bookmarkIconContainer}
+                        onPress={() => handleBookmarkToggle(item)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                          size={22}
+                          color="#3b1b0d"
+                        />
+                      </TouchableOpacity>
+                    )}
 
                     {/* Navigate via image */}
                     <TouchableOpacity
-                      onPress={() => router.push(`/item/${item.item_id}`)}
+                      onPress={() => {
+                        // If it's the user's own item, go to edit screen
+                        if (item.owner_id === user?.user_id) {
+                          router.push({
+                            pathname: "/edit-item",
+                            params: { id: item.item_id }
+                          });
+                        } else {
+                          // Otherwise go to item detail
+                          router.push(`/item/${item.item_id}`);
+                        }
+                      }}
                       activeOpacity={0.8}
                     >
                       {item.image_url ? (
@@ -519,6 +545,15 @@ const styles = StyleSheet.create({
     zIndex: 10,
     backgroundColor: "rgba(255,255,255,0.85)",
     padding: 6,
+    borderRadius: 20,
+  },
+  editIconContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 20,
+    backgroundColor: "#f97316",
+    padding: 8,
     borderRadius: 20,
   },
 });

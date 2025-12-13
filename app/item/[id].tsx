@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { items as itemsApi } from "../../services/api";
+import { Ionicons } from "@expo/vector-icons";
 
 const imageMap: Record<string, any> = {
   // item images
@@ -65,7 +66,6 @@ interface ItemDetails {
   end_date?: string;
   owner_name?: string;
   owner_avatar?: string;
-  owner_rating?: number;
 }
 
 export default function ItemDetail() {
@@ -137,6 +137,15 @@ export default function ItemDetail() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {/* Back button header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Item Details</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView style={styles.container}>
         {/* ITEM IMAGE */}
         {localImage ? (
@@ -181,9 +190,6 @@ export default function ItemDetail() {
             <Text style={styles.listerName}>
               {item.owner_name || `User ${item.owner_id}`}
             </Text>
-            {item.owner_rating && (
-              <Text style={styles.rating}>⭐ {item.owner_rating}</Text>
-            )}
           </View>
 
           <TouchableOpacity
@@ -245,6 +251,21 @@ export default function ItemDetail() {
 
 // ---------------- STYLES ----------------
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+  },
   safeArea: {
     flex: 1,
     backgroundColor: "#fff",
@@ -345,11 +366,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
-  },
-  rating: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginTop: 2,
   },
   viewProfileButton: {
     backgroundColor: "#f97316",

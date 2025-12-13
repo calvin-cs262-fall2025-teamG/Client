@@ -9,8 +9,10 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { items } from "../services/api";
 
@@ -144,8 +146,18 @@ export default function EditItem() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {/* Back button header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Item</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>Edit item</Text>
+        {/* Remove this line since title is now in header */}
+        {/* <Text style={styles.heading}>Edit item</Text> */}
 
         {/* Image preview */}
         {imageUrl && imageUrl.startsWith('http') && (
@@ -206,6 +218,21 @@ export default function EditItem() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+  },
   safeArea: {
     flex: 1,
     backgroundColor: "#fff",
