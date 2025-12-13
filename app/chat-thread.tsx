@@ -10,11 +10,13 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import { messages as messagesApi, users as usersApi } from "../services/api";
+import type { ImageSourcePropType } from "react-native";
 
 const avatarMap: Record<string, any> = {
   "helen.png": require("../assets/images/helen.png"),
@@ -25,6 +27,22 @@ const avatarMap: Record<string, any> = {
   "laila.png": require("../assets/images/laila.png"),
   "chloe.png": require("../assets/images/chloe.png"),
 };
+
+function resolveImageSource(
+  key: string | null | undefined,
+  imageMap: Record<string, any>
+): ImageSourcePropType | undefined {
+  if (!key) return undefined;
+  const trimmed = key.trim();
+  if (!trimmed) return undefined;
+
+  // Remote URL
+  if (/^https?:\/\//i.test(trimmed)) return { uri: trimmed };
+
+  // Local bundled filename
+  const lower = trimmed.toLowerCase();
+  return imageMap[lower];
+}
 
 interface Message {
   message_id: number;
@@ -38,9 +56,10 @@ interface Message {
 export default function ChatThread() {
   const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
 
-  const { id, name } = useLocalSearchParams<{
+  const { id, name, avatar } = useLocalSearchParams<{
     id?: string;
     name?: string;
+    avatar?: string;
   }>();
 
   const router = useRouter();
@@ -48,6 +67,8 @@ export default function ChatThread() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const otherUserId = id ? Number(id) : null;
+  const otherAvatarSource = resolveImageSource(otherAvatar, avatarMap);
+  const headerInitial = String(name || "Chat").trim().charAt(0).toUpperCase() || "?";
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -103,8 +124,13 @@ export default function ChatThread() {
       }
     };
 
-    loadOtherUser();
-  }, [otherUserId]);
+    // Use avatar from params first, otherwise load from API
+    if (avatar && avatar.trim()) {
+      setOtherAvatar(avatar);
+    } else {
+      loadOtherUser();
+    }
+  }, [otherUserId, avatar]);
 
 
 
@@ -153,18 +179,20 @@ export default function ChatThread() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={styles.backButton}>←</Text>
           </TouchableOpacity>
 
           <View style={styles.headerUserBlock}>
-            {otherAvatar && avatarMap[otherAvatar] ? (
-              <Image source={avatarMap[otherAvatar]} style={styles.headerAvatar} />
+            {otherAvatarSource ? (
+              <Image source={otherAvatarSource} style={styles.headerAvatar} />
             ) : (
-              <View style={[styles.headerAvatar, { backgroundColor: "#ffffff55" }]} />
+              <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+                <Text style={styles.headerAvatarText}>{headerInitial}</Text>
+              </View>
             )}
-
 
             <View>
               <Text style={styles.headerTitle}>{name || "Chat"}</Text>
@@ -186,16 +214,19 @@ export default function ChatThread() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerUserBlock}>
-          {otherAvatar && avatarMap[otherAvatar] ? (
-            <Image source={avatarMap[otherAvatar]} style={styles.headerAvatar} />
+          {otherAvatarSource ? (
+            <Image source={otherAvatarSource} style={styles.headerAvatar} />
           ) : (
-            <View style={[styles.headerAvatar, { backgroundColor: "#ffffff55" }]} />
+            <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+              <Text style={styles.headerAvatarText}>{headerInitial}</Text>
+            </View>
           )}
 
           <View>
@@ -341,6 +372,16 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     borderWidth: 2,
     borderColor: "#fff",
+  },
+  headerAvatarPlaceholder: {
+    backgroundColor: "rgba(255,255,255,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerAvatarText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 16,
   },
   headerTitle: {
     color: "#fff",

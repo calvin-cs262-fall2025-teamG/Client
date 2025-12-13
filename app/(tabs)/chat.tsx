@@ -2,19 +2,22 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
-  TouchableOpacity,
   ScrollView,
+  StyleSheet,
+  TouchableOpacity,
   Image,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { messages as messagesApi } from "../../services/api";
+import { messages as messagesApi, users as usersApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import type { ImageSourcePropType } from "react-native";
+
+/* ---------------- AVATAR MAP ---------------- */
 
 const avatarMap: Record<string, any> = {
   "helen.png": require("../../assets/images/helen.png"),
@@ -25,6 +28,8 @@ const avatarMap: Record<string, any> = {
   "laila.png": require("../../assets/images/laila.png"),
   "chloe.png": require("../../assets/images/chloe.png"),
 };
+
+/* ---------------- TYPES ---------------- */
 
 interface ChatPreview {
   message_id: number;
@@ -37,22 +42,65 @@ interface ChatPreview {
   receiver_id: number;
 }
 
+/* ---------------- HELPERS ---------------- */
+
+function resolveImageSource(
+  key: string | null | undefined
+): ImageSourcePropType | undefined {
+  if (!key) return undefined;
+  if (/^https?:\/\//i.test(key)) return { uri: key };
+  return avatarMap[key.toLowerCase()];
+}
+
+/* ---------------- SCREEN ---------------- */
+
 export default function Chat() {
   const router = useRouter();
   const { user } = useAuth();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [avatarCache, setAvatarCache] = useState<Record<number, string>>({});
+  const [nameCache, setNameCache] = useState<Record<number, string>>({});
 
   const loadChats = async () => {
     if (!user?.user_id) return;
+    setLoading(true);
 
     try {
-      const data: any = await messagesApi.getUserMessages(user.user_id);
+      const data = (await messagesApi.getUserMessages(
+        user.user_id
+      )) as ChatPreview[];
+
       setChats(data);
-    } catch (error) {
-      console.error("Failed to load chats:", error);
+
+      const userPromises = data.map(async (chat) => {
+        try {
+          const u: any = await usersApi.getById(chat.other_user_id);
+          return {
+            id: chat.other_user_id,
+            name: u?.name ?? u?.username,
+            avatar: u?.profile_picture,
+          };
+        } catch {
+          return null;
+        }
+      });
+
+      const results = await Promise.all(userPromises);
+      const names: Record<number, string> = {};
+      const avatars: Record<number, string> = {};
+
+      results.forEach((r) => {
+        if (!r) return;
+        if (r.name) names[r.id] = r.name;
+        if (r.avatar) avatars[r.id] = r.avatar;
+      });
+
+      setNameCache((p) => ({ ...p, ...names }));
+      setAvatarCache((p) => ({ ...p, ...avatars }));
     } finally {
       setLoading(false);
     }
@@ -68,239 +116,212 @@ export default function Chat() {
     setRefreshing(false);
   };
 
-  // 🔍 FILTER CHATS LIVE
   const filteredChats = useMemo(() => {
+    const q = searchQuery.toLowerCase();
     return chats.filter(
-      (chat) =>
-        chat.other_user_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.content.toLowerCase().includes(searchQuery.toLowerCase())
+      (c) =>
+        c.other_user_name.toLowerCase().includes(q) ||
+        c.content.toLowerCase().includes(q)
     );
   }, [searchQuery, chats]);
 
-  // Format time ago
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "now";
-    if (diffMins < 60) return `${diffMins}m`;
-    if (diffHours < 24) return `${diffHours}h`;
-    return `${diffDays}d`;
+  const getTimeAgo = (d: string) => {
+    const diff = Date.now() - new Date(d).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "now";
+    if (m < 60) return `${m}m`;
+    if (m < 1440) return `${Math.floor(m / 60)}h`;
+    return `${Math.floor(m / 1440)}d`;
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f97316" />
-          <Text style={styles.loadingText}>Loading messages...</Text>
-        </View>
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#f97316" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* SEARCH BAR */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={16} color="#6b7280" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search messages"
-          placeholderTextColor="#9ca3af"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* CHAT LIST */}
+    <SafeAreaView style={styles.container}>
       <ScrollView
-        style={styles.chatList}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {filteredChats.length === 0 && !loading ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={60} color="#9ca3af" />
-            <Text style={styles.emptyText}>
-              {searchQuery ? "No chats found" : "No messages yet"}
-            </Text>
-            <Text style={styles.emptySub}>
-              {searchQuery ? "Try a different search" : "Start borrowing items to chat with neighbors"}
-            </Text>
-          </View>
-        ) : (
-          filteredChats.map((chat) => (
+        {/* CHATS HEADER (IN-SCREEN) */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Chats</Text>
+          <View style={styles.headerDivider} />
+        </View>
+
+        {/* SEARCH BAR (MATCHES SEARCH TAB) */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color="#6b7280" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search messages"
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        {/* CHAT LIST */}
+        {filteredChats.map((chat) => {
+          const name = nameCache[chat.other_user_id] || chat.other_user_name;
+          const avatarKey =
+            avatarCache[chat.other_user_id] || chat.other_user_avatar;
+          const avatarSource = resolveImageSource(avatarKey);
+
+          return (
             <TouchableOpacity
               key={chat.message_id}
-              style={styles.chatItem}
+              style={styles.chatCard}
               onPress={() =>
                 router.push({
                   pathname: "/chat-thread",
                   params: {
                     id: chat.other_user_id,
-                    name: chat.other_user_name,
+                    name,
+                    avatar: avatarKey ?? "",
                   },
                 })
               }
             >
-              {chat.other_user_avatar && avatarMap[chat.other_user_avatar] ? (
-                <Image
-                  source={avatarMap[chat.other_user_avatar]}
-                  style={styles.avatarImage}
-                />
+              {avatarSource ? (
+                <Image source={avatarSource} style={styles.avatar} />
               ) : (
-                <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
-                  <Ionicons name="person" size={28} color="#9ca3af" />
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <Text style={styles.avatarInitial}>
+                    {name?.[0]?.toUpperCase() ?? "?"}
+                  </Text>
                 </View>
               )}
 
-              <View style={styles.chatContent}>
-                <View style={styles.chatHeader}>
-                  <Text style={styles.chatName}>{chat.other_user_name}</Text>
-                  <Text style={styles.chatTime}>{getTimeAgo(chat.sent_at)}</Text>
+              <View style={{ flex: 1 }}>
+                <View style={styles.row}>
+                  <Text style={styles.name}>{name}</Text>
+                  <Text style={styles.time}>{getTimeAgo(chat.sent_at)}</Text>
                 </View>
 
-                <View style={styles.messageRow}>
-                  <Text style={styles.lastMessage} numberOfLines={1}>
-                    {chat.sender_id === user?.user_id ? "You: " : ""}
-                    {chat.content}
-                  </Text>
-                </View>
+                <Text style={styles.preview} numberOfLines={1}>
+                  {chat.sender_id === user?.user_id ? "You: " : ""}
+                  {chat.content}
+                </Text>
               </View>
             </TouchableOpacity>
-          ))
-        )}
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-export const options = {
-  headerShown: false,
-};
+/* ---------------- STYLES ---------------- */
 
-// STYLES
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#6b7280",
-  },
-  emptyContainer: {
-    paddingTop: 80,
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#4b5563",
-  },
-  emptySub: {
-    marginTop: 6,
-    fontSize: 14,
-    color: "#9ca3af",
-    textAlign: "center",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginTop: 12,
-    marginBottom: 12,
+  },
+
+  scrollContent: {
+    paddingBottom: 18,
+  },
+
+  /* --- HEADER --- */
+  header: {
+    paddingTop: 6,
+    paddingBottom: 6,
+    alignItems: "center",
+  },
+
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#3b2a22",
+  },
+
+  headerDivider: {
+    marginTop: 10,
+    height: 1,
+    width: "100%",
+    backgroundColor: "#e5e7eb",
+  },
+
+  /* --- SEARCH --- */
+  searchBar: {
+    flexDirection: "row",
+    backgroundColor: "#f3f4f6",
     marginHorizontal: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
+    marginTop: 8,       // tighter than 10
+    marginBottom: 6,    // prevents extra blank space
+    paddingHorizontal: 16,
+    paddingVertical: 10, // slightly shorter
+    borderRadius: 30,
+    alignItems: "center",
   },
-  searchIcon: {
-    marginRight: 8,
-  },
+
   searchInput: {
+    marginLeft: 10,
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: "#111827",
   },
-  chatList: {
-    flex: 1,
-  },
-  chatItem: {
+
+  /* --- CHAT CARDS --- */
+  chatCard: {
     flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 8, // tighter than 14 (removes the big gap feeling)
+    padding: 14,
     backgroundColor: "#fff",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderRadius: 14,
     alignItems: "center",
+    elevation: 2,
   },
-  avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     marginRight: 12,
   },
-  avatarPlaceholder: {
+
+  avatarFallback: {
     backgroundColor: "#e5e7eb",
     justifyContent: "center",
     alignItems: "center",
   },
-  chatContent: {
-    flex: 1,
+
+  avatarInitial: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#6b7280",
   },
-  chatHeader: {
+
+  row: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  chatName: {
+
+  name: {
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
   },
-  chatTime: {
+
+  time: {
     fontSize: 12,
-    color: "#6b7280",
+    color: "#9ca3af",
   },
-  messageRow: {
-    flexDirection: "row",
-    alignItems: "center",
+
+  preview: {
     marginTop: 4,
-  },
-  lastMessage: {
-    flex: 1,
     fontSize: 14,
     color: "#6b7280",
-  },
-  unreadBadge: {
-    marginLeft: 8,
-    backgroundColor: "#f97316",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  unreadText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
   },
 });

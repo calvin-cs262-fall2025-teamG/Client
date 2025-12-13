@@ -13,6 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { items as itemsApi } from "../../services/api";
 import { Ionicons } from "@expo/vector-icons";
+import { messages as messagesApi } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+import type { ImageSourcePropType } from "react-native";
 
 const imageMap: Record<string, any> = {
   // item images
@@ -53,6 +56,21 @@ const imageMap: Record<string, any> = {
   "laila.png": require("../../assets/images/laila.png"),
 };
 
+function resolveImageSource(key?: string | null): ImageSourcePropType | undefined {
+  if (!key) return undefined;
+
+  const trimmed = key.trim();
+  if (!trimmed) return undefined;
+
+  // remote URL
+  if (/^https?:\/\//i.test(trimmed)) {
+    return { uri: trimmed };
+  }
+
+  // local bundled image by filename
+  const lower = trimmed.toLowerCase();
+  return imageMap[lower];
+}
 
 interface ItemDetails {
   item_id: number;
@@ -76,6 +94,43 @@ export default function ItemDetail() {
 
   const [item, setItem] = useState<ItemDetails | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { user } = useAuth();
+  const [sending, setSending] = useState(false);
+
+  const sendBorrowRequestMessage = async () => {
+    if (!user) {
+      Alert.alert("Not logged in", "Please log in to request an item.");
+      return;
+    }
+    if (!item) return;
+
+    setSending(true);
+    try {
+      const content = `Hi! I’d love to borrow your ${item.name}.`;
+
+      await messagesApi.create({
+        sender_id: user.user_id,
+        receiver_id: item.owner_id,
+        content,
+        item_id: item.item_id,
+      });
+
+      router.push({
+        pathname: "/chat-thread",
+        params: {
+          id: item.owner_id,
+          name: item.owner_name || `User ${item.owner_id}`,
+        },
+      });
+    } catch (e) {
+      console.error("Failed to send borrow request message:", e);
+      Alert.alert("Message failed", "Could not send your request. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
 
   // Load item from API
   useEffect(() => {
@@ -130,10 +185,16 @@ export default function ItemDetail() {
   }
 
   const isBorrowed = item.request_status !== "available";
-  const localImage = item.image_url ? imageMap[item.image_url] : undefined;
-  const ownerKey = (item.owner_avatar ?? "").trim().toLowerCase();
-  const localOwnerAvatar = ownerKey ? imageMap[ownerKey] : undefined;
+  const itemImageSource = resolveImageSource(item.image_url);
 
+  // try multiple possible fields for avatar coming from API
+  const avatarKey =
+    item.owner_avatar ??
+    (item as any).profile_picture ??
+    (item as any).owner_profile_picture ??
+    null;
+
+  const ownerAvatarSource = resolveImageSource(avatarKey);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -148,9 +209,9 @@ export default function ItemDetail() {
 
       <ScrollView style={styles.container}>
         {/* ITEM IMAGE */}
-        {localImage ? (
+        {itemImageSource ? (
           <Image
-            source={localImage}
+            source={itemImageSource}
             style={[styles.image, isBorrowed && { opacity: 0.55 }]}
           />
         ) : (
@@ -158,6 +219,7 @@ export default function ItemDetail() {
             <Text style={styles.placeholderText}>No Image</Text>
           </View>
         )}
+
 
         {/* NAME */}
         <Text style={styles.name}>{item.name}</Text>
@@ -176,9 +238,10 @@ export default function ItemDetail() {
 
         {/* LISTER PROFILE */}
         <View style={styles.listerCard}>
-          {localOwnerAvatar ? (
-            <Image source={localOwnerAvatar} style={styles.avatar} />
+          {ownerAvatarSource ? (
+            <Image source={ownerAvatarSource} style={styles.avatar} />
           ) : (
+
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarText}>
                 {item.owner_name?.charAt(0) || "?"}
@@ -211,32 +274,24 @@ export default function ItemDetail() {
         {/* ACTION BUTTONS */}
         {!isBorrowed ? (
           <TouchableOpacity
-            style={styles.borrowButton}
+            style={[styles.borrowButton, sending && { opacity: 0.6 }]}
+            disabled={sending}
             onPress={() =>
               Alert.alert(
                 "Borrow Request",
                 `Send a borrow request for ${item.name}?`,
                 [
                   { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Send Request",
-                    onPress: () => {
-                      // Navigate to chat with the owner
-                      router.push({
-                        pathname: "/chat-thread",
-                        params: {
-                          id: item.owner_id,
-                          name: item.owner_name || `User ${item.owner_id}`,
-                        },
-                      });
-                    },
-                  },
+                  { text: sending ? "Sending..." : "Send Request", onPress: sendBorrowRequestMessage },
                 ]
               )
             }
           >
-            <Text style={styles.borrowText}>Request to Borrow</Text>
+            <Text style={styles.borrowText}>
+              {sending ? "Sending..." : "Request to Borrow"}
+            </Text>
           </TouchableOpacity>
+
         ) : (
           <View style={styles.borrowedContainer}>
             <Text style={styles.borrowedText}>
