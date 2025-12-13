@@ -19,7 +19,7 @@ const logo = require("../../assets/images/logo.png");
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { tab } = useLocalSearchParams<{ tab?: string }>(); // ✅ read incoming tab param
+  const { tab } = useLocalSearchParams<{ tab?: string }>(); // read incoming tab param
   const { login, signup } = useAuth();
 
   // Default to signup (so “Get Started” with no param still lands on signup)
@@ -30,7 +30,7 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ when navigated here with params, open correct tab
+  // when navigated here with params, open correct tab
   useEffect(() => {
     if (tab === "login" || tab === "signup") {
       setMode(tab);
@@ -145,7 +145,7 @@ export default function LoginScreen() {
               ]}
               onPress={() => {
                 setMode("signup");
-                router.setParams({ tab: "signup" }); // ✅ keeps param in sync (optional but nice)
+                router.setParams({ tab: "signup" }); // keeps param in sync (optional but nice)
                 setError(null);
               }}
             >
@@ -351,6 +351,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
     paddingVertical: 4,
+    letterSpacing: 0,
   },
   errorText: {
     marginTop: 10,

@@ -31,6 +31,7 @@ export default function EditItem() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [status, setStatus] = useState<"available" | "borrowed">("available"); // ADD THIS
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,6 +50,8 @@ export default function EditItem() {
         setDescription(item.description || "");
         setCategory(item.category || "");
         setImageUrl(item.image_url || "");
+        // Set status based on request_status from database
+        setStatus(item.request_status === "available" ? "available" : "borrowed");
       } catch (error) {
         console.error("Failed to load item:", error);
         Alert.alert("Error", "Could not load item details.");
@@ -78,6 +81,7 @@ export default function EditItem() {
         name: title.trim(),
         description: description.trim(),
         category: category.trim() || undefined,
+        request_status: status, // Save the status
       });
 
       Alert.alert("Success", "Item updated successfully!", [
@@ -156,9 +160,6 @@ export default function EditItem() {
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Remove this line since title is now in header */}
-        {/* <Text style={styles.heading}>Edit item</Text> */}
-
         {/* Image preview */}
         {imageUrl && imageUrl.startsWith('http') && (
           <Image
@@ -185,6 +186,59 @@ export default function EditItem() {
           style={styles.input}
           editable={!saving}
         />
+
+        {/* STATUS TOGGLE */}
+        <View style={styles.statusSection}>
+          <Text style={styles.label}>Item Status</Text>
+          <View style={styles.statusToggle}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton, 
+                status === 'available' && styles.statusActive
+              ]}
+              onPress={() => setStatus('available')}
+              disabled={saving}
+            >
+              <Ionicons 
+                name="checkmark-circle" 
+                size={20} 
+                color={status === 'available' ? '#16a34a' : '#9ca3af'} 
+              />
+              <Text style={[
+                styles.statusText,
+                status === 'available' && styles.statusTextActive
+              ]}>
+                Available
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.statusButton, 
+                status === 'borrowed' && styles.statusActive
+              ]}
+              onPress={() => setStatus('borrowed')}
+              disabled={saving}
+            >
+              <Ionicons 
+                name="time" 
+                size={20} 
+                color={status === 'borrowed' ? '#f97316' : '#9ca3af'} 
+              />
+              <Text style={[
+                styles.statusText,
+                status === 'borrowed' && styles.statusTextActive
+              ]}>
+                Borrowed
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.statusHint}>
+            {status === 'available' 
+              ? 'Item is ready to lend out' 
+              : 'Item is currently borrowed by someone'}
+          </Text>
+        </View>
 
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -257,16 +311,12 @@ const styles = StyleSheet.create({
     color: "#ef4444",
     fontWeight: "600",
   },
-  heading: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
   label: {
     fontSize: 14,
     fontWeight: "600",
     marginTop: 12,
     marginBottom: 4,
+    color: "#374151",
   },
   input: {
     borderWidth: 1,
@@ -291,5 +341,47 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     marginTop: 12,
+  },
+  
+  // Status toggle styles
+  statusSection: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statusToggle: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  statusButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+  },
+  statusActive: {
+    borderColor: "#f97316",
+    backgroundColor: "#fff7ed",
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  statusTextActive: {
+    color: "#f97316",
+  },
+  statusHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#6b7280",
+    fontStyle: "italic",
   },
 });

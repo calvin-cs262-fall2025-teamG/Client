@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   cancel: {
     fontSize: 16,
-    color: "#6b7280",
+    color: "#414448ff",
   },
   title: {
     fontSize: 17,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   save: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#2563eb",
+    color: "#414448ff",
   },
   avatarSection: {
     alignItems: "center",
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 15,
     fontWeight: "600",
-    color: "#2563eb",
+    color: "#f97316",
   },
   field: {
     paddingHorizontal: 16,

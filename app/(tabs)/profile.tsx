@@ -17,6 +17,7 @@ import { items as itemsApi, users as usersApi } from "../../services/api";
 import type { User } from "../../services/authServices";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import BookmarkButton from "../components/BookmarkButton";
 
 type ApiItem = {
   item_id: number;
@@ -25,6 +26,7 @@ type ApiItem = {
   image_url?: string | null;
   category?: string | null;
   owner_id: number;
+  request_status?: string;
 };
 
 type ItemCard = {
@@ -33,6 +35,7 @@ type ItemCard = {
   count: number;
   image: string | null;
   category: string;
+  status: string;
 };
 
 export default function Profile() {
@@ -65,18 +68,39 @@ export default function Profile() {
       setListings([]);
       return;
     }
+
+    console.log("🔄 Loading items for user:", user.user_id);
     const all = (await itemsApi.getAll()) as ApiItem[];
     const mine = all.filter((it) => it.owner_id === user.user_id);
 
-    setListings(
-      mine.map((it) => ({
-        id: it.item_id,
-        name: it.name,
-        count: 0,
-        image: it.image_url ?? null,
-        category: it.category ?? "",
-      }))
+    // Load bookmark counts for each item
+    const itemsWithCounts = await Promise.all(
+      mine.map(async (it) => {
+        let bookmarkCount = 0;
+        try {
+          const stored = await AsyncStorage.getItem(`bookmark-count:${user.user_id}:${it.item_id}`);
+          bookmarkCount = stored ? parseInt(stored) : 0;
+          console.log(`📊 Item ${it.item_id} (${it.name}): ${bookmarkCount} bookmarks`);
+        } catch (err) {
+          console.error(`❌ Error loading bookmark count for item ${it.item_id}:`, err);
+        }
+
+        return {
+          id: it.item_id,
+          name: it.name,
+          count: bookmarkCount,
+          image: it.image_url ?? null,
+          category: it.category ?? "",
+          status: it.request_status ?? "available",
+        };
+      })
     );
+
+    console.log("✅ Loaded items with counts:", itemsWithCounts);
+    console.log("🔍 check direct key", await AsyncStorage.getItem("bookmark-count:5"));
+    console.log("🔍 all bookmark keys", (await AsyncStorage.getAllKeys()).filter(k => k.startsWith("bookmark-count:")));
+
+    setListings(itemsWithCounts);
   };
 
   const onRefresh = async () => {
@@ -91,18 +115,17 @@ export default function Profile() {
     loadMyItems().catch(console.error);
   }, [user?.user_id]);
 
+  // Reload items every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      console.log("🎯 Profile screen focused, reloading items...");
       loadProfileUser();
       loadMyItems();
     }, [user?.user_id])
   );
 
   const displayName = fullUser?.name ?? user?.name ?? "New User";
-const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
-
-  // placeholder until you build real neighbor logic
-  const neighborsCount = 0;
+  const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -133,7 +156,6 @@ const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
             <Text style={styles.name} numberOfLines={2}>
               {displayName}
             </Text>
-            <Text style={styles.neighborsText}>{neighborsCount} Neighbors</Text>
           </View>
         </View>
 
@@ -189,56 +211,79 @@ const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
               <Text style={styles.emptyTitle}>No listings yet</Text>
             </View>
           ) : (
-            listings.map((item) => (
-              <View key={item.id} style={styles.recommendedItem}>
-                <View style={styles.recommendedImageContainer}>
-                  {item.image ? (
-                    <Image
-                      source={{ uri: item.image }}
-                      style={styles.recommendedImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.noImageBox}>
-                      <Ionicons
-                        name="image-outline"
-                        size={28}
-                        color="#9ca3af"
+            listings.map((item) => {
+              const isBorrowed = item.status !== "available";
+
+              return (
+                <View key={item.id} style={styles.recommendedItem}>
+                  <View style={styles.recommendedImageContainer}>
+                    {item.image ? (
+                      <Image
+                        source={{ uri: item.image }}
+                        style={[
+                          styles.recommendedImage,
+                          isBorrowed && { opacity: 0.55 }
+                        ]}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[
+                        styles.noImageBox,
+                        isBorrowed && { opacity: 0.55 }
+                      ]}>
+                        <Ionicons
+                          name="image-outline"
+                          size={28}
+                          color="#9ca3af"
+                        />
+                      </View>
+                    )}
+
+                    {/* Borrowed Badge */}
+                    {isBorrowed && (
+                      <View style={styles.borrowedBadge}>
+                        <Text style={styles.borrowedText}>Borrowed</Text>
+                      </View>
+                    )}
+
+                    {/* Edit Button */}
+                    <TouchableOpacity
+                      style={styles.editFloatingButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/edit-item",
+                          params: { id: item.id.toString() },
+                        })
+                      }
+                      activeOpacity={0.9}
+                    >
+                      <Ionicons name="pencil" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.recommendedInfo}>
+                    <Text
+                      style={[
+                        styles.recommendedName,
+                        isBorrowed && { opacity: 0.7 }
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+
+                    <View style={styles.countRow}>
+                      <BookmarkButton
+                        item={{ id: String(item.id), title: item.name }}
+                        size={16}
+                        showCount={true}
                       />
                     </View>
-                  )}
 
-                  <TouchableOpacity
-                    style={styles.editFloatingButton}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/edit-item",
-                        params: { id: item.id.toString() },
-                      })
-                    }
-                    activeOpacity={0.9}
-                  >
-                    <Ionicons name="pencil" size={16} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.recommendedInfo}>
-                  <Text style={styles.recommendedName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-
-                  <View style={styles.countRow}>
-                    <Ionicons
-                      name="bookmark"
-                      size={14}
-                      color="#3b1b0d"
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text>{item.count}</Text>
                   </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -260,7 +305,6 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  // ✅ bigger tap target + slightly more balanced placement
   logoutIcon: {
     position: "absolute",
     right: 12,
@@ -276,7 +320,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    paddingRight: 56, // ✅ give more space so the icon never feels cramped
+    paddingRight: 56,
   },
 
   profileImage: {
@@ -297,19 +341,11 @@ const styles = StyleSheet.create({
 
   nameBlock: { flex: 1, minWidth: 0 },
 
-  // ✅ slightly smaller + less tall so it feels more “real”
   name: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     color: "#111827",
     lineHeight: 26,
-  },
-
-  neighborsText: {
-    marginTop: 6,
-    fontSize: 15,
-    color: "#6b7280",
-    fontWeight: "500",
   },
 
   actionsRow: {
@@ -348,7 +384,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // ✅ smaller section label
   sectionHeaderText: {
     color: "#4b5563",
     fontSize: 18,
@@ -392,6 +427,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  // Borrowed badge styles
+  borrowedBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "#f87171",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  borrowedText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
   editFloatingButton: {
     position: "absolute",
     top: 10,
@@ -421,7 +472,18 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
-  countRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+    gap: 4,
+  },
+
+  countNumber: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#3b1b0d",
+  },
 
   createItemCard: {
     justifyContent: "center",

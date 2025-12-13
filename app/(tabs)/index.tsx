@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useBookmarks } from "../../context/BookmarksContext";
 import { items as itemsApi } from "../../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Image,
   View,
@@ -69,18 +70,39 @@ export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bookmarkCounts, setBookmarkCounts] = useState<Record<number, number>>({});
 
   const { byId, isSaved, toggle } = useBookmarks();
   const bookmarkCount = Object.keys(byId).length;
 
-
   const searchInputRef = useRef<TextInput | null>(null);
+
+  // Load bookmark counts for all items
+  const loadBookmarkCounts = async (itemsList: Item[]) => {
+    const counts: Record<number, number> = {};
+
+    await Promise.all(
+      itemsList.map(async (item) => {
+        try {
+          // ✅ Use global key (no user ID)
+          const stored = await AsyncStorage.getItem(`bookmark-count:${item.item_id}`);
+          counts[item.item_id] = stored ? parseInt(stored) : 0;
+          console.log(`📊 Item ${item.item_id}: ${counts[item.item_id]} bookmarks`);
+        } catch (err) {
+          counts[item.item_id] = 0;
+        }
+      })
+    );
+
+    setBookmarkCounts(counts);
+  };
 
   // Load items from API
   const loadItems = async () => {
     try {
       const data: any = await itemsApi.getAll();
       setItems(data);
+      await loadBookmarkCounts(data);
     } catch (error) {
       console.error("Failed to load items:", error);
     } finally {
@@ -98,7 +120,10 @@ export default function Index() {
     setRefreshing(false);
   };
 
-  const handleBookmarkToggle = (item: Item) => {
+  const handleBookmarkToggle = async (item: Item) => {
+    const wasBookmarked = isSaved(item.item_id);
+
+    // Toggle the bookmark
     toggle({
       id: item.item_id,
       title: item.name,
@@ -107,6 +132,23 @@ export default function Index() {
       status: item.request_status === "available" ? "none" : "borrowed",
       category: item.category || "Other",
     });
+
+    // Update the bookmark count with global key
+    try {
+      const currentCount = bookmarkCounts[item.item_id] || 0;
+      const newCount = wasBookmarked ? Math.max(0, currentCount - 1) : currentCount + 1;
+
+      await AsyncStorage.setItem(`bookmark-count:${item.item_id}`, newCount.toString());
+
+      setBookmarkCounts(prev => ({
+        ...prev,
+        [item.item_id]: newCount
+      }));
+
+      console.log(`✅ Updated count for item ${item.item_id}: ${newCount}`);
+    } catch (error) {
+      console.error('Error updating bookmark count:', error);
+    }
   };
 
   const filteredItems = items.filter((item) => {
@@ -238,6 +280,7 @@ export default function Index() {
             {filteredItems.map((item) => {
               const isBookmarked = isSaved(item.item_id);
               const isBorrowed = item.request_status !== "available";
+              const itemBookmarkCount = bookmarkCounts[item.item_id] || 0;
 
               return (
                 <View key={item.item_id} style={styles.recommendedItem}>
@@ -274,25 +317,21 @@ export default function Index() {
                         />
                       </TouchableOpacity>
                     )}
-
                     {/* Navigate via image */}
                     <TouchableOpacity
                       onPress={() => {
-                        // If it's the user's own item, go to edit screen
                         if (item.owner_id === user?.user_id) {
                           router.push({
                             pathname: "/edit-item",
                             params: { id: item.item_id }
                           });
                         } else {
-                          // Otherwise go to item detail
                           router.push(`/item/${item.item_id}`);
                         }
                       }}
                       activeOpacity={0.8}
                     >
                       {item.image_url ? (
-                        // Check if it's a local asset or remote URL
                         imageMap[item.image_url] ? (
                           <Image
                             source={imageMap[item.image_url]}
