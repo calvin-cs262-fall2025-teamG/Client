@@ -2,12 +2,12 @@ import React from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useBookmarksUnsafe } from "../../context/BookmarksContext";
+import { useBookmarks } from "../../context/BookmarksContext";
 
 export default function BookmarkHeaderIcon() {
   const router = useRouter();
-  const ctx = useBookmarksUnsafe();
-  const count = ctx ? ctx.ids.size : 0;
+  const { byId } = useBookmarks();
+  const count = Object.keys(byId).length;
 
   return (
     <Pressable
@@ -16,10 +16,10 @@ export default function BookmarkHeaderIcon() {
       accessibilityLabel="Open bookmarks"
     >
       <View>
-        <Ionicons name="bookmark" size={24} />
+        <Ionicons name="bookmark" size={24} color="#3b1b0d" />
         {count > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{count}</Text>
+            <Text style={styles.badgeText}>{count > 99 ? "99+" : count}</Text>
           </View>
         )}
       </View>
@@ -32,17 +32,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -6,
     right: -8,
-    backgroundColor: "#ff5a5f",
+    backgroundColor: "#f97316",
     borderRadius: 10,
     paddingHorizontal: 5,
     minWidth: 18,
     height: 18,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   badgeText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
   },
 });

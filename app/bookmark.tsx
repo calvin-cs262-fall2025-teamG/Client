@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useBookmarks } from "../context/BookmarksContext";
@@ -18,110 +19,140 @@ export default function BookmarkScreen() {
   const items = Object.values(byId);
 
   return (
-    <ScrollView style={styles.container}>
-      {items.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="bookmark-outline" size={60} color="#9ca3af" />
-          <Text style={styles.emptyText}>No bookmarks yet</Text>
-          <Text style={styles.emptySub}>
-            Tap the bookmark icon on an item to save it.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.grid}>
-          {items.map((item) => {
-            const saved = isSaved(item.id);
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
 
-            return (
-              <View key={item.id} style={styles.card}>
-                {/* Floating DELETE Button */}
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => remove(item.id)}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
-                </TouchableOpacity>
+        <Text style={styles.headerTitle}>Bookmarks</Text>
 
-                {/* Floating Bookmark Toggle */}
-                <TouchableOpacity
-                  style={styles.bookmarkIconContainer}
-                  onPress={() => toggle(item)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons
-                    name={saved ? "bookmark" : "bookmark-outline"}
-                    size={22}
-                    color="#3b1b0d"
-                  />
-                </TouchableOpacity>
+        {/* spacer for centering */}
+        <View style={{ width: 24 }} />
+      </View>
 
-                {/* ITEM IMAGE */}
-                <TouchableOpacity
-                  onPress={() => router.push(`/item/${item.id}`)}
-                  activeOpacity={0.8}
-                >
-                  <Image
-                    source={item.image}
-                    style={[
-                      styles.image,
-                      item.status === "borrowed" && { opacity: 0.55 },
-                    ]}
-                  />
-                </TouchableOpacity>
+      <ScrollView style={styles.container}>
+        {items.length === 0 ? (
+          /* Empty state */
+          <View style={styles.emptyContainer}>
+            <Ionicons name="bookmark-outline" size={60} color="#9ca3af" />
+            <Text style={styles.emptyText}>No bookmarks yet</Text>
+            <Text style={styles.emptySub}>
+              Tap the bookmark icon on an item to save it.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {items.map((item) => {
+              const saved = isSaved(item.id);
 
-                {/* Borrowed badge */}
-                {item.status === "borrowed" && (
-                  <View style={[styles.badge, styles.borrowedBadge]}>
-                    <Text style={styles.badgeText}>Borrowed</Text>
-                  </View>
-                )}
-
-                {/* Name + Count */}
-                <TouchableOpacity
-                  onPress={() => router.push(`/item/${item.id}`)}
-                  activeOpacity={0.8}
-                  style={styles.info}
-                >
-                  <Text
-                    style={[
-                      styles.name,
-                      item.status === "borrowed" && { opacity: 0.7 },
-                    ]}
-                    numberOfLines={1}
+              return (
+                <View key={item.id} style={styles.card}>
+                  {/* Delete button */}
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => remove(item.id)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
-                    {item.title}
-                  </Text>
+                    <Ionicons
+                      name="trash-outline"
+                      size={22}
+                      color="#ef4444"
+                    />
+                  </TouchableOpacity>
 
-                  {item.count !== undefined && (
+                  {/* Bookmark toggle */}
+                  <TouchableOpacity
+                    style={styles.bookmarkIconContainer}
+                    onPress={() => toggle(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons
+                      name={saved ? "bookmark" : "bookmark-outline"}
+                      size={22}
+                      color="#3b1b0d"
+                    />
+                  </TouchableOpacity>
+
+                  {/* Item image */}
+                  <TouchableOpacity
+                    onPress={() => router.push(`/item/${item.id}`)}
+                    activeOpacity={0.85}
+                  >
+                    {item.image ? (
+                      <Image source={item.image} style={styles.image} />
+                    ) : (
+                      <View style={[styles.image, styles.imagePlaceholder]}>
+                        <Ionicons name="image-outline" size={26} color="#9ca3af" />
+                        <Text style={styles.placeholderText}>No Image</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+
+                  {/* Borrowed badge */}
+                  {item.status === "borrowed" && (
+                    <View style={[styles.badge, styles.borrowedBadge]}>
+                      <Text style={styles.badgeText}>Borrowed</Text>
+                    </View>
+                  )}
+
+                  {/* Info */}
+                  <TouchableOpacity
+                    onPress={() => router.push(`/item/${item.id}`)}
+                    activeOpacity={0.85}
+                    style={styles.info}
+                  >
+                    <Text style={styles.name} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+
                     <View style={styles.countRow}>
                       <Ionicons
-                        name={saved ? "bookmark" : "bookmark-outline"}
+                        name="bookmark"
                         size={14}
                         color="#3b1b0d"
                         style={{ marginRight: 4 }}
                       />
-                      <Text
-                        style={[
-                          styles.count,
-                          item.status === "borrowed" && { opacity: 0.7 },
-                        ]}
-                      >
-                        {item.count}
-                      </Text>
+                      <Text style={styles.count}>{item.count ?? 0}</Text>
                     </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </View>
-      )}
-    </ScrollView>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
+/* ---------------- STYLES ---------------- */
+
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
   container: {
     flex: 1,
     backgroundColor: "#f9fafb",
@@ -171,6 +202,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
   },
 
+  imagePlaceholder: { 
+    alignItems: "center", 
+    justifyContent: "center", 
+    gap: 6 
+  },
+  
+  placeholderText: { 
+    color: "#9ca3af", 
+    fontWeight: "600" 
+  },
+
   info: {
     padding: 12,
   },
@@ -182,23 +224,26 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   count: {
     fontSize: 13,
     color: "#6b7280",
   },
 
-  /* floating delete button */
   deleteButton: {
     position: "absolute",
     bottom: 8,
     right: 8,
     zIndex: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "rgba(255,255,255,0.85)",
     padding: 6,
     borderRadius: 20,
   },
 
-  /* floating bookmark button */
   bookmarkIconContainer: {
     position: "absolute",
     top: 8,
@@ -224,13 +269,8 @@ const styles = StyleSheet.create({
   },
 
   badgeText: {
-    color: "white",
+    color: "#fff",
     fontWeight: "600",
     fontSize: 12,
-  },
-  countRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
   },
 });

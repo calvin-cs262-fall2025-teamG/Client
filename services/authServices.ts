@@ -2,10 +2,11 @@ import { apiRequest } from './api';
 
 export type User = {
   user_id: number;
-  email: string;
+  email: string | null;
   name: string;
   rating: number;
-  avatar_url?: string;
+  profile_picture?: string | null;
+  avatar_url?: string | null;
   created_at: string;
 };
 

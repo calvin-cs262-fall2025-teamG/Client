@@ -7,7 +7,6 @@ export default function BorrowConfirmation() {
   const router = useRouter();
   const { itemName, listerName, image } = useLocalSearchParams();
 
-  // must happen AFTER loading params
   const cleanImage = Array.isArray(image) ? image[0] : image;
 
   return (
@@ -22,9 +21,9 @@ export default function BorrowConfirmation() {
         {cleanImage && (
           <Image
             source={
-              /^\d+$/.test(cleanImage)
-                ? Number(cleanImage)         // require() image ID
-                : { uri: cleanImage }        // URL
+              /^\d+$/.test(cleanImage as string)
+                ? Number(cleanImage) // require() image ID
+                : { uri: cleanImage as string } // URL
             }
             style={styles.itemImage}
             resizeMode="cover"
@@ -53,7 +52,7 @@ export default function BorrowConfirmation() {
       {/* Return Home */}
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.replace("/")}
+        onPress={() => router.replace("/(tabs)")}
       >
         <Text style={styles.buttonText}>Return Home</Text>
       </TouchableOpacity>
