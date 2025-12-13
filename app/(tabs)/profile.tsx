@@ -13,70 +13,153 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
+import { items as itemsApi, users as usersApi } from "../../services/api";
+import type { User } from "../../services/authServices";
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
-const roseImage = require("../../assets/images/rose.png");
+type ApiItem = {
+  item_id: number;
+  name: string;
+  description?: string;
+  image_url?: string | null;
+  category?: string | null;
+  owner_id: number;
+};
 
-interface Item {
+type ItemCard = {
   id: number;
   name: string;
   count: number;
-  image: any;
+  image: string | null;
   category: string;
-}
+};
 
 export default function Profile() {
-  const [listings, setListings] = useState<Item[]>([]);
+  const [listings, setListings] = useState<ItemCard[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const { logout } = useAuth();
+
+  const { logout, user } = useAuth();
   const router = useRouter();
+  const [fullUser, setFullUser] = useState<User | null>(null);
 
   const handleLogout = async () => {
     await logout();
     router.replace("/(auth)/login");
   };
 
-  const loadItems = async () => {
-    const stored = await AsyncStorage.getItem("userItems");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const fixed = parsed.map((item: any) => ({
-        ...item,
-        count: item.count ?? 0,
-      }));
-      setListings(fixed);
+  const clearOldHardcodedItems = async () => {
+    await AsyncStorage.removeItem("userItems");
+  };
+
+  const loadProfileUser = async () => {
+    if (!user) return;
+    console.log("📥 Loading profile for user:", user.user_id);
+    const u = await usersApi.getById(user.user_id);
+    console.log("✅ Loaded user:", u);
+    setFullUser(u as User);
+  };
+
+  const loadMyItems = async () => {
+    if (!user) {
+      setListings([]);
+      return;
     }
+    const all = (await itemsApi.getAll()) as ApiItem[];
+    const mine = all.filter((it) => it.owner_id === user.user_id);
+
+    setListings(
+      mine.map((it) => ({
+        id: it.item_id,
+        name: it.name,
+        count: 0,
+        image: it.image_url ?? null,
+        category: it.category ?? "",
+      }))
+    );
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadItems();
+    await Promise.all([loadProfileUser(), loadMyItems()]);
     setRefreshing(false);
   };
 
   useEffect(() => {
-    loadItems();
-  }, []);
+    clearOldHardcodedItems().catch(console.error);
+    loadProfileUser().catch(console.error);
+    loadMyItems().catch(console.error);
+  }, [user?.user_id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileUser();
+      loadMyItems();
+    }, [user?.user_id])
+  );
+
+  const displayName = fullUser?.name ?? user?.name ?? "New User";
+  const avatarUrl = fullUser?.avatar_url ?? user?.avatar_url ?? null;
+
+  // placeholder until you build real neighbor logic
+  const neighborsCount = 0;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top profile header */}
-      <View style={styles.profileTop}>
-        <Image source={roseImage} style={styles.profileImage} />
-        <View style={styles.profileInfo}>
-          <Text style={styles.name}>Rose Campbell</Text>
+      {/* HEADER */}
+      <View style={styles.headerWrap}>
+        {/* top-right logout icon */}
+        <TouchableOpacity style={styles.logoutIcon} onPress={handleLogout} activeOpacity={0.85}>
+          <Ionicons name="log-out-outline" size={34} color="#2b2725ff" />
+        </TouchableOpacity>
+
+        {/* Row 1: avatar + name */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push("/edit-profile")}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.profileImage} />
+            ) : (
+              <View style={[styles.profileImage, styles.profilePlaceholder]}>
+                <Ionicons name="person" size={34} color="#9ca3af" />
+                <Text style={styles.addPhotoText}>Add</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.nameBlock}>
+            <Text style={styles.name} numberOfLines={2}>
+              {displayName}
+            </Text>
+            <Text style={styles.neighborsText}>{neighborsCount} Neighbors</Text>
+          </View>
         </View>
 
-        {/* Logout button in the header */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
+        {/* Row 2: actions */}
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => router.push("/edit-profile")}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.editProfileText} numberOfLines={1}>
+              Edit profile
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.smallPlusButton}
+            onPress={() => router.push("/(tabs)/list")}
+            activeOpacity={0.9}
+          >
+            <Ionicons name="add" size={22} color="#111827" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <Text
-        style={[styles.sectionHeaderText, { marginTop: 12, marginLeft: 12 }]}
-      >
-        Your Listings
-      </Text>
+      <Text style={styles.sectionHeaderText}>Your Listings</Text>
 
       <ScrollView
         style={styles.scrollView}
@@ -85,97 +168,206 @@ export default function Profile() {
         }
       >
         <View style={styles.recommendedGrid}>
+          {/* Create New card */}
           <TouchableOpacity
             style={[styles.recommendedItem, styles.createItemCard]}
             onPress={() => router.push("/(tabs)/list")}
+            activeOpacity={0.9}
           >
             <View style={styles.createItemInner}>
-              <Ionicons name="add-circle" size={40} color="#f97316" />
+              <View style={styles.createCircle}>
+                <Ionicons name="add" size={45} color="#ffffff" />
+              </View>
               <Text style={styles.createItemText}>Create New</Text>
             </View>
           </TouchableOpacity>
 
-          {listings.map((item) => (
-            <View key={item.id} style={styles.recommendedItem}>
-              <View style={styles.recommendedImageContainer}>
-                <Image
-                  source={
-                    typeof item.image === "string"
-                      ? { uri: item.image }
-                      : item.image
-                  }
-                  style={styles.recommendedImage}
-                  resizeMode="cover"
-                />
+          {/* Empty state tile */}
+          {listings.length === 0 ? (
+            <View style={[styles.recommendedItem, styles.emptyCard]}>
+              <Ionicons name="pricetag-outline" size={26} color="#9ca3af" />
+              <Text style={styles.emptyTitle}>No listings yet</Text>
+            </View>
+          ) : (
+            listings.map((item) => (
+              <View key={item.id} style={styles.recommendedItem}>
+                <View style={styles.recommendedImageContainer}>
+                  {item.image ? (
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.recommendedImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.noImageBox}>
+                      <Ionicons
+                        name="image-outline"
+                        size={28}
+                        color="#9ca3af"
+                      />
+                    </View>
+                  )}
 
-                <TouchableOpacity
-                  style={styles.editFloatingButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/edit-item",
-                      params: {
-                        id: item.id.toString(),
-                        name: item.name,
-                        image: typeof item.image === "string" ? item.image : "",
-                      },
-                    })
-                  }
-                >
-                  <Ionicons name="pencil" size={16} color="#fff" />
-                </TouchableOpacity>
-              </View>
+                  <TouchableOpacity
+                    style={styles.editFloatingButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/edit-item",
+                        params: { id: item.id.toString() },
+                      })
+                    }
+                    activeOpacity={0.9}
+                  >
+                    <Ionicons name="pencil" size={16} color="#fff" />
+                  </TouchableOpacity>
+                </View>
 
-              <View style={styles.recommendedInfo}>
-                <Text style={styles.recommendedName} numberOfLines={1}>
-                  {item.name}
-                </Text>
+                <View style={styles.recommendedInfo}>
+                  <Text style={styles.recommendedName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
 
-                <View style={styles.countRow}>
-                  <Ionicons
-                    name="bookmark"
-                    size={14}
-                    color="#3b1b0d"
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text>{item.count}</Text>
+                  <View style={styles.countRow}>
+                    <Ionicons
+                      name="bookmark"
+                      size={14}
+                      color="#3b1b0d"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text>{item.count}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
+
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 12,
+  container: { flex: 1, backgroundColor: "#f9fafb" },
+  scrollView: { flex: 1 },
+
+  headerWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 10,
     backgroundColor: "#f9fafb",
+    position: "relative",
   },
 
+  // ✅ bigger tap target + slightly more balanced placement
+  logoutIcon: {
+    position: "absolute",
+    right: 12,
+    top: 18,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingRight: 56, // ✅ give more space so the icon never feels cramped
+  },
+
+  profileImage: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: "#e5e7eb",
+  },
+
+  profilePlaceholder: { justifyContent: "center", alignItems: "center" },
+
+  addPhotoText: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#9ca3af",
+  },
+
+  nameBlock: { flex: 1, minWidth: 0 },
+
+  // ✅ slightly smaller + less tall so it feels more “real”
+  name: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#111827",
+    lineHeight: 26,
+  },
+
+  neighborsText: {
+    marginTop: 6,
+    fontSize: 15,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+
+  actionsRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  editProfileButton: {
+    flex: 1,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+
+  editProfileText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  smallPlusButton: {
+    width: 56,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // ✅ smaller section label
   sectionHeaderText: {
     color: "#4b5563",
     fontSize: 18,
-    fontWeight: "600",
-  },
-
-  scrollView: {
-    flex: 1,
+    fontWeight: "700",
+    marginTop: 10,
+    marginLeft: 16,
   },
 
   recommendedGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    padding: 10,
+    padding: 16,
     gap: 12,
   },
 
   recommendedItem: {
     width: "47%",
     backgroundColor: "#ffffff",
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -191,22 +383,23 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  recommendedImage: {
+  recommendedImage: { width: "100%", height: "100%" },
+
+  noImageBox: {
     width: "100%",
     height: "100%",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  /* ⭐ EDIT BUTTON — TOP RIGHT */
   editFloatingButton: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: 10,
+    right: 10,
     backgroundColor: "#f97316",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -222,88 +415,62 @@ const styles = StyleSheet.create({
   },
 
   recommendedName: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 2,
+    fontSize: 22,
+    fontWeight: "800",
+    marginBottom: 6,
     color: "#111827",
   },
 
-  countTextSmall: {
-    fontSize: 14,
-    color: "#4b5563",
-    marginBottom: 12,
-  },
-
-  profileTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 35,
-    paddingLeft: 16,
-    marginBottom: 24,
-  },
-
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#e5e7eb",
-  },
-
-  profileInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-
-  name: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  neighborsCount: {
-    marginTop: 4,
-    fontSize: 16,
-    color: "#6b7280",
-  },
+  countRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
 
   createItemCard: {
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: 26,
   },
 
   createItemInner: {
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: 8,
+  },
+
+  createCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   createItemText: {
-    marginTop: 8,
+    marginTop: 14,
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "800",
     color: "#f97316",
+    textAlign: "center",
   },
 
-  countRow: {
-    flexDirection: "row",
+  emptyCard: {
+    padding: 16,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 2,
+    gap: 8,
+    minHeight: 190,
   },
 
-  logoutButton: {
-    marginLeft: "auto",
-    marginRight: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#9ca3af",
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111827",
+    textAlign: "center",
   },
 
-  logoutText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
+  emptySubtitle: {
+    fontSize: 13,
+    color: "#6b7280",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

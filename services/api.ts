@@ -1,9 +1,7 @@
 import Constants from "expo-constants";
+import type { User } from "./authServices";
 
 function getHost() {
-  // Examples:
-  // - "10.0.0.8:8081" (phone on same Wi-Fi)
-  // - "localhost:8081" (simulator)
   const hostUri =
     (Constants.expoConfig as any)?.hostUri ??
     (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
@@ -24,17 +22,19 @@ export async function apiRequest<T>(
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options?.headers,
       },
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(
+        error.error || `HTTP ${response.status}: ${response.statusText}`
+      );
     }
 
-    return await response.json();
+    return (await response.json()) as T;
   } catch (error) {
     console.error(`API Error (${endpoint}):`, error);
     throw error;
@@ -43,20 +43,20 @@ export async function apiRequest<T>(
 
 export const auth = {
   signup: (email: string, name: string) =>
-    apiRequest('/auth/signup', {
-      method: 'POST',
+    apiRequest("/auth/signup", {
+      method: "POST",
       body: JSON.stringify({ email, name }),
     }),
 
   login: (email: string) =>
-    apiRequest('/auth/login', {
-      method: 'POST',
+    apiRequest("/auth/login", {
+      method: "POST",
       body: JSON.stringify({ email }),
     }),
 };
 
 export const items = {
-  getAll: () => apiRequest('/items'),
+  getAll: () => apiRequest("/items"),
 
   getById: (id: number) => apiRequest(`/items/${id}`),
 
@@ -70,33 +70,36 @@ export const items = {
     start_date?: string;
     end_date?: string;
   }) =>
-    apiRequest('/items', {
-      method: 'POST',
+    apiRequest("/items", {
+      method: "POST",
       body: JSON.stringify(data),
     }),
 
-  update: (id: number, data: {
-    name?: string;
-    description?: string;
-    image_url?: string;
-    category?: string;
-    request_status?: string;
-    start_date?: string;
-    end_date?: string;
-  }) =>
+  update: (
+    id: number,
+    data: {
+      name?: string;
+      description?: string;
+      image_url?: string;
+      category?: string;
+      request_status?: string;
+      start_date?: string;
+      end_date?: string;
+    }
+  ) =>
     apiRequest(`/items/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     }),
 
   delete: (id: number) =>
     apiRequest(`/items/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     }),
 };
 
 export const messages = {
-  getAll: () => apiRequest('/messages'),
+  getAll: () => apiRequest("/messages"),
 
   getUserMessages: (userId: number) => apiRequest(`/messages/user/${userId}`),
 
@@ -106,13 +109,21 @@ export const messages = {
     item_id?: number;
     content: string;
   }) =>
-    apiRequest('/messages', {
-      method: 'POST',
+    apiRequest("/messages", {
+      method: "POST",
       body: JSON.stringify(data),
     }),
 };
 
 export const users = {
-  getById: (id: number) => apiRequest(`/users/${id}`),
+  getById: (id: number) => apiRequest<User>(`/users/${id}`),
+  
+  update: (id: number, data: {
+    name?: string;
+    profile_picture?: string;
+  }) =>
+    apiRequest<User>(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
-
