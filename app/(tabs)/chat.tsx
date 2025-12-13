@@ -2,17 +2,18 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
-  ScrollView,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
+  ScrollView,
   Image,
   ActivityIndicator,
   RefreshControl,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { messages as messagesApi, users as usersApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import type { ImageSourcePropType } from "react-native";
@@ -48,8 +49,15 @@ function resolveImageSource(
   key: string | null | undefined
 ): ImageSourcePropType | undefined {
   if (!key) return undefined;
-  if (/^https?:\/\//i.test(key)) return { uri: key };
-  return avatarMap[key.toLowerCase()];
+  const trimmed = key.trim();
+  if (!trimmed) return undefined;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return { uri: trimmed };
+  }
+
+  const lower = trimmed.toLowerCase();
+  return avatarMap[lower];
 }
 
 /* ---------------- SCREEN ---------------- */
@@ -63,44 +71,39 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [avatarCache, setAvatarCache] = useState<Record<number, string>>({});
-  const [nameCache, setNameCache] = useState<Record<number, string>>({});
+
+  /* -------- LOAD CHATS -------- */
 
   const loadChats = async () => {
     if (!user?.user_id) return;
-    setLoading(true);
 
     try {
-      const data = (await messagesApi.getUserMessages(
-        user.user_id
-      )) as ChatPreview[];
-
+      const data: any = await messagesApi.getUserMessages(user.user_id);
       setChats(data);
 
-      const userPromises = data.map(async (chat) => {
+      // Load avatars for ALL users to ensure we have them
+      const avatarPromises = data.map(async (chat: ChatPreview) => {
         try {
-          const u: any = await usersApi.getById(chat.other_user_id);
-          return {
-            id: chat.other_user_id,
-            name: u?.name ?? u?.username,
-            avatar: u?.profile_picture,
-          };
-        } catch {
+          const userData: any = await usersApi.getById(chat.other_user_id);
+          return { userId: chat.other_user_id, avatar: userData?.profile_picture };
+        } catch (error) {
+          console.error(`Failed to load avatar for user ${chat.other_user_id}:`, error);
           return null;
         }
       });
 
-      const results = await Promise.all(userPromises);
-      const names: Record<number, string> = {};
-      const avatars: Record<number, string> = {};
-
-      results.forEach((r) => {
-        if (!r) return;
-        if (r.name) names[r.id] = r.name;
-        if (r.avatar) avatars[r.id] = r.avatar;
+      const avatarResults = await Promise.all(avatarPromises);
+      const newAvatarCache: Record<number, string> = {};
+      
+      avatarResults.forEach((result) => {
+        if (result && result.avatar) {
+          newAvatarCache[result.userId] = result.avatar;
+        }
       });
 
-      setNameCache((p) => ({ ...p, ...names }));
-      setAvatarCache((p) => ({ ...p, ...avatars }));
+      setAvatarCache(prev => ({ ...prev, ...newAvatarCache }));
+    } catch (error) {
+      console.error("Failed to load chats:", error);
     } finally {
       setLoading(false);
     }
@@ -116,105 +119,131 @@ export default function Chat() {
     setRefreshing(false);
   };
 
+  /* -------- FILTER -------- */
+
   const filteredChats = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return chats.filter(
-      (c) =>
-        c.other_user_name.toLowerCase().includes(q) ||
-        c.content.toLowerCase().includes(q)
+      (chat) =>
+        chat.other_user_name.toLowerCase().includes(q) ||
+        chat.content.toLowerCase().includes(q)
     );
   }, [searchQuery, chats]);
 
-  const getTimeAgo = (d: string) => {
-    const diff = Date.now() - new Date(d).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return "now";
-    if (m < 60) return `${m}m`;
-    if (m < 1440) return `${Math.floor(m / 60)}h`;
-    return `${Math.floor(m / 1440)}d`;
+  /* -------- TIME FORMAT -------- */
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const diff = Date.now() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (mins < 1) return "now";
+    if (mins < 60) return `${mins}m`;
+    if (hrs < 24) return `${hrs}h`;
+    return `${days}d`;
   };
+
+  /* -------- LOADING -------- */
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#f97316" />
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#f97316" />
+          <Text style={styles.loadingText}>Loading messages...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
+  /* ---------------- RENDER ---------------- */
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      {/* SEARCH */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={16} color="#6b7280" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search messages"
+          placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* CHAT LIST */}
       <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* CHATS HEADER (IN-SCREEN) */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Chats</Text>
-          <View style={styles.headerDivider} />
-        </View>
+        {filteredChats.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="chatbubbles-outline" size={60} color="#9ca3af" />
+            <Text style={styles.emptyText}>
+              {searchQuery ? "No chats found" : "No messages yet"}
+            </Text>
+            <Text style={styles.emptySub}>
+              {searchQuery
+                ? "Try a different search"
+                : "Start borrowing items to chat with neighbors"}
+            </Text>
+          </View>
+        ) : (
+          filteredChats.map((chat) => {
+            // Prioritize cached avatar (full URL) over chat data (filename only)
+            const avatarKey = avatarCache[chat.other_user_id] || chat.other_user_avatar;
+            const avatarSource = resolveImageSource(avatarKey);
+            const initial =
+              chat.other_user_name?.trim()?.[0]?.toUpperCase() ?? "?";
 
-        {/* SEARCH BAR (MATCHES SEARCH TAB) */}
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#6b7280" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search messages"
-            placeholderTextColor="#9ca3af"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+            return (
+              <TouchableOpacity
+                key={chat.message_id}
+                style={styles.chatItem}
+                onPress={() =>
+                  router.push({
+                    pathname: "/chat-thread",
+                    params: {
+                      id: chat.other_user_id,
+                      name: chat.other_user_name,
+                      avatar: avatarKey ?? "",
+                    },
+                  })
+                }
+              >
+                {avatarSource ? (
+                  <Image source={avatarSource} style={styles.avatarImage} />
+                ) : (
+                  <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
+                    <Text style={styles.avatarInitial}>{initial}</Text>
+                  </View>
+                )}
 
-        {/* CHAT LIST */}
-        {filteredChats.map((chat) => {
-          const name = nameCache[chat.other_user_id] || chat.other_user_name;
-          const avatarKey =
-            avatarCache[chat.other_user_id] || chat.other_user_avatar;
-          const avatarSource = resolveImageSource(avatarKey);
+                <View style={styles.chatContent}>
+                  <View style={styles.chatHeader}>
+                    <Text style={styles.chatName}>
+                      {chat.other_user_name}
+                    </Text>
+                    <Text style={styles.chatTime}>
+                      {getTimeAgo(chat.sent_at)}
+                    </Text>
+                  </View>
 
-          return (
-            <TouchableOpacity
-              key={chat.message_id}
-              style={styles.chatCard}
-              onPress={() =>
-                router.push({
-                  pathname: "/chat-thread",
-                  params: {
-                    id: chat.other_user_id,
-                    name,
-                    avatar: avatarKey ?? "",
-                  },
-                })
-              }
-            >
-              {avatarSource ? (
-                <Image source={avatarSource} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarInitial}>
-                    {name?.[0]?.toUpperCase() ?? "?"}
+                  <Text style={styles.lastMessage} numberOfLines={1}>
+                    {chat.sender_id === user?.user_id ? "You: " : ""}
+                    {chat.content}
                   </Text>
                 </View>
-              )}
-
-              <View style={{ flex: 1 }}>
-                <View style={styles.row}>
-                  <Text style={styles.name}>{name}</Text>
-                  <Text style={styles.time}>{getTimeAgo(chat.sent_at)}</Text>
-                </View>
-
-                <Text style={styles.preview} numberOfLines={1}>
-                  {chat.sender_id === user?.user_id ? "You: " : ""}
-                  {chat.content}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -223,75 +252,77 @@ export default function Chat() {
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: { flex: 1, backgroundColor: "#f9fafb" },
+
+  loadingContainer: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-
-  scrollContent: {
-    paddingBottom: 18,
-  },
-
-  /* --- HEADER --- */
-  header: {
-    paddingTop: 6,
-    paddingBottom: 6,
+    justifyContent: "center",
     alignItems: "center",
   },
 
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#3b2a22",
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6b7280",
   },
 
-  headerDivider: {
-    marginTop: 10,
-    height: 1,
-    width: "100%",
-    backgroundColor: "#e5e7eb",
-  },
-
-  /* --- SEARCH --- */
-  searchBar: {
+  searchContainer: {
     flexDirection: "row",
-    backgroundColor: "#f3f4f6",
-    marginHorizontal: 16,
-    marginTop: 8,       // tighter than 10
-    marginBottom: 6,    // prevents extra blank space
-    paddingHorizontal: 16,
-    paddingVertical: 10, // slightly shorter
-    borderRadius: 30,
     alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
   },
 
   searchInput: {
-    marginLeft: 10,
     flex: 1,
-    fontSize: 16,
+    marginLeft: 8,
+    fontSize: 14,
     color: "#111827",
   },
 
-  /* --- CHAT CARDS --- */
-  chatCard: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 8, // tighter than 14 (removes the big gap feeling)
-    padding: 14,
-    backgroundColor: "#fff",
-    borderRadius: 14,
+  emptyContainer: {
+    paddingTop: 80,
     alignItems: "center",
-    elevation: 2,
+    paddingHorizontal: 20,
   },
 
-  avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+  emptyText: {
+    marginTop: 12,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#4b5563",
+  },
+
+  emptySub: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#9ca3af",
+    textAlign: "center",
+  },
+
+  chatItem: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    alignItems: "center",
+  },
+
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     marginRight: 12,
   },
 
-  avatarFallback: {
+  avatarPlaceholder: {
     backgroundColor: "#e5e7eb",
     justifyContent: "center",
     alignItems: "center",
@@ -299,27 +330,31 @@ const styles = StyleSheet.create({
 
   avatarInitial: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#6b7280",
   },
 
-  row: {
+  chatContent: {
+    flex: 1,
+  },
+
+  chatHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
 
-  name: {
+  chatName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
   },
 
-  time: {
+  chatTime: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "#6b7280",
   },
 
-  preview: {
+  lastMessage: {
     marginTop: 4,
     fontSize: 14,
     color: "#6b7280",

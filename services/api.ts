@@ -42,14 +42,26 @@ export async function apiRequest<T>(
 }
 
 export const auth = {
-  signup: (email: string, name: string) =>
+  signup: (email: string, password: string, name: string) =>
     apiRequest("/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ email, name }),
+      body: JSON.stringify({ email, password, name }),
     }),
 
-  login: (email: string) =>
+  login: (email: string, password: string) =>
     apiRequest("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+
+  verifyCode: (email: string, code: string) =>
+    apiRequest("/auth/verify-code", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    }),
+
+  resendVerification: (email: string) =>
+    apiRequest("/auth/resend-verification", {
       method: "POST",
       body: JSON.stringify({ email }),
     }),

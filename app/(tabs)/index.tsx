@@ -415,6 +415,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: "#111827",
+    letterSpacing: 0,
   },
   iconGroup: {
     flexDirection: "row",

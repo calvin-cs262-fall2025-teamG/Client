@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as authService from "../services/authServices";
+import { auth } from "../services/api";  // ✅ Import from api.ts
 import type { User } from "../services/authServices";
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  setUser: (u: User | null) => void; // ✅ add this
+  setUser: (u: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<any>;  // ✅ Return type
   logout: () => Promise<void>;
 };
 
@@ -36,23 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      const u = await authService.login({ email, password });
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(u));
+    const response: any = await auth.login(email, password);
+    if (response.user) {
+      const u = response.user;
       setUser(u);
-    } catch (error: any) {
-      throw new Error(error.message || "Login failed");
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(u));
     }
   };
 
   const signup = async (email: string, password: string, name: string) => {
-    try {
-      const u = await authService.signup({ email, password, name });
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(u));
-      setUser(u);
-    } catch (error: any) {
-      throw new Error(error.message || "Signup failed");
-    }
+    const response = await auth.signup(email, password, name);
+    // Don't set user yet - they need to verify email first
+    return response;
   };
 
   const logout = async () => {
