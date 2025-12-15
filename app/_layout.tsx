@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { AuthProvider } from "../context/AuthContext";
 import { BookmarksProvider } from "../context/BookmarksContext";
+// Added comment
 
 export default function RootLayout() {
   return (
