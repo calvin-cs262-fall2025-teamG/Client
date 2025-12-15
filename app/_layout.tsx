@@ -29,6 +29,10 @@ export default function RootLayout() {
             name="item/[id]" 
             options={{ headerShown: false }} 
           />
+            <Stack.Screen 
+            name="chat-thread"
+            options={{ headerShown: false }} 
+          />
         </Stack>
       </BookmarksProvider>
     </AuthProvider>
