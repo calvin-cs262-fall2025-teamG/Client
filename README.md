@@ -35,4 +35,9 @@ npm run dev
 ```bash
 npx expo start
 ```
+## Common Issue
 
+"Unable to connect to development server"
+
+- Try restarting the Expo dev server
+- Clear Expo cache: npx expo start -c
