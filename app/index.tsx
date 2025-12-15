@@ -218,9 +218,20 @@ export default function Onboarding() {
     setPageIndex(index);
   };
 
-  const goToAuth = () => {
-    router.replace("/(auth)/login");
+  const goToSignup = () => {
+    router.replace({
+      pathname: "/(auth)/login",
+      params: { tab: "signup" },
+    });
   };
+
+  const goToLogin = () => {
+    router.replace({
+      pathname: "/(auth)/login",
+      params: { tab: "login" },
+    });
+  };
+
 
   return (
     <View style={styles.root}>
@@ -230,9 +241,10 @@ export default function Onboarding() {
 
       {/* Skip button */}
       {pageIndex < 2 && (
-        <TouchableOpacity style={styles.skipButton} onPress={goToAuth}>
+        <TouchableOpacity style={styles.skipButton} onPress={goToLogin}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
+
       )}
 
       <Animated.ScrollView
@@ -393,12 +405,12 @@ export default function Onboarding() {
           <Text style={styles.pageTitle}>Why we built Hey, Neighbor</Text>
           <Text style={styles.pageBody}>
             Our goal is to make borrowing feel normal and effortless on campus—
-            like knocking on your neighbor’s door, but safer and more organized.
+            like knocking on your neighbor’s door, but more organized and with a lot more neighbors.
           </Text>
 
           <Animated.View style={[styles.goalCard, goalParallax]}>
             <View style={styles.goalRow}>
-              <Ionicons name="people-outline" size={22} color="#f97316" />
+              <Ionicons name="people-outline" size={27} color="#f97316" />
               <Text style={styles.goalText}>
                 Help Calvin students connect beyond class and build small, everyday
                 community.
@@ -406,38 +418,32 @@ export default function Onboarding() {
             </View>
 
             <View style={styles.goalRow}>
-              <Ionicons name="cash-outline" size={22} color="#15803d" />
+              <Ionicons name="cash-outline" size={27} color="#15803d" />
               <Text style={styles.goalText}>
                 Save money by borrowing instead of buying new for every little thing.
               </Text>
             </View>
 
             <View style={styles.goalRow}>
-              <Ionicons name="leaf-outline" size={22} color="#16a34a" />
+              <Ionicons name="leaf-outline" size={27} color="#16a34a" />
               <Text style={styles.goalText}>
                 Cut down on waste and let rarely-used items get a second life.
               </Text>
             </View>
           </Animated.View>
 
-          <Text style={styles.pageBodySmall}>
-            Use your @calvin.edu email to create your account and start borrowing
-            or lending in minutes.
-          </Text>
-
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={goToAuth}
+            onPress={goToSignup}
             activeOpacity={0.9}
           >
             <Text style={styles.primaryButtonText}>Get started</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={goToAuth}>
-            <Text style={styles.secondaryButtonText}>
-              I already have an account
-            </Text>
+          <TouchableOpacity style={styles.secondaryButton} onPress={goToLogin}>
+            <Text style={styles.secondaryButtonText}>I already have an account</Text>
           </TouchableOpacity>
+
         </View>
       </Animated.ScrollView>
 

@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarksUnsafe } from "../../context/BookmarksContext";
+import { useBookmarks } from "../../context/BookmarksContext";
+import { items as itemsApi } from "../../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Image,
   View,
@@ -9,171 +11,186 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../context/AuthContext";
 
-const charger = require("../../assets/images/charger.jpg");
-const corebook = require("../../assets/images/corebook.jpg");
-const chair = require("../../assets/images/chair.jpg");
-const tools = require("../../assets/images/tools.jpg");
-const tractor = require("../../assets/images/tractor.jpg");
-const vacuum = require("../../assets/images/vacuum.jpg");
-const keurig = require("../../assets/images/keurig.png");
-const desklamp = require("../../assets/images/desklamp.jpeg");
-const speaker = require("../../assets/images/speaker.jpg");
-const bike = require("../../assets/images/bike.jpg");
-const cookset = require("../../assets/images/cookset.jpg");
-const yogamat = require("../../assets/images/yogamat.jpg");
-const wirelessbuds = require("../../assets/images/wirelessbuds.jpg");
-const standingdesk = require("../../assets/images/standingdesk.jpg");
-const electrickettle = require("../../assets/images/electrickettle.jpg");
-const campingtent = require("../../assets/images/campingtent.jpg");
-const electricdrill = require("../../assets/images/drill.jpg");
-const cookbook = require("../../assets/images/cookbook.jpg");
-const smartwatch = require("../../assets/images/smartwatch.jpg");
-const pressurewasher = require("../../assets/images/pressurewasher.jpg");
-const laptopstand = require("../../assets/images/laptopstand.jpg");
-const gardenhose = require("../../assets/images/hose.jpg");
-const vacuum2 = require("../../assets/images/vacuum2.jpg");
-const vacuum3 = require("../../assets/images/vacuum3.jpg");
-const vacuum4 = require("../../assets/images/vacuum4.jpg");
-const vacuum5 = require("../../assets/images/vacuum5.jpg");
-const vacuum6 = require("../../assets/images/vacuum6.jpg");
+const imageMap: Record<string, any> = {
+  "banner.png": require("../../assets/images/banner.png"),
+  "bike.jpg": require("../../assets/images/bike.jpg"),
+  "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
+  "chair.jpg": require("../../assets/images/chair.jpg"),
+  "charger.jpg": require("../../assets/images/charger.jpg"),
+  "cookbook.jpg": require("../../assets/images/cookbook.jpg"),
+  "cookset.jpg": require("../../assets/images/cookset.jpg"),
+  "corebook.jpg": require("../../assets/images/corebook.jpg"),
+  "desklamp.jpeg": require("../../assets/images/desklamp.jpeg"),
+  "drill.jpg": require("../../assets/images/drill.jpg"),
+  "electrickettle.jpg": require("../../assets/images/electrickettle.jpg"),
+  "hose.jpg": require("../../assets/images/hose.jpg"),
+  "keurig.png": require("../../assets/images/keurig.png"),
+  "laptopstand.jpg": require("../../assets/images/laptopstand.jpg"),
+  "pressurewasher.jpg": require("../../assets/images/pressurewasher.jpg"),
+  "smartwatch.jpg": require("../../assets/images/smartwatch.jpg"),
+  "speaker.jpg": require("../../assets/images/speaker.jpg"),
+  "standingdesk.jpg": require("../../assets/images/standingdesk.jpg"),
+  "tools.jpg": require("../../assets/images/tools.jpg"),
+  "tractor.jpg": require("../../assets/images/tractor.jpg"),
+  "vacuum.jpg": require("../../assets/images/vacuum.jpg"),
+  "vacuum2.jpg": require("../../assets/images/vacuum2.jpg"),
+  "vacuum3.jpg": require("../../assets/images/vacuum3.jpg"),
+  "vacuum4.jpg": require("../../assets/images/vacuum4.jpg"),
+  "vacuum5.jpg": require("../../assets/images/vacuum5.jpg"),
+  "vacuum6.jpg": require("../../assets/images/vacuum6.jpg"),
+  "wirelessbuds.jpg": require("../../assets/images/wirelessbuds.jpg"),
+  "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
+};
 
 interface Item {
-  id: number;
+  item_id: number;
   name: string;
-  count: number;
-  image: any;
-  category: string;
-  status: "none" | "borrowed";
+  description?: string;
+  image_url?: string;
+  category?: string;
+  owner_id: number;
+  request_status: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 export default function Index() {
   const router = useRouter();
-  const bookmarkCtx = useBookmarksUnsafe();
-
-  const {
-    isSaved = () => false,
-    toggle = () => { },
-    ids = new Set(),
-  } = bookmarkCtx || {};
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [bookmarkCounts, setBookmarkCounts] = useState<Record<number, number>>({});
 
-  const searchInputRef = useRef<TextInput>(null);
-  const searchBarRef = useRef<View>(null);
+  const { byId, isSaved, toggle } = useBookmarks();
+  const bookmarkCount = Object.keys(byId).length;
 
-  const presetItems: Item[] = [
-    { id: 1, name: "USB-C Charger", count: 254, image: charger, category: "Popular", status: "none" },
-    { id: 2, name: "Core 100 Book", count: 243, image: corebook, category: "Books", status: "borrowed" },
-    { id: 3, name: "Office Chair", count: 180, image: chair, category: "Home", status: "none" },
-    { id: 4, name: "Keurig", count: 180, image: keurig, category: "Home", status: "borrowed" },
-    { id: 5, name: "Tool Set", count: 156, image: tools, category: "Tools", status: "none" },
-    { id: 6, name: "Garden Tractor", count: 180, image: tractor, category: "Tools", status: "none" },
-    { id: 7, name: "Vacuum", count: 156, image: vacuum, category: "Home", status: "borrowed" },
-    { id: 8, name: "Desk Lamp", count: 120, image: desklamp, category: "Home", status: "none" },
-    { id: 9, name: "Bluetooth Speaker", count: 95, image: speaker, category: "Popular", status: "none" },
-    { id: 10, name: "Mountain Bike", count: 110, image: bike, category: "Tools", status: "none" },
-    { id: 11, name: "Cookware Set", count: 85, image: cookset, category: "Home", status: "borrowed" },
-    { id: 12, name: "Yoga Mat", count: 70, image: yogamat, category: "Popular", status: "none" },
-    { id: 13, name: "Wireless Headphones", count: 130, image: wirelessbuds, category: "Popular", status: "none" },
-    { id: 14, name: "Standing Desk", count: 90, image: standingdesk, category: "Home", status: "none" },
-    { id: 15, name: "Electric Kettle", count: 85, image: electrickettle, category: "Home", status: "none" },
-    { id: 16, name: "Camping Tent", count: 120, image: campingtent, category: "Tools", status: "none" },
-    { id: 17, name: "Electric Drill", count: 140, image: electricdrill, category: "Tools", status: "borrowed" },
-    { id: 18, name: "Cookbook", count: 110, image: cookbook, category: "Books", status: "none" },
-    { id: 19, name: "Smartwatch", count: 150, image: smartwatch, category: "Popular", status: "none" },
-    { id: 20, name: "Pressure Washer", count: 100, image: pressurewasher, category: "Tools", status: "none" },
-    { id: 21, name: "Laptop Stand", count: 120, image: laptopstand, category: "Popular", status: "none" },
-    { id: 22, name: "Garden Hose", count: 110, image: gardenhose, category: "Tools", status: "none" },
-    { id: 23, name: "Vacuum", count: 156, image: vacuum2, category: "Home", status: "none" },
-    { id: 24, name: "Vacuum", count: 156, image: vacuum3, category: "Home", status: "none" },
-    { id: 25, name: "Vacuum", count: 156, image: vacuum4, category: "Home", status: "borrowed" },
-    { id: 26, name: "Vacuum", count: 156, image: vacuum5, category: "Home", status: "borrowed" },
-    { id: 27, name: "Vacuum", count: 156, image: vacuum6, category: "Home", status: "none" },
-  ];
+  const searchInputRef = useRef<TextInput | null>(null);
 
-  // Get bookmark count from context
-  const bookmarkCount = ids.size;
+  // Load bookmark counts for all items
+  const loadBookmarkCounts = async (itemsList: Item[]) => {
+    const counts: Record<number, number> = {};
+
+    await Promise.all(
+      itemsList.map(async (item) => {
+        try {
+          // ✅ Use global key (no user ID)
+          const stored = await AsyncStorage.getItem(`bookmark-count:${item.item_id}`);
+          counts[item.item_id] = stored ? parseInt(stored) : 0;
+          console.log(`📊 Item ${item.item_id}: ${counts[item.item_id]} bookmarks`);
+        } catch (err) {
+          counts[item.item_id] = 0;
+        }
+      })
+    );
+
+    setBookmarkCounts(counts);
+  };
+
+  // Load items from API
+  const loadItems = async () => {
+    try {
+      const data: any = await itemsApi.getAll();
+      setItems(data);
+      await loadBookmarkCounts(data);
+    } catch (error) {
+      console.error("Failed to load items:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadSearches = async () => {
-      const saved = await AsyncStorage.getItem("recentSearches");
-      if (saved) setRecentSearches(JSON.parse(saved));
-    };
-    loadSearches();
+    loadItems();
   }, []);
-
-  useEffect(() => {
-    AsyncStorage.setItem("recentSearches", JSON.stringify(recentSearches));
-  }, [recentSearches]);
-
-  useEffect(() => {
-    if (searchQuery.length > 0 && searchBarRef.current) {
-      searchBarRef.current.measure((x, y, width, height, pageX, pageY) => {
-        setDropdownLayout({
-          top: pageY + height + 4,
-          left: pageX,
-          width: width,
-        });
-      });
-    }
-  }, [searchQuery]);
-
-  const handleSearchSubmit = () => {
-    const trimmed = searchQuery.trim();
-    if (trimmed && !recentSearches.includes(trimmed)) {
-      setRecentSearches([trimmed, ...recentSearches].slice(0, 5));
-    }
-  };
-
-  const handleClearRecentSearches = async () => {
-    await AsyncStorage.removeItem("recentSearches");
-    setRecentSearches([]);
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    const saved = await AsyncStorage.getItem("recentSearches");
-    if (saved) setRecentSearches(JSON.parse(saved));
+    await loadItems();
     setRefreshing(false);
   };
 
-  const handleBookmarkToggle = (item: Item) => {
+  const handleBookmarkToggle = async (item: Item) => {
+    const wasBookmarked = isSaved(item.item_id);
+
+    // Toggle the bookmark
     toggle({
-      id: String(item.id),
+      id: item.item_id,
       title: item.name,
-      image: item.image,
-      count: item.count,
-      status: item.status,
-      category: item.category,
+      image_url: item.image_url ?? null,
+      count: 0,
+      status: item.request_status === "available" ? "none" : "borrowed",
+      category: item.category || "Other",
     });
+
+    // Update the bookmark count with global key
+    try {
+      const currentCount = bookmarkCounts[item.item_id] || 0;
+      const newCount = wasBookmarked ? Math.max(0, currentCount - 1) : currentCount + 1;
+
+      await AsyncStorage.setItem(`bookmark-count:${item.item_id}`, newCount.toString());
+
+      setBookmarkCounts(prev => ({
+        ...prev,
+        [item.item_id]: newCount
+      }));
+
+      console.log(`✅ Updated count for item ${item.item_id}: ${newCount}`);
+    } catch (error) {
+      console.error('Error updating bookmark count:', error);
+    }
   };
 
-  const filteredItems = presetItems.filter((item) => {
-    const matchesCategory = activeTab === "Popular" || item.category === activeTab;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredItems = items.filter((item) => {
+    const matchesCategory =
+      activeTab === "Popular" ||
+      (item.category && item.category.toLowerCase() === activeTab.toLowerCase());
+
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      q === "" ||
+      item.name.toLowerCase().includes(q) ||
+      (item.description ?? "").toLowerCase().includes(q);
+
     return matchesCategory && matchesSearch;
   });
+
+  // Fixed category tabs
+  const categories = ["Popular", "Home", "Books", "Tools"];
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#f97316" />
+          <Text style={styles.loadingText}>Loading items...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Image
-          source={require("../../assets/images/logo.png")}
-          style={styles.logoImage}
-        />
+        <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+          <Image
+            source={require("../../assets/images/logo.png")}
+            style={styles.logoImage}
+          />
+        </TouchableOpacity>
 
-        <View ref={searchBarRef} style={styles.searchBar}>
+        <View style={styles.searchBar}>
           <Ionicons
             name="search"
             size={18}
@@ -187,8 +204,7 @@ export default function Index() {
             placeholder="Search items"
             placeholderTextColor="#9ca3af"
             value={searchQuery}
-            onChangeText={(text) => setSearchQuery(text)}
-            onSubmitEditing={handleSearchSubmit}
+            onChangeText={setSearchQuery}
           />
 
           {searchQuery.length > 0 && (
@@ -212,48 +228,13 @@ export default function Index() {
             {bookmarkCount > 0 && (
               <View style={styles.bookmarkBadge}>
                 <Text style={styles.bookmarkBadgeText}>
-                  {bookmarkCount > 99 ? '99+' : bookmarkCount}
+                  {bookmarkCount > 99 ? "99+" : bookmarkCount}
                 </Text>
               </View>
             )}
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* RECENT SEARCH DROPDOWN */}
-      {searchQuery.length > 0 && recentSearches.length > 0 && (
-        <View
-          style={[
-            styles.recentDropdown,
-            {
-              top: dropdownLayout.top,
-              left: dropdownLayout.left,
-              width: dropdownLayout.width,
-            },
-          ]}
-        >
-          {recentSearches.slice(0, 5).map((term, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => {
-                setSearchQuery(term);
-                searchInputRef.current?.blur();
-              }}
-              style={styles.recentRow}
-            >
-              <Ionicons name="time-outline" size={16} color="#6b7280" />
-              <Text style={styles.recentRowText}>{term}</Text>
-            </TouchableOpacity>
-          ))}
-
-          <TouchableOpacity
-            onPress={handleClearRecentSearches}
-            style={styles.recentClearRow}
-          >
-            <Text style={styles.recentClearText}>Clear recent searches</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* MAIN CONTENT */}
       <ScrollView
@@ -264,7 +245,7 @@ export default function Index() {
       >
         {/* TABS */}
         <View style={styles.tabContainer}>
-          {["Popular", "Home", "Books", "Tools"].map((tab) => (
+          {categories.map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => {
@@ -286,86 +267,128 @@ export default function Index() {
         </View>
 
         {/* ITEMS GRID */}
-        <View style={styles.recommendedGrid}>
-          {filteredItems.map((item) => {
-            const isBookmarked = isSaved(String(item.id));
+        {filteredItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cube-outline" size={60} color="#9ca3af" />
+            <Text style={styles.emptyText}>No items found</Text>
+            <Text style={styles.emptySub}>
+              {searchQuery ? "Try a different search" : "Check back later for new items"}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.recommendedGrid}>
+            {filteredItems.map((item) => {
+              const isBookmarked = isSaved(item.item_id);
+              const isBorrowed = item.request_status !== "available";
+              const itemBookmarkCount = bookmarkCounts[item.item_id] || 0;
 
-            return (
-              <View key={item.id} style={styles.recommendedItem}>
-                {/* IMAGE + BOOKMARK */}
-                <View style={styles.recommendedImageContainer}>
-                  {/* Bookmark Icon */}
-                  <TouchableOpacity
-                    style={styles.bookmarkIconContainer}
-                    onPress={() => handleBookmarkToggle(item)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={isBookmarked ? "bookmark" : "bookmark-outline"}
-                      size={22}
-                      color="#3b1b0d"
-                    />
-                  </TouchableOpacity>
+              return (
+                <View key={item.item_id} style={styles.recommendedItem}>
+                  {/* IMAGE + BOOKMARK */}
+                  <View style={styles.recommendedImageContainer}>
+                    {/* Edit icon for own items, bookmark for others */}
+                    {item.owner_id === user?.user_id ? (
+                      <TouchableOpacity
+                        style={styles.editIconContainer}
+                        onPress={() => router.push({
+                          pathname: "/edit-item",
+                          params: { id: item.item_id }
+                        })}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name="pencil"
+                          size={16}
+                          color="#fff"
+                        />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.bookmarkIconContainer}
+                        onPress={() => handleBookmarkToggle(item)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                          size={22}
+                          color="#3b1b0d"
+                        />
+                      </TouchableOpacity>
+                    )}
+                    {/* Navigate via image */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (item.owner_id === user?.user_id) {
+                          router.push({
+                            pathname: "/edit-item",
+                            params: { id: item.item_id }
+                          });
+                        } else {
+                          router.push(`/item/${item.item_id}`);
+                        }
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      {item.image_url ? (
+                        imageMap[item.image_url] ? (
+                          <Image
+                            source={imageMap[item.image_url]}
+                            style={[
+                              styles.recommendedImage,
+                              isBorrowed && { opacity: 0.55 },
+                            ]}
+                          />
+                        ) : item.image_url.startsWith('http') ? (
+                          <Image
+                            source={{ uri: item.image_url }}
+                            style={[
+                              styles.recommendedImage,
+                              isBorrowed && { opacity: 0.55 },
+                            ]}
+                          />
+                        ) : (
+                          <View style={[styles.recommendedImage, styles.placeholderImage]}>
+                            <Ionicons name="image-outline" size={40} color="#9ca3af" />
+                          </View>
+                        )
+                      ) : (
+                        <View style={[styles.recommendedImage, styles.placeholderImage]}>
+                          <Ionicons name="image-outline" size={40} color="#9ca3af" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
 
-                  {/* Navigate via image */}
+                    {/* Borrowed badge */}
+                    {isBorrowed && (
+                      <View style={[styles.statusBadge, styles.statusBorrowed]}>
+                        <Text style={styles.statusText}>Borrowed</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Navigate via info section */}
                   <TouchableOpacity
-                    onPress={() => router.push(`/item/${item.id}`)}
+                    onPress={() => router.push(`/item/${item.item_id}`)}
                     activeOpacity={0.8}
+                    style={styles.recommendedInfo}
                   >
-                    <Image
-                      source={item.image}
-                      style={[
-                        styles.recommendedImage,
-                        item.status === "borrowed" && { opacity: 0.55 },
-                      ]}
-                    />
-                  </TouchableOpacity>
-
-                  {/* Borrowed badge */}
-                  {item.status === "borrowed" && (
-                    <View style={[styles.statusBadge, styles.statusBorrowed]}>
-                      <Text style={styles.statusText}>Borrowed</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Navigate via info section */}
-                <TouchableOpacity
-                  onPress={() => router.push(`/item/${item.id}`)}
-                  activeOpacity={0.8}
-                  style={styles.recommendedInfo}
-                >
-                  <Text
-                    style={[
-                      styles.recommendedName,
-                      item.status === "borrowed" && { opacity: 0.7 },
-                    ]}
-                  >
-                    {item.name}
-                  </Text>
-
-                  <View style={styles.countRow}>
-                    <Ionicons
-                      name="bookmark"
-                      size={14}
-                      color="#3b1b0d"
-                      style={{ marginRight: 4 }}
-                    />
                     <Text
                       style={[
-                        styles.countText,
-                        item.status === "borrowed" && { opacity: 0.7 },
+                        styles.recommendedName,
+                        isBorrowed && { opacity: 0.7 },
                       ]}
+                      numberOfLines={1}
                     >
-                      {item.count}
+                      {item.name}
                     </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </View>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -376,7 +399,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f9fafb",
   },
-
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6b7280",
+  },
+  emptyContainer: {
+    paddingTop: 80,
+    alignItems: "center",
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#4b5563",
+  },
+  emptySub: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#9ca3af",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -389,13 +436,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-
   logoImage: {
     width: 55,
     height: 55,
     borderRadius: 12,
   },
-
   searchBar: {
     flex: 1,
     flexDirection: "row",
@@ -405,22 +450,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
   },
-
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: "#111827",
+    letterSpacing: 0,
   },
-
   iconGroup: {
     flexDirection: "row",
     gap: 14,
   },
-
   bookmarkHeaderContainer: {
     position: "relative",
   },
-
   bookmarkBadge: {
     position: "absolute",
     top: -6,
@@ -435,103 +477,44 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-
   bookmarkBadgeText: {
     color: "#fff",
     fontSize: 10,
     fontWeight: "700",
   },
-
-  // RECENT DROPDOWN
-  recentDropdown: {
-    position: "absolute",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    zIndex: 1000,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "#f3f4f6",
-  },
-
-  recentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 9,
-    paddingHorizontal: 8,
-    gap: 10,
-    borderRadius: 8,
-  },
-
-  recentRowText: {
-    fontSize: 14,
-    color: "#1f2937",
-    flex: 1,
-  },
-
-  recentClearRow: {
-    marginTop: 2,
-    paddingTop: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#f3f4f6",
-    alignItems: "center",
-  },
-
-  recentClearText: {
-    color: "#f97316",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  // TABS
   tabContainer: {
     flexDirection: "row",
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
-
   tab: {
     flex: 1,
     paddingVertical: 14,
     alignItems: "center",
   },
-
   activeTab: {
     borderBottomWidth: 2,
     borderBottomColor: "#f97316",
   },
-
   tabText: {
     fontSize: 14,
     color: "#6b7280",
     fontWeight: "500",
   },
-
   activeTabText: {
     color: "#f97316",
     fontWeight: "600",
   },
-
-  // ITEMS
   scrollView: {
     flex: 1,
   },
-
   recommendedGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     padding: 12,
     gap: 12,
   },
-
   recommendedItem: {
     width: "47.5%",
     backgroundColor: "#fff",
@@ -543,34 +526,41 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-
   recommendedImageContainer: {
     width: "100%",
     aspectRatio: 1,
     backgroundColor: "#f3f4f6",
   },
-
   recommendedImage: {
     width: "100%",
     height: "100%",
   },
-
+  placeholderImage: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#e5e7eb",
+  },
   recommendedInfo: {
     padding: 12,
   },
-
   recommendedName: {
     fontSize: 15,
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 4,
+    marginBottom: 6,
   },
-
-  countText: {
-    fontSize: 13,
+  categoryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  categoryText: {
+    fontSize: 11,
     color: "#6b7280",
+    fontWeight: "500",
   },
-
   statusBadge: {
     position: "absolute",
     top: 8,
@@ -580,28 +570,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     zIndex: 10,
   },
-
   statusText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "600",
   },
-
   statusBorrowed: {
     backgroundColor: "#f73e3eaf",
   },
-
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-
-  bookmarkIcon: {
-    marginLeft: 8,
-  },
-
   bookmarkIconContainer: {
     position: "absolute",
     top: 8,
@@ -611,9 +587,13 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 20,
   },
-  countRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
+  editIconContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 20,
+    backgroundColor: "#f97316",
+    padding: 8,
+    borderRadius: 20,
   },
 });
