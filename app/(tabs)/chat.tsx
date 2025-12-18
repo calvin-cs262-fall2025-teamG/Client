@@ -79,7 +79,13 @@ export default function Chat() {
 
     try {
       const data: any = await messagesApi.getUserMessages(user.user_id);
-      setChats(data);
+
+      // Sort chats by most recent first
+      const sortedChats = data.sort((a: ChatPreview, b: ChatPreview) => {
+        return new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime();
+      });
+
+      setChats(sortedChats);
 
       // Load avatars for ALL users to ensure we have them
       const avatarPromises = data.map(async (chat: ChatPreview) => {
@@ -94,7 +100,7 @@ export default function Chat() {
 
       const avatarResults = await Promise.all(avatarPromises);
       const newAvatarCache: Record<number, string> = {};
-      
+
       avatarResults.forEach((result) => {
         if (result && result.avatar) {
           newAvatarCache[result.userId] = result.avatar;

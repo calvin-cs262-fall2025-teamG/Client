@@ -57,9 +57,9 @@ export default function Profile() {
 
   const loadProfileUser = async () => {
     if (!user) return;
-    console.log("📥 Loading profile for user:", user.user_id);
+    console.log("Loading profile for user:", user.user_id);
     const u = await usersApi.getById(user.user_id);
-    console.log("✅ Loaded user:", u);
+    console.log("Loaded user:", u);
     setFullUser(u as User);
   };
 
@@ -80,9 +80,9 @@ export default function Profile() {
         try {
           const stored = await AsyncStorage.getItem(`bookmark-count:${user.user_id}:${it.item_id}`);
           bookmarkCount = stored ? parseInt(stored) : 0;
-          console.log(`📊 Item ${it.item_id} (${it.name}): ${bookmarkCount} bookmarks`);
+          console.log(`Item ${it.item_id} (${it.name}): ${bookmarkCount} bookmarks`);
         } catch (err) {
-          console.error(`❌ Error loading bookmark count for item ${it.item_id}:`, err);
+          console.error(` Error loading bookmark count for item ${it.item_id}:`, err);
         }
 
         return {
@@ -172,12 +172,14 @@ export default function Profile() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.smallPlusButton}
-            onPress={() => router.push("/(tabs)/list")}
+            style={styles.smallHelpButton}
+            onPress={() => router.push("/HelpList")}
             activeOpacity={0.9}
           >
-            <Ionicons name="add" size={22} color="#111827" />
+            <Ionicons name="help-circle-outline" size={22} color="#111827" />
           </TouchableOpacity>
+
+
         </View>
       </View>
 
@@ -373,7 +375,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
-  smallPlusButton: {
+  smallHelpButton: {
     width: 56,
     height: 40,
     borderRadius: 12,

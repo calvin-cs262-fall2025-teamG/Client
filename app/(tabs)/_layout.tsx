@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
-import { BookmarksProvider } from "../../context/BookmarksContext"; // <-- add this
+import { BookmarksProvider } from "../../context/BookmarksContext";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
