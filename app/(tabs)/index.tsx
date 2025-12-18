@@ -84,7 +84,6 @@ export default function Index() {
     await Promise.all(
       itemsList.map(async (item) => {
         try {
-          // ✅ Use global key (no user ID)
           const stored = await AsyncStorage.getItem(`bookmark-count:${item.item_id}`);
           counts[item.item_id] = stored ? parseInt(stored) : 0;
           console.log(`📊 Item ${item.item_id}: ${counts[item.item_id]} bookmarks`);
@@ -164,9 +163,8 @@ export default function Index() {
 
     return matchesCategory && matchesSearch;
   });
-
-  // Fixed category tabs
-  const categories = ["Popular", "Home", "Books", "Tools", "Outdoor", "School", "Electronics", "Fitness"];
+  
+  const categories = ["Popular", "Home", "Books", "Tools", "Outdoor", "School", "Electronics", "Kitchen"];
 
   if (loading) {
     return (
@@ -244,29 +242,32 @@ export default function Index() {
         }
       >
         {/* TABS */}
-        <View style={styles.tabContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabScrollContent}
-          >
-            {categories.map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                onPress={() => {
-                  setActiveTab(tab);
-                  setSearchQuery("");
-                }}
-                style={[styles.tabPill, activeTab === tab && styles.activeTabPill]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabScrollContent}
+          style={styles.tabScrollContainer}
+        >
+          {categories.map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => {
+                setActiveTab(tab);
+                setSearchQuery("");
+              }}
+              style={[styles.tab, activeTab === tab && styles.activeTab]}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
               >
-                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                  {tab}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {/* ITEMS GRID */}
         {filteredItems.length === 0 ? (
@@ -484,24 +485,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
-
-  tabContainer: {
+  tabScrollContainer: {
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
   tabScrollContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 10,
+    paddingHorizontal: 8,
   },
   tab: {
-    flex: 1,
     paddingVertical: 14,
-    alignItems: "center",
+    paddingHorizontal: 20,
+    marginHorizontal: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomWidth: 2,
     borderBottomColor: "#f97316",
   },
   tabText: {
@@ -509,18 +508,6 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     fontWeight: "500",
   },
-
-  tabPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#f3f4f6",
-  },
-  activeTabPill: {
-  backgroundColor: "#fff7ed",
-  borderWidth: 1,
-  borderColor: "#f97316",
-},
   activeTabText: {
     color: "#f97316",
     fontWeight: "600",

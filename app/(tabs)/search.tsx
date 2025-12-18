@@ -19,10 +19,10 @@ type ApiItem = {
   item_id: number;
   name: string;
   description?: string | null;
-  image_url?: string | null;    // should be full URL from your service
+  image_url?: string | null;
   category?: string | null;
   owner_id: number;
-  request_status?: string | null; // "available" | "borrowed" | etc
+  request_status?: string | null;
 };
 
 const imageMap: Record<string, any> = {
@@ -33,13 +33,10 @@ const imageMap: Record<string, any> = {
 const getImageSource = (raw?: string | null) => {
   if (!raw) return null;
 
-  // if the API gives a full url, keep it
   if (raw.startsWith("http")) return { uri: raw };
 
-  // if the API gives a path like "uploads/xxx.jpg", grab the filename
   const filename = raw.split("/").pop()?.toLowerCase() ?? raw.toLowerCase();
 
-  // local filename -> require mapping
   if (imageMap[filename]) return imageMap[filename];
 
   return null;
@@ -80,7 +77,7 @@ export default function DiscoverScreen() {
     setRefreshing(false);
   };
 
-  // Build categories from DB (plus "All")
+  // Build categories from DB
   const categories = useMemo(() => {
     const set = new Set<string>();
     items.forEach((it) => {

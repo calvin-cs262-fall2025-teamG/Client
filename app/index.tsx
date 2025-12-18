@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 const logo = require("../assets/images/logo.png");
 
-// tiny “peek inside” sample items
+// tiny sample items
 const previewItems = [
   { id: 1, icon: "flash-outline" as const, label: "USB-C charger", tag: "Tech" },
   { id: 2, icon: "book-outline" as const, label: "Core 100 book", tag: "Books" },
@@ -58,7 +58,6 @@ export default function Onboarding() {
     );
     loop.start();
 
-    // one-time intro: hero → text → preview
     Animated.stagger(140, [
       Animated.timing(heroIntro, {
         toValue: 1,
