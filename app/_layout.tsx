@@ -34,6 +34,14 @@ export default function RootLayout() {
             name="chat-thread"
             options={{ headerShown: false }} 
           />
+          <Stack.Screen 
+            name="HelpDetails"
+            options={{ headerShown: false }} 
+          />
+          <Stack.Screen 
+            name="HelpList"
+            options={{ headerShown: false }} 
+          />
         </Stack>
       </BookmarksProvider>
     </AuthProvider>

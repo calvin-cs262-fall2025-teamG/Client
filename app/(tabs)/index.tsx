@@ -166,7 +166,7 @@ export default function Index() {
   });
 
   // Fixed category tabs
-  const categories = ["Popular", "Home", "Books", "Tools"];
+  const categories = ["Popular", "Home", "Books", "Tools", "Outdoor", "School", "Electronics", "Fitness"];
 
   if (loading) {
     return (
@@ -245,26 +245,28 @@ export default function Index() {
       >
         {/* TABS */}
         <View style={styles.tabContainer}>
-          {categories.map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => {
-                setActiveTab(tab);
-                setSearchQuery("");
-              }}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabScrollContent}
+          >
+            {categories.map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => {
+                  setActiveTab(tab);
+                  setSearchQuery("");
+                }}
+                style={[styles.tabPill, activeTab === tab && styles.activeTabPill]}
               >
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
+
 
         {/* ITEMS GRID */}
         {filteredItems.length === 0 ? (
@@ -482,11 +484,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
+
   tabContainer: {
-    flexDirection: "row",
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
+  },
+  tabScrollContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
   },
   tab: {
     flex: 1,
@@ -502,6 +509,18 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     fontWeight: "500",
   },
+
+  tabPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#f3f4f6",
+  },
+  activeTabPill: {
+  backgroundColor: "#fff7ed",
+  borderWidth: 1,
+  borderColor: "#f97316",
+},
   activeTabText: {
     color: "#f97316",
     fontWeight: "600",
