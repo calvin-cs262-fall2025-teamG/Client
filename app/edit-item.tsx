@@ -74,9 +74,7 @@ export default function EditItem() {
       return;
     }
 
-    const updated = items.map((item: any) =>
-      item.id === id ? { ...item, name: title, image: imageUri } : item
-    );
+    setSaving(true);
 
     try {
       await items.update(id, {
@@ -97,18 +95,11 @@ export default function EditItem() {
     }
   };
 
-  const deleteItem = async () => {
-    Alert.alert("Delete Item", "Are you sure you want to delete this item?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          const stored = await AsyncStorage.getItem("userItems");
-          let items = stored ? JSON.parse(stored) : [];
-
-          const updated = items.filter((item: any) => item.id !== id);
-          await AsyncStorage.setItem("userItems", JSON.stringify(updated));
+  const handleDelete = async () => {
+    if (!id) {
+      Alert.alert("Error", "Invalid item ID.");
+      return;
+    }
 
     Alert.alert(
       "Delete item?",
