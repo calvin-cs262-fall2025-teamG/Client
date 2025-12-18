@@ -59,168 +59,13 @@ const imageMap: Record<string, any> = {
 function resolveImageSource(key?: string | null): ImageSourcePropType | undefined {
   if (!key) return undefined;
 
-  //  NEW ITEMS
-  8: {
-    name: "Desk Lamp",
-    status: "none",
-    image: require("../../assets/images/desklamp.jpeg"),
-    count: 120,
-    lister: { name: "Sarah T.", avatar: require("../../assets/images/chloe.png"), rating: 4.8 },
-  },
-  9: {
-    name: "Bluetooth Speaker",
-    status: "none",
-    image: require("../../assets/images/speaker.jpg"),
-    count: 95,
-    lister: { name: "Evan S.", avatar: require("../../assets/images/jacob.png"), rating: 4.7 },
-  },
-  10: {
-    name: "Mountain Bike",
-    status: "none",
-    image: require("../../assets/images/bike.jpg"),
-    count: 110,
-    lister: { name: "Matt D.", avatar: require("../../assets/images/greg.png"), rating: 4.6 },
-  },
-  11: {
-    name: "Cookware Set",
-    status: "borrowed",
-    image: require("../../assets/images/cookset.jpg"),
-    count: 85,
-    lister: { name: "Kelly P.", avatar: require("../../assets/images/rose.png"), rating: 4.9 },
-  },
-  12: {
-    name: "Yoga Mat",
-    status: "none",
-    image: require("../../assets/images/yogamat.jpg"),
-    count: 70,
-    lister: { name: "Mia L.", avatar: require("../../assets/images/laila.png"), rating: 4.8 },
-  },
-  13: {
-    name: "Wireless Headphones",
-    status: "none",
-    image: require("../../assets/images/wirelessbuds.jpg"),
-    count: 130,
-    lister: { name: "Tori W.", avatar: require("../../assets/images/bryn.png"), rating: 4.7 },
-  },
-  14: {
-    name: "Standing Desk",
-    status: "none",
-    image: require("../../assets/images/standingdesk.jpg"),
-    count: 90,
-    lister: { name: "Ben J.", avatar: require("../../assets/images/chloe.png"), rating: 4.5 },
-  },
-  15: {
-    name: "Electric Kettle",
-    status: "none",
-    image: require("../../assets/images/electrickettle.jpg"),
-    count: 85,
-    lister: { name: "Nora Q.", avatar: require("../../assets/images/helen.png"), rating: 4.8 },
-  },
-  16: {
-    name: "Camping Tent",
-    status: "none",
-    image: require("../../assets/images/campingtent.jpg"),
-    count: 120,
-    lister: { name: "Derek P.", avatar: require("../../assets/images/jacob.png"), rating: 4.7 },
-  },
-  17: {
-    name: "Electric Drill",
-    status: "borrowed",
-    image: require("../../assets/images/drill.jpg"),
-    count: 140,
-    lister: { name: "Sam G.", avatar: require("../../assets/images/greg.png"), rating: 4.8 },
-  },
-  18: {
-    name: "Cookbook",
-    status: "none",
-    image: require("../../assets/images/cookbook.jpg"),
-    count: 110,
-    lister: { name: "Emily R.", avatar: require("../../assets/images/rose.png"), rating: 4.9 },
-  },
-  19: {
-    name: "Smartwatch",
-    status: "none",
-    image: require("../../assets/images/smartwatch.jpg"),
-    count: 150,
-    lister: { name: "Owen T.", avatar: require("../../assets/images/laila.png"), rating: 4.8 },
-  },
-  20: {
-    name: "Pressure Washer",
-    status: "none",
-    image: require("../../assets/images/pressurewasher.jpg"),
-    count: 100,
-    lister: { name: "Caleb Z.", avatar: require("../../assets/images/jacob.png"), rating: 4.7 },
-  },
-  21: {
-    name: "Laptop Stand",
-    status: "none",
-    image: require("../../assets/images/laptopstand.jpg"),
-    count: 120,
-    lister: { name: "Hannah K.", avatar: require("../../assets/images/chloe.png"), rating: 4.8 },
-  },
-  22: {
-    name: "Garden Hose",
-    status: "none",
-    image: require("../../assets/images/hose.jpg"),
-    count: 110,
-    lister: { name: "Adam S.", avatar: require("../../assets/images/greg.png"), rating: 4.6 },
-  },
-  23: {
-    name: "Vacuum",
-    status: "none",
-    image: require("../../assets/images/vacuum2.jpg"),
-    count: 156,
-    lister: {
-      name: "Julia R.",
-      avatar: require("../../assets/images/laila.png"),
-      rating: 4.7,
-    },
-  },
-  24: {
-    name: "Vacuum",
-    status: "none",
-    image: require("../../assets/images/vacuum3.jpg"),
-    count: 156,
-    lister: {
-      name: "Marcus T.",
-      avatar: require("../../assets/images/jacob.png"),
-      rating: 4.6,
-    },
-  },
-  25: {
-    name: "Vacuum",
-    status: "borrowed",
-    image: require("../../assets/images/vacuum4.jpg"),
-    count: 156,
-    lister: {
-      name: "Ava J.",
-      avatar: require("../../assets/images/chloe.png"),
-      rating: 4.9,
-    },
-  },
-  26: {
-    name: "Vacuum",
-    status: "borrowed",
-    image: require("../../assets/images/vacuum5.jpg"),
-    count: 156,
-    lister: {
-      name: "James L.",
-      avatar: require("../../assets/images/greg.png"),
-      rating: 4.8,
-    },
-  },
-  27: {
-    name: "Vacuum",
-    status: "none",
-    image: require("../../assets/images/vacuum6.jpg"),
-    count: 156,
-    lister: {
-      name: "Ella M.",
-      avatar: require("../../assets/images/helen.png"),
-      rating: 4.8,
-    },
-  },
-};
+  const trimmed = key.trim();
+  if (!trimmed) return undefined;
+
+  // remote URL
+  if (/^https?:\/\//i.test(trimmed)) {
+    return { uri: trimmed };
+  }
 
   // local bundled image by filename
   const lower = trimmed.toLowerCase();
@@ -247,11 +92,44 @@ export default function ItemDetail() {
 
   const numericId = Array.isArray(id) ? Number(id[0]) : Number(id);
 
-  const item = presetItems[numericId];
-  const [isNotified, setIsNotified] = useState(false);
+  const [item, setItem] = useState<ItemDetails | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // derive status safely even if item is undefined
-  const status: "borrowed" | "none" = item?.status ?? "none";
+  const { user } = useAuth();
+  const [sending, setSending] = useState(false);
+
+  const sendBorrowRequestMessage = async () => {
+    if (!user) {
+      Alert.alert("Not logged in", "Please log in to request an item.");
+      return;
+    }
+    if (!item) return;
+
+    setSending(true);
+    try {
+      const content = `Hi! I’d love to borrow your ${item.name}.`;
+
+      await messagesApi.create({
+        sender_id: user.user_id,
+        receiver_id: item.owner_id,
+        content,
+        item_id: item.item_id,
+      });
+
+      router.push({
+        pathname: "/chat-thread",
+        params: {
+          id: item.owner_id,
+          name: item.owner_name || `User ${item.owner_id}`,
+        },
+      });
+    } catch (e) {
+      console.error("Failed to send borrow request message:", e);
+      Alert.alert("Message failed", "Could not send your request. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
 
 
   // Load item from API
@@ -261,17 +139,6 @@ export default function ItemDetail() {
         setLoading(false);
         return;
       }
-    };
-
-    if (!Number.isNaN(numericId)) {
-      checkInitialNotify();
-    }
-  }, [numericId]);
-
-  // show "Good news!" if item is now available
-  useEffect(() => {
-    const checkNotify = async () => {
-      if (!item) return;
 
       try {
         const data: any = await itemsApi.getById(numericId);
@@ -284,48 +151,17 @@ export default function ItemDetail() {
         console.log("profile_picture raw:", data.profile_picture);
         console.log("profile_picture normalized:", (data.profile_picture ?? "").trim().toLowerCase());
 
-    if (!Number.isNaN(numericId)) {
-      checkNotify();
-    }
-  }, [numericId, status, item]);
-
-  // ❗ early return is now AFTER hooks, so hooks run on every render
-  if (!item || Number.isNaN(numericId)) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ fontSize: 18 }}>Item not found.</Text>
-      </View>
-    );
-  }
-
-  const handleNotifyMe = async () => {
-    try {
-      const raw = await AsyncStorage.getItem(NOTIFY_KEY);
-      const ids: number[] = raw ? JSON.parse(raw) : [];
-
-      if (!ids.includes(numericId)) {
-        ids.push(numericId);
-        await AsyncStorage.setItem(NOTIFY_KEY, JSON.stringify(ids));
-        setIsNotified(true);
-
-        Alert.alert(
-          "Notification set",
-          `We'll notify you when ${item.name} becomes available.`
-        );
-      } else {
-        const updated = ids.filter((x) => x !== numericId);
-        await AsyncStorage.setItem(NOTIFY_KEY, JSON.stringify(updated));
-        setIsNotified(false);
-
-        Alert.alert(
-          "Notification removed",
-          `You will no longer be notified about ${item.name}.`
-        );
+        setItem(data);
+      } catch (error) {
+        console.error("Failed to load item:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.log("Error saving notify-me:", err);
-    }
-  };
+
+    };
+
+    loadItem();
+  }, [numericId]);
 
   if (loading) {
     return (
@@ -371,37 +207,100 @@ export default function ItemDetail() {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* ACTION BUTTONS */}
-      {status === "none" ? (
-        <TouchableOpacity
-          style={styles.borrowButton}
-          onPress={() =>
-            router.push({
-              pathname: "/borrow-confirmation",
-              params: {
-                itemName: item.name,
-                listerName: item.lister.name,
-                image: item.image,
-              },
-            })
-          }
-        >
-          <Text style={styles.borrowText}>Borrow Now</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[
-            styles.notifyButton,
-            isNotified && styles.notifyButtonDisabled,
-          ]}
-          onPress={handleNotifyMe}
-        >
-          <Text style={styles.notifyText}>
-            {isNotified ? "Notifying you" : "Notify Me"}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+      <ScrollView style={styles.container}>
+        {/* ITEM IMAGE */}
+        {itemImageSource ? (
+          <Image
+            source={itemImageSource}
+            style={[styles.image, isBorrowed && { opacity: 0.55 }]}
+          />
+        ) : (
+          <View style={[styles.image, styles.imagePlaceholder]}>
+            <Text style={styles.placeholderText}>No Image</Text>
+          </View>
+        )}
+
+
+        {/* NAME */}
+        <Text style={styles.name}>{item.name}</Text>
+
+        {/* DESCRIPTION */}
+        {item.description && (
+          <Text style={styles.description}>{item.description}</Text>
+        )}
+
+        {/* BADGE */}
+        {isBorrowed && (
+          <View style={[styles.badge, styles.borrowed]}>
+            <Text style={styles.badgeText}>BORROWED</Text>
+          </View>
+        )}
+
+        {/* LISTER PROFILE */}
+        <View style={styles.listerCard}>
+          {ownerAvatarSource ? (
+            <Image source={ownerAvatarSource} style={styles.avatar} />
+          ) : (
+
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarText}>
+                {item.owner_name?.charAt(0) || "?"}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.listerInfo}>
+            <Text style={styles.listerName}>
+              {item.owner_name || `User ${item.owner_id}`}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.viewProfileButton}
+            onPress={() =>
+              router.push({
+                pathname: "/chat-thread",
+                params: {
+                  id: item.owner_id,
+                  name: item.owner_name || `User ${item.owner_id}`,
+                },
+              })
+            }
+          >
+            <Text style={styles.viewProfileText}>Chat</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ACTION BUTTONS */}
+        {!isBorrowed ? (
+          <TouchableOpacity
+            style={[styles.borrowButton, sending && { opacity: 0.6 }]}
+            disabled={sending}
+            onPress={() =>
+              Alert.alert(
+                "Borrow Request",
+                `Send a borrow request for ${item.name}?`,
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: sending ? "Sending..." : "Send Request", onPress: sendBorrowRequestMessage },
+                ]
+              )
+            }
+          >
+            <Text style={styles.borrowText}>
+              {sending ? "Sending..." : "Request to Borrow"}
+            </Text>
+          </TouchableOpacity>
+
+        ) : (
+          <View style={styles.borrowedContainer}>
+            <Text style={styles.borrowedText}>
+              This item is currently borrowed
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView >
   );
 }
 
@@ -553,8 +452,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fee2e2",
   },
-  notifyText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  notifyButtonDisabled: {
-    opacity: 0.6,
+  borrowedText: {
+    color: "#991b1b",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });
