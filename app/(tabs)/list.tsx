@@ -106,7 +106,6 @@ export default function ListItem() {
     try {
       setUploading(true);
 
-      // Upload image first (if exists)
       let imageFilename = null;
       if (imageUri) {
         imageFilename = await uploadImage();
@@ -120,8 +119,8 @@ export default function ListItem() {
         category: category.trim() || "Other",
         owner_id: user.user_id,
         request_status: "available",
-        start_date: new Date().toISOString(),  // ← Add this
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // ← Add this (30 days from now)
+        start_date: new Date().toISOString(),
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       });
 
       Alert.alert("Success", "Your item has been listed!", [
