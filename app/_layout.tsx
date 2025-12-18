@@ -1,66 +1,46 @@
-import React from "react";
 import { Stack } from "expo-router";
-import { BookmarksProvider } from "../context/BookmarksContext";
 import { AuthProvider } from "../context/AuthContext";
+import { BookmarksProvider } from "../context/BookmarksContext";
+// Added comment
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <BookmarksProvider>
-        <Stack initialRouteName="index">
-          {/* 👇 New onboarding entry screen */}
-          <Stack.Screen
-            name="index"
-            options={{ headerShown: false }}
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+           <Stack.Screen 
+            name="index" 
+            options={{ headerShown: false }} 
           />
-
-          {/* Auth flow (login / signup) */}
-          <Stack.Screen
-            name="(auth)"
-            options={{ headerShown: false }}
+          <Stack.Screen 
+            name="bookmark" 
+            options={{ headerShown: false }} 
           />
-
-          {/* Main app with bottom tabs */}
-          <Stack.Screen
-            name="(tabs)"
-            options={{ headerShown: false }}
+          <Stack.Screen 
+            name="edit-item" 
+            options={{ headerShown: false }} 
           />
-
-          {/* Existing extra screens */}
-          <Stack.Screen
-            name="bookmark"
-            options={{
-              title: "Bookmarks",
-              headerStyle: { backgroundColor: "white" },
-              headerTintColor: "#3b1b0d",
-              headerBackButtonDisplayMode: "minimal",
-              headerTitleStyle: { fontWeight: "bold" },
-            }}
+          <Stack.Screen 
+            name="edit-profile" 
+            options={{ headerShown: false }} 
           />
-
-          <Stack.Screen
-            name="item/[id]"
-            options={{
-              title: "Item Info",
-              headerStyle: { backgroundColor: "white" },
-              headerTintColor: "#3b1b0d",
-              headerBackButtonDisplayMode: "minimal",
-              headerTitleStyle: { fontWeight: "bold" },
-            }}
+          <Stack.Screen 
+            name="item/[id]" 
+            options={{ headerShown: false }} 
           />
-
-          <Stack.Screen
-            name="borrow-confirmation"
-            options={{
-              headerShown: false,
-            }}
-          />
-
-          <Stack.Screen
+            <Stack.Screen 
             name="chat-thread"
-            options={{
-              headerShown: false,
-            }}
+            options={{ headerShown: false }} 
+          />
+          <Stack.Screen 
+            name="HelpDetails"
+            options={{ headerShown: false }} 
+          />
+          <Stack.Screen 
+            name="HelpList"
+            options={{ headerShown: false }} 
           />
         </Stack>
       </BookmarksProvider>

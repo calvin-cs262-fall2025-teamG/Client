@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,26 +11,37 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 
 const logo = require("../../assets/images/logo.png");
 
 export default function LoginScreen() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const router = useRouter();
+  const { tab } = useLocalSearchParams<{ tab?: string }>(); // read incoming tab param
+  const { login, signup } = useAuth();
+
+  // Default to signup (so “Get Started” with no param still lands on signup)
+  const [mode, setMode] = useState<"login" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState(""); 
+  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const router = useRouter();
-  const { login } = useAuth();
+  // when navigated here with params, open correct tab
+  useEffect(() => {
+    if (tab === "login" || tab === "signup") {
+      setMode(tab);
+      setError(null);
+    }
+  }, [tab]);
 
   const handleSubmit = async () => {
     setError(null);
 
+    // Validate Calvin email
     if (!email.toLowerCase().endsWith("@calvin.edu")) {
       setError("Please use your @calvin.edu email.");
       return;
@@ -48,8 +59,39 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      await login(email);
-      router.replace("/(tabs)");
+
+      if (mode === "signup") {
+        // Signup
+        const response = await signup(email, password, name);
+
+        router.push({
+          pathname: "/(auth)/verify-email",
+          params: { email },
+        });
+      } else {
+        // Login
+        try {
+          await login(email, password);
+          router.replace("/(tabs)");
+        } catch (err: any) {
+          console.error("Login error:", err);
+
+          const errorMessage = err?.message || "";
+          if (
+            errorMessage.includes("not verified") ||
+            errorMessage.includes("verification") ||
+            errorMessage.includes("verify")
+          ) {
+            router.push({
+              pathname: "/(auth)/verify-email",
+              params: { email },
+            });
+            return;
+          }
+
+          throw err;
+        }
+      }
     } catch (err: any) {
       console.error(err);
       setError(err?.message || "Something went wrong. Please try again.");
@@ -58,8 +100,8 @@ export default function LoginScreen() {
     }
   };
 
-  const isButtonDisabled = !email || !password || (mode === "signup" && !name.trim()) || loading;
-
+  const isButtonDisabled =
+    !email || !password || (mode === "signup" && !name.trim()) || loading;
   const isLogin = mode === "login";
 
   return (
@@ -85,14 +127,12 @@ export default function LoginScreen() {
               style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
               onPress={() => {
                 setMode("login");
+                router.setParams({ tab: "login" }); // ✅ keeps param in sync (optional but nice)
                 setError(null);
               }}
             >
               <Text
-                style={[
-                  styles.toggleText,
-                  isLogin && styles.toggleTextActive,
-                ]}
+                style={[styles.toggleText, isLogin && styles.toggleTextActive]}
               >
                 Log in
               </Text>
@@ -105,6 +145,7 @@ export default function LoginScreen() {
               ]}
               onPress={() => {
                 setMode("signup");
+                router.setParams({ tab: "signup" }); // keeps param in sync (optional but nice)
                 setError(null);
               }}
             >
@@ -189,10 +230,7 @@ export default function LoginScreen() {
 
           {/* Button */}
           <TouchableOpacity
-            style={[
-              styles.button,
-              isButtonDisabled && { opacity: 0.6 },
-            ]}
+            style={[styles.button, isButtonDisabled && { opacity: 0.6 }]}
             onPress={handleSubmit}
             disabled={isButtonDisabled}
             activeOpacity={0.85}
@@ -208,8 +246,9 @@ export default function LoginScreen() {
 
           {/* Helper text */}
           <Text style={styles.footerText}>
-            Later, this can connect to the Hey, Neighbor!
-            backend and real accounts.
+            {isLogin
+              ? "Use your @calvin.edu email to log in"
+              : "Create an account with your @calvin.edu email"}
           </Text>
         </View>
       </ScrollView>
@@ -312,6 +351,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
     paddingVertical: 4,
+    letterSpacing: 0,
   },
   errorText: {
     marginTop: 10,
