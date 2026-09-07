@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useBookmarks } from "../../context/BookmarksContext";
 import { items as itemsApi } from "../../services/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getBookmarkCount, updateBookmarkCount } from "../../services/bookmarkCount";
 import {
   Image,
   View,
@@ -83,13 +83,7 @@ export default function Index() {
 
     await Promise.all(
       itemsList.map(async (item) => {
-        try {
-          const stored = await AsyncStorage.getItem(`bookmark-count:${item.item_id}`);
-          counts[item.item_id] = stored ? parseInt(stored) : 0;
-          console.log(`📊 Item ${item.item_id}: ${counts[item.item_id]} bookmarks`);
-        } catch (err) {
-          counts[item.item_id] = 0;
-        }
+        counts[item.item_id] = await getBookmarkCount(item.item_id);
       })
     );
 
@@ -122,7 +116,6 @@ export default function Index() {
   const handleBookmarkToggle = async (item: Item) => {
     const wasBookmarked = isSaved(item.item_id);
 
-    // Toggle the bookmark
     toggle({
       id: item.item_id,
       title: item.name,
@@ -132,22 +125,13 @@ export default function Index() {
       category: item.category || "Other",
     });
 
-    // Update the bookmark count with global key
-    try {
-      const currentCount = bookmarkCounts[item.item_id] || 0;
-      const newCount = wasBookmarked ? Math.max(0, currentCount - 1) : currentCount + 1;
+    const currentCount = bookmarkCounts[item.item_id] || 0;
+    const newCount = await updateBookmarkCount(item.item_id, wasBookmarked, currentCount);
 
-      await AsyncStorage.setItem(`bookmark-count:${item.item_id}`, newCount.toString());
-
-      setBookmarkCounts(prev => ({
-        ...prev,
-        [item.item_id]: newCount
-      }));
-
-      console.log(`✅ Updated count for item ${item.item_id}: ${newCount}`);
-    } catch (error) {
-      console.error('Error updating bookmark count:', error);
-    }
+    setBookmarkCounts(prev => ({
+      ...prev,
+      [item.item_id]: newCount
+    }));
   };
 
   const filteredItems = items.filter((item) => {
@@ -163,7 +147,7 @@ export default function Index() {
 
     return matchesCategory && matchesSearch;
   });
-  
+
   const categories = ["Popular", "Home", "Books", "Tools", "Outdoor", "School", "Electronics", "Kitchen"];
 
   if (loading) {

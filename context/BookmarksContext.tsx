@@ -1,14 +1,12 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ImageSourcePropType } from "react-native";
-import { useAuth } from "./AuthContext"; // ✅ ADD (adjust path if needed)
+import { useAuth } from "./AuthContext";
 
 const STORAGE_KEY_BASE = "bookmarks_byId_v2";
 
-/**
- * Map local filenames (from API like "campingtent.jpg") to require() images.
- * Add any images you use in the app here.
- */
+// maps local seed-data filenames to actual bundled images
+// add new images here as they get used in the app
 const imageMap: Record<string, any> = {
   "bike.jpg": require("../assets/images/bike.jpg"),
   "campingtent.jpg": require("../assets/images/campingtent.jpg"),
@@ -108,18 +106,23 @@ type PersistedBookmarkItem = Omit<BookmarkItem, "image">;
 export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
-  // ✅ per-user storage key (Option A)
+  // separate storage per user so logging in as someone else doesn't show their bookmarks
   const storageKey = `${STORAGE_KEY_BASE}:${user?.user_id ?? "anon"}`;
 
   const [byId, setById] = useState<Record<number, BookmarkItem>>({});
 
-  // ✅ LOAD bookmarks when user changes (or app mounts)
+  // tracks whether we've finished loading from storage for the current storageKey
+  // needed so the save effect below doesn't fire with a stale/empty byId and
+  // overwrite what's already saved before the load even finishes
+  const hasLoadedRef = useRef(false);
+
+  // load bookmarks whenever the logged-in user changes (or app first mounts)
   useEffect(() => {
     let cancelled = false;
+    hasLoadedRef.current = false;
 
     (async () => {
       try {
-        // if logged out, start empty
         if (!user) {
           if (!cancelled) setById({});
           return;
@@ -136,10 +139,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         const rebuilt: Record<number, BookmarkItem> = {};
         for (const [idStr, item] of Object.entries(parsed)) {
           const id = Number(idStr);
-
-          // rebuild image from imageKey
           const { image } = normalizeImage(item.imageKey ?? null);
-
           rebuilt[id] = { ...item, id, image };
         }
 
@@ -147,6 +147,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         console.error("Failed to load bookmarks:", e);
         if (!cancelled) setById({});
+      } finally {
+        if (!cancelled) hasLoadedRef.current = true;
       }
     })();
 
@@ -155,13 +157,15 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.user_id, storageKey]);
 
-  // ✅ SAVE bookmarks when byId changes (ONLY ONCE — you had this twice)
+  // save bookmarks whenever byId changes - but skip until the load above has finished,
+  // otherwise this fires first with an empty byId and wipes out what's already saved
   useEffect(() => {
+    if (!hasLoadedRef.current) return;
+
     let cancelled = false;
 
     (async () => {
       try {
-        // don't persist if logged out
         if (!user) return;
 
         const toPersist: Record<number, PersistedBookmarkItem> = {};

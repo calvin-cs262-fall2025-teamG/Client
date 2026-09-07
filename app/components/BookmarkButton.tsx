@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useBookmarks } from "../../context/BookmarksContext";
 import { useAuth } from "../../context/AuthContext";
+import { getBookmarkCount, updateBookmarkCount } from "../../services/bookmarkCount";
 
 type Props = {
   item: { id: string; title: string };
@@ -30,42 +30,21 @@ export default function BookmarkButton({
 
   const loadBookmarkCount = async () => {
     const itemId = Number(item.id);
-    const key = `bookmark-count:${itemId}`;
-
-    try {
-      const stored = await AsyncStorage.getItem(key);
-      const count = stored ? parseInt(stored) : 0;
-      console.log(`📊 Loaded count for item ${itemId}: ${count}`);
-      setBookmarkCount(count);
-    } catch (err) {
-      console.error("Error loading bookmark count:", err);
-      setBookmarkCount(0);
-    } finally {
-      setLoading(false);
-    }
+    const count = await getBookmarkCount(itemId);
+    setBookmarkCount(count);
+    setLoading(false);
   };
 
   const handleToggle = async () => {
     if (!ctx || !user) return;
 
     const itemId = Number(item.id);
-    const key = `bookmark-count:${itemId}`;
-
     const wasBookmarked = ctx.isSaved(itemId);
-    
+
     ctx.toggle(item);
 
-    const newCount = wasBookmarked
-      ? Math.max(0, bookmarkCount - 1)
-      : bookmarkCount + 1;
-
-    try {
-      await AsyncStorage.setItem(key, String(newCount));
-      console.log(`✅ Updated count for item ${itemId}: ${newCount}`);
-      setBookmarkCount(newCount);
-    } catch (error) {
-      console.error("Error updating bookmark count:", error);
-    }
+    const newCount = await updateBookmarkCount(itemId, wasBookmarked, bookmarkCount);
+    setBookmarkCount(newCount);
   };
 
   if (!ctx) {

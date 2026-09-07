@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -95,37 +96,48 @@ export default function EditItem() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!id) {
-      Alert.alert("Error", "Invalid item ID.");
-      return;
-    }
+const handleDelete = async () => {
+  if (!id) {
+    Alert.alert("Error", "Invalid item ID.");
+    return;
+  }
 
-    Alert.alert(
-      "Delete item?",
-      "This will permanently remove the item from your listings.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setSaving(true);
-            try {
-              await items.delete(id);
-              Alert.alert("Deleted", "Item removed successfully.", [
-                { text: "OK", onPress: () => router.back() },
-              ]);
-            } catch (error) {
-              console.error("Failed to delete item:", error);
-              Alert.alert("Error", "Could not delete the item.");
-              setSaving(false);
-            }
-          },
-        },
-      ]
-    );
-  };
+  const confirmed = Platform.OS === "web"
+    ? window.confirm("Delete item?\n\nThis will permanently remove the item from your listings.")
+    : await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          "Delete item?",
+          "This will permanently remove the item from your listings.",
+          [
+            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+            { text: "Delete", style: "destructive", onPress: () => resolve(true) },
+          ]
+        );
+      });
+
+  if (!confirmed) return;
+
+  setSaving(true);
+  try {
+    await items.delete(id);
+    if (Platform.OS === "web") {
+      window.alert("Item removed successfully.");
+      router.back();
+    } else {
+      Alert.alert("Deleted", "Item removed successfully.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    }
+  } catch (error) {
+    console.error("Failed to delete item:", error);
+    if (Platform.OS === "web") {
+      window.alert("Could not delete the item.");
+    } else {
+      Alert.alert("Error", "Could not delete the item.");
+    }
+    setSaving(false);
+  }
+};
 
   if (loading) {
     return (

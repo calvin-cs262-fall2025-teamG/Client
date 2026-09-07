@@ -18,6 +18,7 @@ import type { User } from "../../services/authServices";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import BookmarkButton from "../components/BookmarkButton";
+import { getBookmarkCount } from "../../services/bookmarkCount";
 
 type ApiItem = {
   item_id: number;
@@ -76,15 +77,7 @@ export default function Profile() {
     // Load bookmark counts for each item
     const itemsWithCounts = await Promise.all(
       mine.map(async (it) => {
-        let bookmarkCount = 0;
-        try {
-          const stored = await AsyncStorage.getItem(`bookmark-count:${user.user_id}:${it.item_id}`);
-          bookmarkCount = stored ? parseInt(stored) : 0;
-          console.log(`Item ${it.item_id} (${it.name}): ${bookmarkCount} bookmarks`);
-        } catch (err) {
-          console.error(` Error loading bookmark count for item ${it.item_id}:`, err);
-        }
-
+        const bookmarkCount = await getBookmarkCount(it.item_id);
         return {
           id: it.item_id,
           name: it.name,
@@ -95,10 +88,6 @@ export default function Profile() {
         };
       })
     );
-
-    console.log("✅ Loaded items with counts:", itemsWithCounts);
-    console.log("🔍 check direct key", await AsyncStorage.getItem("bookmark-count:5"));
-    console.log("🔍 all bookmark keys", (await AsyncStorage.getAllKeys()).filter(k => k.startsWith("bookmark-count:")));
 
     setListings(itemsWithCounts);
   };
@@ -118,7 +107,6 @@ export default function Profile() {
   // Reload items every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log("🎯 Profile screen focused, reloading items...");
       loadProfileUser();
       loadMyItems();
     }, [user?.user_id])

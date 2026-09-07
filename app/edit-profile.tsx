@@ -106,7 +106,7 @@ export default function EditProfile() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("❌ Upload failed:", response.status, errorText);
+        console.error("Upload failed:", response.status, errorText);
         throw new Error(`Upload failed: ${response.status}`);
       }
 
@@ -130,10 +130,6 @@ export default function EditProfile() {
   };
 
   const handleSave = async () => {
-    console.log("🔘 Save button clicked!");
-    console.log("👤 Current user:", user);
-    console.log("👤 User ID:", user?.user_id);
-
     if (!user?.user_id) {
       Alert.alert("Error", "User session expired. Please log in again.");
       return;
@@ -144,20 +140,17 @@ export default function EditProfile() {
       return;
     }
 
-    console.log("📝 Updating name to:", name.trim());
-
     try {
       setSaving(true);
       const updated = await usersApi.update(user.user_id, {
         name: name.trim(),
       });
-      console.log("✅ Update successful:", updated);
       setUser(updated as any);
 
       Alert.alert("Success", "Profile updated!");
       router.back();
     } catch (error) {
-      console.error("❌ Error updating profile:", error);
+      console.error("Error updating profile:", error);
       Alert.alert("Error", "Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
