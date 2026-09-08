@@ -12,19 +12,9 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
-import { items as itemsApi } from "../../services/api";
 import PageContainer from "../components/PageContainer";
-import Constants from "expo-constants";
-
-function getHost() {
-  const hostUri =
-    (Constants.expoConfig as any)?.hostUri ??
-    (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
-  const host = hostUri?.split(":")?.[0];
-  return host || "localhost";
-}
-
-const BASE_URL = `http://${getHost()}:3001`;
+import { items as itemsApi, BASE_URL } from "../../services/api";
+import * as FileSystem from "expo-file-system/legacy";
 
 export default function ListItem() {
   const router = useRouter();
@@ -61,30 +51,22 @@ export default function ListItem() {
     if (!imageUri) return null;
 
     try {
-      const formData = new FormData();
+      const uploadResult = await FileSystem.uploadAsync(
+        `${BASE_URL}/items/upload`,
+        imageUri,
+        {
+          fieldName: "photo",
+          httpMethod: "POST",
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        }
+      );
 
-      const uriParts = imageUri.split(".");
-      const fileType = uriParts[uriParts.length - 1];
-
-      formData.append("photo", {
-        uri: imageUri,
-        name: `item_${Date.now()}.${fileType}`,
-        type: `image/${fileType}`,
-      } as any);
-
-      const response = await fetch(`${BASE_URL}/items/upload`, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (!response.ok) {
+      if (uploadResult.status !== 200) {
+        console.error("Upload failed:", uploadResult.status, uploadResult.body);
         throw new Error("Image upload failed");
       }
 
-      const data = await response.json();
+      const data = JSON.parse(uploadResult.body);
       return data.filename;
     } catch (error) {
       console.error("Upload error:", error);

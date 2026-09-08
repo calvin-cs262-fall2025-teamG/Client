@@ -7,20 +7,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
-import { users as usersApi } from "../../services/api";
 import type { User } from "../../services/authServices";
-
-function getHost() {
-  const hostUri =
-    (Constants.expoConfig as any)?.hostUri ??
-    (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
-  const host = hostUri?.split(":")?.[0];
-  return host || "localhost";
-}
-
-const BASE_URL = `http://${getHost()}:3001`; // Change for production
+import { users as usersApi, BASE_URL } from "../../services/api";
 
 export default function ListerProfile() {
   const { name, id } = useLocalSearchParams<{ name: string; id?: string }>();

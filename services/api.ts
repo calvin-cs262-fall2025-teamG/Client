@@ -11,7 +11,7 @@ function getHost() {
 
 const USE_DEPLOYED_BACKEND = true; //  true = the Azure-deployed backend instead of local
 
-const BASE_URL = USE_DEPLOYED_BACKEND
+export const BASE_URL = USE_DEPLOYED_BACKEND
   ? "https://bryn-monopoly-service-bpcuabdzg8bkdycb.westus3-01.azurewebsites.net"
   : `http://${getHost()}:3001`;
 console.log("BASE_URL:", BASE_URL);

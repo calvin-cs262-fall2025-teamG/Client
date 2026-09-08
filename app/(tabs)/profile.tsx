@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { items as itemsApi, users as usersApi } from "../../services/api";
 import type { User } from "../../services/authServices";
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from "expo-router/react-navigation";
 import { useCallback } from 'react';
 import BookmarkButton from "../components/BookmarkButton";
 import { getBookmarkCount } from "../../services/bookmarkCount";
@@ -70,7 +70,7 @@ export default function Profile() {
       return;
     }
 
-    console.log("🔄 Loading items for user:", user.user_id);
+    console.log("Loading items for user:", user.user_id);
     const all = (await itemsApi.getAll()) as ApiItem[];
     const mine = all.filter((it) => it.owner_id === user.user_id);
 

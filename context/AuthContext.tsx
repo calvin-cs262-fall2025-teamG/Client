@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { auth } from "../services/api";  // ✅ Import from api.ts
+import { auth } from "../services/api";  // Import from api.ts
 import type { User } from "../services/authServices";
 
 type AuthContextType = {
@@ -8,7 +8,7 @@ type AuthContextType = {
   loading: boolean;
   setUser: (u: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<any>;  // ✅ Return type
+  signup: (email: string, password: string, name: string) => Promise<any>;  // Return type
   logout: () => Promise<void>;
 };
 

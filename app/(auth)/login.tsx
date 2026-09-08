@@ -127,7 +127,7 @@ export default function LoginScreen() {
               style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
               onPress={() => {
                 setMode("login");
-                router.setParams({ tab: "login" }); // ✅ keeps param in sync (optional but nice)
+                router.setParams({ tab: "login" }); // keeps param in sync (optional but nice)
                 setError(null);
               }}
             >

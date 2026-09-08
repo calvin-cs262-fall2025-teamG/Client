@@ -15,24 +15,15 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { users as usersApi } from "../services/api";
-import Constants from "expo-constants";
-
-function getHost() {
-  const hostUri =
-    (Constants.expoConfig as any)?.hostUri ??
-    (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
-  const host = hostUri?.split(":")?.[0];
-  return host || "localhost";
-}
-
-const BASE_URL = `http://${getHost()}:3001`; // Change for production
+import * as FileSystem from "expo-file-system/legacy";
+import { BASE_URL } from "../services/api";
 
 export default function EditProfile() {
   const router = useRouter();
   const { user, setUser } = useAuth();
 
-  console.log("👤 User in edit-profile:", user);
-  console.log("📷 Profile picture:", user?.profile_picture);
+  console.log("User in edit-profile:", user);
+  console.log("Profile picture:", user?.profile_picture);
 
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
@@ -83,47 +74,32 @@ export default function EditProfile() {
     try {
       setUploading(true);
 
-      const formData = new FormData();
-      const uriParts = uri.split(".");
-      const fileType = uriParts[uriParts.length - 1];
-
-      formData.append("photo", {
-        uri,
-        name: `profile.${fileType}`,
-        type: `image/${fileType}`,
-      } as any);
-
-      const response = await fetch(
+      const uploadResult = await FileSystem.uploadAsync(
         `${BASE_URL}/users/${user!.user_id}/profile-picture`,
+        uri,
         {
-          method: "POST",
-          body: formData,
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          fieldName: "photo",
+          httpMethod: "POST",
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
         }
       );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Upload failed:", response.status, errorText);
-        throw new Error(`Upload failed: ${response.status}`);
+      if (uploadResult.status !== 200) {
+        console.error("Upload failed:", uploadResult.status, uploadResult.body);
+        throw new Error(`Upload failed: ${uploadResult.status}`);
       }
 
-      const uploadResponse = await response.json();
+      const data = JSON.parse(uploadResult.body);
 
-      // Update the database with the new profile picture filename
-      const updatedUser = await usersApi.update(user!.user_id, {
-        profile_picture: uploadResponse.filename
+      // Persist the new filename to the user's record, then update local state
+      const updated = await usersApi.update(user!.user_id, {
+        profile_picture: data.filename,
       });
-
-      setUser(updatedUser as any);
-
-      Alert.alert("Success", "Profile picture updated!");
+      setUser(updated as any);
     } catch (error) {
-      console.error("Upload error:", error);
-      Alert.alert("Error", "Failed to upload image.");
-      setLocalImageUri(null);
+      console.error("Error uploading image:", error);
+      Alert.alert("Error", "Failed to upload photo. Please try again.");
+      setLocalImageUri(null); // revert the optimistic preview on failure
     } finally {
       setUploading(false);
     }

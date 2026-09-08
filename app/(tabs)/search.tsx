@@ -60,7 +60,7 @@ export default function DiscoverScreen() {
       const data = (await itemsApi.getAll()) as ApiItem[];
       setItems(data ?? []);
     } catch (e) {
-      console.error("❌ Failed to load items:", e);
+      console.error("Failed to load items:", e);
       setItems([]);
     } finally {
       setLoading(false);
