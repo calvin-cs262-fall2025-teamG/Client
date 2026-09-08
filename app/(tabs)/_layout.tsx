@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
+import type { ColorValue } from "react-native";
 import { BookmarksProvider } from "../../context/BookmarksContext";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
@@ -10,7 +11,7 @@ export default function TabLayout() {
     focused: boolean,
     active: IoniconName,
     inactive: IoniconName,
-    color: string
+    color: ColorValue
   ) => (
     <Ionicons name={focused ? active : inactive} size={24} color={color} />
   );

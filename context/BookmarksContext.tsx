@@ -155,6 +155,12 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
+    // Intentionally depends on user?.user_id (stable across profile edits), not
+    // `user` itself. Depending on the full object would re-trigger this load effect
+    // on every setUser() call from edit-profile.tsx (name/photo updates), racing
+    // against the save effect below and silently overwriting bookmark toggles made
+    // during the reload. See hasLoadedRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.user_id, storageKey]);
 
   // save bookmarks whenever byId changes - but skip until the load above has finished,
@@ -192,6 +198,11 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
+    // Same reasoning as the load effect above (depends on user?.user_id, not the
+    // full `user` object), but unlike that effect, a stray re-trigger here is
+    // harmless: the hasLoadedRef guard just causes a redundant write of the same
+    // data, not a race.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [byId, user?.user_id, storageKey]);
 
   const value = useMemo<BookmarksContextValue>(() => {

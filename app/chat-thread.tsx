@@ -140,7 +140,7 @@ export default function ChatThread() {
     setSending(true);
 
     try {
-      const newMessage = await messagesApi.create({
+      await messagesApi.create({
         sender_id: user.user_id,
         receiver_id: otherUserId,
         content: inputText.trim(),

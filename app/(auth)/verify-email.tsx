@@ -108,7 +108,7 @@ export default function VerifyEmailScreen() {
                 <Ionicons name="mail" size={40} color="#f97316" />
                 <Text style={styles.instructionsTitle}>Check your inbox</Text>
                 <Text style={styles.instructionsText}>
-                  We've sent a 6-digit code to
+                  We&apos;ve sent a 6-digit code to
                 </Text>
                 <Text style={styles.emailText}>{email}</Text>
               </View>
@@ -160,7 +160,7 @@ export default function VerifyEmailScreen() {
 
               {/* Resend Code */}
               <View style={styles.resendContainer}>
-                <Text style={styles.resendText}>Didn't receive the code?</Text>
+                <Text style={styles.resendText}>Didn&apos;t receive the code?</Text>
                 <TouchableOpacity
                   onPress={handleResendCode}
                   disabled={resending}

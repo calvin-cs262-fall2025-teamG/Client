@@ -14,9 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
-import { users as usersApi } from "../services/api";
+import { users as usersApi, BASE_URL } from "../services/api";
 import * as FileSystem from "expo-file-system/legacy";
-import { BASE_URL } from "../services/api";
 
 export default function EditProfile() {
   const router = useRouter();

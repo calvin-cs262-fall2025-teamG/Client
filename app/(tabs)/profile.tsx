@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import {
   View,
@@ -16,7 +16,6 @@ import { useAuth } from "../../context/AuthContext";
 import { items as itemsApi, users as usersApi } from "../../services/api";
 import type { User } from "../../services/authServices";
 import { useFocusEffect } from "expo-router/react-navigation";
-import { useCallback } from 'react';
 import BookmarkButton from "../components/BookmarkButton";
 import { getBookmarkCount } from "../../services/bookmarkCount";
 
@@ -469,12 +468,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 
-  countNumber: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#3b1b0d",
-  },
-
   createItemCard: {
     justifyContent: "center",
     alignItems: "center",
@@ -519,10 +512,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  emptySubtitle: {
-    fontSize: 13,
-    color: "#6b7280",
-    textAlign: "center",
-    lineHeight: 18,
-  },
 });

@@ -62,7 +62,7 @@ export default function LoginScreen() {
 
       if (mode === "signup") {
         // Signup
-        const response = await signup(email, password, name);
+        await signup(email, password, name);
 
         router.push({
           pathname: "/(auth)/verify-email",

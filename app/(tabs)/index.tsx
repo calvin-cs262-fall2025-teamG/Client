@@ -267,7 +267,6 @@ export default function Index() {
             {filteredItems.map((item) => {
               const isBookmarked = isSaved(item.item_id);
               const isBorrowed = item.request_status !== "available";
-              const itemBookmarkCount = bookmarkCounts[item.item_id] || 0;
 
               return (
                 <View key={item.item_id} style={styles.recommendedItem}>
@@ -538,18 +537,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
     marginBottom: 6,
-  },
-  categoryBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#f3f4f6",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  categoryText: {
-    fontSize: 11,
-    color: "#6b7280",
-    fontWeight: "500",
   },
   statusBadge: {
     position: "absolute",

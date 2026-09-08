@@ -11,9 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { items as itemsApi } from "../../services/api";
+import { items as itemsApi, messages as messagesApi } from "../../services/api";
 import { Ionicons } from "@expo/vector-icons";
-import { messages as messagesApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import type { ImageSourcePropType } from "react-native";
 
