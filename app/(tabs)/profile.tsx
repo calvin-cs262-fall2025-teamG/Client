@@ -1,23 +1,23 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router/react-navigation";
+import { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  RefreshControl,
   Image,
+  RefreshControl,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { items as itemsApi, users as usersApi } from "../../services/api";
 import type { User } from "../../services/authServices";
-import { useFocusEffect } from "expo-router/react-navigation";
-import BookmarkButton from "../components/BookmarkButton";
 import { getBookmarkCount } from "../../services/bookmarkCount";
+import BookmarkButton from "../components/BookmarkButton";
 
 type ApiItem = {
   item_id: number;
@@ -85,7 +85,7 @@ export default function Profile() {
           category: it.category ?? "",
           status: it.request_status ?? "available",
         };
-      })
+      }),
     );
 
     setListings(itemsWithCounts);
@@ -108,7 +108,7 @@ export default function Profile() {
     useCallback(() => {
       loadProfileUser();
       loadMyItems();
-    }, [user?.user_id])
+    }, [user?.user_id]),
   );
 
   const displayName = fullUser?.name ?? user?.name ?? "New User";
@@ -119,7 +119,11 @@ export default function Profile() {
       {/* HEADER */}
       <View style={styles.headerWrap}>
         {/* top-right logout icon */}
-        <TouchableOpacity style={styles.logoutIcon} onPress={handleLogout} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.logoutIcon}
+          onPress={handleLogout}
+          activeOpacity={0.85}
+        >
           <Ionicons name="log-out-outline" size={34} color="#2b2725ff" />
         </TouchableOpacity>
 
@@ -165,8 +169,6 @@ export default function Profile() {
           >
             <Ionicons name="help-circle-outline" size={22} color="#111827" />
           </TouchableOpacity>
-
-
         </View>
       </View>
 
@@ -211,15 +213,17 @@ export default function Profile() {
                         source={{ uri: item.image }}
                         style={[
                           styles.recommendedImage,
-                          isBorrowed && { opacity: 0.55 }
+                          isBorrowed && { opacity: 0.55 },
                         ]}
                         resizeMode="cover"
                       />
                     ) : (
-                      <View style={[
-                        styles.noImageBox,
-                        isBorrowed && { opacity: 0.55 }
-                      ]}>
+                      <View
+                        style={[
+                          styles.noImageBox,
+                          isBorrowed && { opacity: 0.55 },
+                        ]}
+                      >
                         <Ionicons
                           name="image-outline"
                           size={28}
@@ -254,7 +258,7 @@ export default function Profile() {
                     <Text
                       style={[
                         styles.recommendedName,
-                        isBorrowed && { opacity: 0.7 }
+                        isBorrowed && { opacity: 0.7 },
                       ]}
                       numberOfLines={1}
                     >
@@ -268,7 +272,6 @@ export default function Profile() {
                         showCount={true}
                       />
                     </View>
-
                   </View>
                 </View>
               );
@@ -511,5 +514,4 @@ const styles = StyleSheet.create({
     color: "#111827",
     textAlign: "center",
   },
-
 });

@@ -1,13 +1,12 @@
-import React from "react";
+import { router, useLocalSearchParams } from "expo-router";
 import {
-  View,
-  Text,
-  TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, router } from "expo-router";
 
 interface HelpContentProps {
   title: string;
@@ -106,14 +105,15 @@ export default function HelpDetailsScreen() {
   const { sectionKey } = useLocalSearchParams<{ sectionKey: string }>();
 
   // Type-safe access with fallback
-  const currentSection = sectionKey && sectionKey in HELP_SECTIONS 
-    ? HELP_SECTIONS[sectionKey as keyof typeof HELP_SECTIONS]
-    : null;
+  const currentSection =
+    sectionKey && sectionKey in HELP_SECTIONS
+      ? HELP_SECTIONS[sectionKey as keyof typeof HELP_SECTIONS]
+      : null;
 
   // Handle invalid section key
   if (!currentSection) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -126,7 +126,7 @@ export default function HelpDetailsScreen() {
         </View>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Help topic not found</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.errorButton}
             onPress={() => router.back()}
           >
@@ -138,7 +138,7 @@ export default function HelpDetailsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}

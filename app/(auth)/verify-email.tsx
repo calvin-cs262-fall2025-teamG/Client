@@ -1,20 +1,20 @@
-import React, { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  StyleSheet,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  ScrollView,
-  Keyboard,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { auth } from "../../services/api";
 
@@ -130,7 +130,9 @@ export default function VerifyEmailScreen() {
                     keyboardType="number-pad"
                     maxLength={6}
                     value={code}
-                    onChangeText={(text) => setCode(text.replace(/[^0-9]/g, ""))}
+                    onChangeText={(text) =>
+                      setCode(text.replace(/[^0-9]/g, ""))
+                    }
                     autoFocus
                   />
                 </View>
@@ -141,7 +143,9 @@ export default function VerifyEmailScreen() {
 
               {/* Success message */}
               {resendSuccess && (
-                <Text style={styles.successText}>Code sent! Check your email.</Text>
+                <Text style={styles.successText}>
+                  Code sent! Check your email.
+                </Text>
               )}
 
               {/* Verify Button */}
@@ -160,7 +164,9 @@ export default function VerifyEmailScreen() {
 
               {/* Resend Code */}
               <View style={styles.resendContainer}>
-                <Text style={styles.resendText}>Didn&apos;t receive the code?</Text>
+                <Text style={styles.resendText}>
+                  Didn&apos;t receive the code?
+                </Text>
                 <TouchableOpacity
                   onPress={handleResendCode}
                   disabled={resending}

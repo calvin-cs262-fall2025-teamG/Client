@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import type { ImageSourcePropType } from "react-native";
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
   ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { items as itemsApi, messages as messagesApi } from "../../services/api";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
-import type { ImageSourcePropType } from "react-native";
+import { items as itemsApi, messages as messagesApi } from "../../services/api";
 
 const imageMap: Record<string, any> = {
   // item images
@@ -55,7 +55,9 @@ const imageMap: Record<string, any> = {
   "laila.png": require("../../assets/images/laila.png"),
 };
 
-function resolveImageSource(key?: string | null): ImageSourcePropType | undefined {
+function resolveImageSource(
+  key?: string | null,
+): ImageSourcePropType | undefined {
   if (!key) return undefined;
 
   const trimmed = key.trim();
@@ -124,12 +126,14 @@ export default function ItemDetail() {
       });
     } catch (e) {
       console.error("Failed to send borrow request message:", e);
-      Alert.alert("Message failed", "Could not send your request. Please try again.");
+      Alert.alert(
+        "Message failed",
+        "Could not send your request. Please try again.",
+      );
     } finally {
       setSending(false);
     }
   };
-
 
   // Load item from API
   useEffect(() => {
@@ -145,10 +149,16 @@ export default function ItemDetail() {
         console.log("ITEM DETAILS RAW:", JSON.stringify(data, null, 2));
 
         console.log("owner_avatar raw:", data.owner_avatar);
-        console.log("owner_avatar normalized:", (data.owner_avatar ?? "").trim().toLowerCase());
+        console.log(
+          "owner_avatar normalized:",
+          (data.owner_avatar ?? "").trim().toLowerCase(),
+        );
 
         console.log("profile_picture raw:", data.profile_picture);
-        console.log("profile_picture normalized:", (data.profile_picture ?? "").trim().toLowerCase());
+        console.log(
+          "profile_picture normalized:",
+          (data.profile_picture ?? "").trim().toLowerCase(),
+        );
 
         setItem(data);
       } catch (error) {
@@ -156,7 +166,6 @@ export default function ItemDetail() {
       } finally {
         setLoading(false);
       }
-
     };
 
     loadItem();
@@ -219,7 +228,6 @@ export default function ItemDetail() {
           </View>
         )}
 
-
         {/* NAME */}
         <Text style={styles.name}>{item.name}</Text>
 
@@ -240,7 +248,6 @@ export default function ItemDetail() {
           {ownerAvatarSource ? (
             <Image source={ownerAvatarSource} style={styles.avatar} />
           ) : (
-
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarText}>
                 {item.owner_name?.charAt(0) || "?"}
@@ -281,8 +288,11 @@ export default function ItemDetail() {
                 `Send a borrow request for ${item.name}?`,
                 [
                   { text: "Cancel", style: "cancel" },
-                  { text: sending ? "Sending..." : "Send Request", onPress: sendBorrowRequestMessage },
-                ]
+                  {
+                    text: sending ? "Sending..." : "Send Request",
+                    onPress: sendBorrowRequestMessage,
+                  },
+                ],
               )
             }
           >
@@ -290,7 +300,6 @@ export default function ItemDetail() {
               {sending ? "Sending..." : "Request to Borrow"}
             </Text>
           </TouchableOpacity>
-
         ) : (
           <View style={styles.borrowedContainer}>
             <Text style={styles.borrowedText}>
@@ -299,7 +308,7 @@ export default function ItemDetail() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView >
+    </SafeAreaView>
   );
 }
 

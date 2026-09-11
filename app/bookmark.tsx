@@ -1,14 +1,14 @@
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useBookmarks } from "../context/BookmarksContext";
 
 export default function BookmarkScreen() {
@@ -54,11 +54,7 @@ export default function BookmarkScreen() {
                     onPress={() => remove(item.id)}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
-                    <Ionicons
-                      name="trash-outline"
-                      size={22}
-                      color="#ef4444"
-                    />
+                    <Ionicons name="trash-outline" size={22} color="#ef4444" />
                   </TouchableOpacity>
 
                   {/* Bookmark toggle */}
@@ -83,12 +79,15 @@ export default function BookmarkScreen() {
                       <Image source={item.image} style={styles.image} />
                     ) : (
                       <View style={[styles.image, styles.imagePlaceholder]}>
-                        <Ionicons name="image-outline" size={26} color="#9ca3af" />
+                        <Ionicons
+                          name="image-outline"
+                          size={26}
+                          color="#9ca3af"
+                        />
                         <Text style={styles.placeholderText}>No Image</Text>
                       </View>
                     )}
                   </TouchableOpacity>
-
 
                   {/* Borrowed badge */}
                   {item.status === "borrowed" && (
@@ -201,15 +200,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
   },
 
-  imagePlaceholder: { 
-    alignItems: "center", 
-    justifyContent: "center", 
-    gap: 6 
+  imagePlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
-  
-  placeholderText: { 
-    color: "#9ca3af", 
-    fontWeight: "600" 
+
+  placeholderText: {
+    color: "#9ca3af",
+    fontWeight: "600",
   },
 
   info: {

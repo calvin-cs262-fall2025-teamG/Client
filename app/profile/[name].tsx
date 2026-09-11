@@ -1,15 +1,9 @@
-import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ActivityIndicator,
-} from "react-native";
-import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
+import { BASE_URL, users as usersApi } from "../../services/api";
 import type { User } from "../../services/authServices";
-import { users as usersApi, BASE_URL } from "../../services/api";
 
 export default function ListerProfile() {
   const { name, id } = useLocalSearchParams<{ name: string; id?: string }>();
@@ -45,8 +39,8 @@ export default function ListerProfile() {
   const avatarUrl = user?.profile_picture?.startsWith("http")
     ? user.profile_picture
     : user?.profile_picture
-    ? `${BASE_URL}/uploads/${user.profile_picture}`
-    : null;
+      ? `${BASE_URL}/uploads/${user.profile_picture}`
+      : null;
 
   return (
     <View style={styles.container}>

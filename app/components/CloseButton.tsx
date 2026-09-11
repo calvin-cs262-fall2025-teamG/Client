@@ -1,6 +1,5 @@
-import React from "react";
-import { TouchableOpacity, Image, StyleSheet, ViewStyle } from "react-native";
 import { useRouter } from "expo-router";
+import { Image, StyleSheet, TouchableOpacity, ViewStyle } from "react-native";
 
 const closeIcon = require("../../assets/images/close.png");
 
@@ -29,4 +28,3 @@ const styles = StyleSheet.create({
     tintColor: "#4b5563",
   },
 });
-

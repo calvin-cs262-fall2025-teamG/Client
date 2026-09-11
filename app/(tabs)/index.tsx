@@ -1,22 +1,25 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarks } from "../../context/BookmarksContext";
-import { items as itemsApi } from "../../services/api";
-import { getBookmarkCount, updateBookmarkCount } from "../../services/bookmarkCount";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  Image,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  RefreshControl,
   ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
+import { useBookmarks } from "../../context/BookmarksContext";
+import { items as itemsApi } from "../../services/api";
+import {
+  getBookmarkCount,
+  updateBookmarkCount,
+} from "../../services/bookmarkCount";
 
 const imageMap: Record<string, any> = {
   "banner.png": require("../../assets/images/banner.png"),
@@ -70,7 +73,9 @@ export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bookmarkCounts, setBookmarkCounts] = useState<Record<number, number>>({});
+  const [bookmarkCounts, setBookmarkCounts] = useState<Record<number, number>>(
+    {},
+  );
 
   const { byId, isSaved, toggle } = useBookmarks();
   const bookmarkCount = Object.keys(byId).length;
@@ -84,7 +89,7 @@ export default function Index() {
     await Promise.all(
       itemsList.map(async (item) => {
         counts[item.item_id] = await getBookmarkCount(item.item_id);
-      })
+      }),
     );
 
     setBookmarkCounts(counts);
@@ -126,18 +131,23 @@ export default function Index() {
     });
 
     const currentCount = bookmarkCounts[item.item_id] || 0;
-    const newCount = await updateBookmarkCount(item.item_id, wasBookmarked, currentCount);
+    const newCount = await updateBookmarkCount(
+      item.item_id,
+      wasBookmarked,
+      currentCount,
+    );
 
-    setBookmarkCounts(prev => ({
+    setBookmarkCounts((prev) => ({
       ...prev,
-      [item.item_id]: newCount
+      [item.item_id]: newCount,
     }));
   };
 
   const filteredItems = items.filter((item) => {
     const matchesCategory =
       activeTab === "Popular" ||
-      (item.category && item.category.toLowerCase() === activeTab.toLowerCase());
+      (item.category &&
+        item.category.toLowerCase() === activeTab.toLowerCase());
 
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
@@ -148,7 +158,16 @@ export default function Index() {
     return matchesCategory && matchesSearch;
   });
 
-  const categories = ["Popular", "Home", "Books", "Tools", "Outdoor", "School", "Electronics", "Kitchen"];
+  const categories = [
+    "Popular",
+    "Home",
+    "Books",
+    "Tools",
+    "Outdoor",
+    "School",
+    "Electronics",
+    "Kitchen",
+  ];
 
   if (loading) {
     return (
@@ -259,7 +278,9 @@ export default function Index() {
             <Ionicons name="cube-outline" size={60} color="#9ca3af" />
             <Text style={styles.emptyText}>No items found</Text>
             <Text style={styles.emptySub}>
-              {searchQuery ? "Try a different search" : "Check back later for new items"}
+              {searchQuery
+                ? "Try a different search"
+                : "Check back later for new items"}
             </Text>
           </View>
         ) : (
@@ -276,18 +297,16 @@ export default function Index() {
                     {item.owner_id === user?.user_id ? (
                       <TouchableOpacity
                         style={styles.editIconContainer}
-                        onPress={() => router.push({
-                          pathname: "/edit-item",
-                          params: { id: item.item_id }
-                        })}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/edit-item",
+                            params: { id: item.item_id },
+                          })
+                        }
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         activeOpacity={0.7}
                       >
-                        <Ionicons
-                          name="pencil"
-                          size={16}
-                          color="#fff"
-                        />
+                        <Ionicons name="pencil" size={16} color="#fff" />
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
@@ -309,7 +328,7 @@ export default function Index() {
                         if (item.owner_id === user?.user_id) {
                           router.push({
                             pathname: "/edit-item",
-                            params: { id: item.item_id }
+                            params: { id: item.item_id },
                           });
                         } else {
                           router.push(`/item/${item.item_id}`);
@@ -326,7 +345,7 @@ export default function Index() {
                               isBorrowed && { opacity: 0.55 },
                             ]}
                           />
-                        ) : item.image_url.startsWith('http') ? (
+                        ) : item.image_url.startsWith("http") ? (
                           <Image
                             source={{ uri: item.image_url }}
                             style={[
@@ -335,13 +354,31 @@ export default function Index() {
                             ]}
                           />
                         ) : (
-                          <View style={[styles.recommendedImage, styles.placeholderImage]}>
-                            <Ionicons name="image-outline" size={40} color="#9ca3af" />
+                          <View
+                            style={[
+                              styles.recommendedImage,
+                              styles.placeholderImage,
+                            ]}
+                          >
+                            <Ionicons
+                              name="image-outline"
+                              size={40}
+                              color="#9ca3af"
+                            />
                           </View>
                         )
                       ) : (
-                        <View style={[styles.recommendedImage, styles.placeholderImage]}>
-                          <Ionicons name="image-outline" size={40} color="#9ca3af" />
+                        <View
+                          style={[
+                            styles.recommendedImage,
+                            styles.placeholderImage,
+                          ]}
+                        >
+                          <Ionicons
+                            name="image-outline"
+                            size={40}
+                            color="#9ca3af"
+                          />
                         </View>
                       )}
                     </TouchableOpacity>

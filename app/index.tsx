@@ -1,28 +1,43 @@
-import React, { useState, useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Animated,
   Dimensions,
   Image,
-  TouchableOpacity,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Animated,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 const logo = require("../assets/images/logo.png");
 
 // tiny sample items
 const previewItems = [
-  { id: 1, icon: "flash-outline" as const, label: "USB-C charger", tag: "Tech" },
-  { id: 2, icon: "book-outline" as const, label: "Core 100 book", tag: "Books" },
+  {
+    id: 1,
+    icon: "flash-outline" as const,
+    label: "USB-C charger",
+    tag: "Tech",
+  },
+  {
+    id: 2,
+    icon: "book-outline" as const,
+    label: "Core 100 book",
+    tag: "Books",
+  },
   { id: 3, icon: "home-outline" as const, label: "Desk lamp", tag: "Dorm" },
-  { id: 4, icon: "cafe-outline" as const, label: "Keurig", tag: "Shared kitchen" },
+  {
+    id: 4,
+    icon: "cafe-outline" as const,
+    label: "Keurig",
+    tag: "Shared kitchen",
+  },
 ];
 
 export default function Onboarding() {
@@ -54,7 +69,7 @@ export default function Onboarding() {
           duration: 1800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     loop.start();
 
@@ -191,7 +206,7 @@ export default function Onboarding() {
 
   // 6 animated values: 3 for Borrow chips, 3 for Lend chips
   const chipAnim = useRef(
-    [0, 1, 2, 3, 4, 5].map(() => new Animated.Value(0))
+    [0, 1, 2, 3, 4, 5].map(() => new Animated.Value(0)),
   ).current;
 
   useEffect(() => {
@@ -203,8 +218,8 @@ export default function Onboarding() {
             toValue: 1,
             duration: 350,
             useNativeDriver: true,
-          })
-        )
+          }),
+        ),
       ).start();
     } else {
       chipAnim.forEach((a) => a.setValue(0));
@@ -231,7 +246,6 @@ export default function Onboarding() {
     });
   };
 
-
   return (
     <View style={styles.root}>
       {/* Soft background blobs */}
@@ -243,7 +257,6 @@ export default function Onboarding() {
         <TouchableOpacity style={styles.skipButton} onPress={goToLogin}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
-
       )}
 
       <Animated.ScrollView
@@ -254,7 +267,7 @@ export default function Onboarding() {
         scrollEventThrottle={16}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
+          { useNativeDriver: true },
         )}
         contentContainerStyle={{ alignItems: "stretch" }}
       >
@@ -273,7 +286,11 @@ export default function Onboarding() {
                 <Ionicons name="home-outline" size={20} color="#3b1b0d" />
               </Animated.View>
               <Animated.View style={[styles.heroBadgeRight, badgeFloatDown]}>
-                <Ionicons name="swap-horizontal-outline" size={20} color="#3b1b0d" />
+                <Ionicons
+                  name="swap-horizontal-outline"
+                  size={20}
+                  color="#3b1b0d"
+                />
               </Animated.View>
 
               {/* Small decorative dots */}
@@ -285,11 +302,15 @@ export default function Onboarding() {
 
           <Animated.View style={[styles.heroTextBlock, textIntroStyle]}>
             <Text style={styles.heroTitle}>Hey, Neighbor!</Text>
-            <Text style={styles.heroSubtitle}>Need it? A neighbor’s got it.</Text>
+            <Text style={styles.heroSubtitle}>
+              Need it? A neighbor’s got it.
+            </Text>
           </Animated.View>
 
           <Animated.View style={[styles.previewStrip, previewIntroStyle]}>
-            <Text style={styles.previewLabel}>A peek at what neighbors share</Text>
+            <Text style={styles.previewLabel}>
+              A peek at what neighbors share
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -325,32 +346,34 @@ export default function Onboarding() {
               </View>
               <Text style={styles.featureTitle}>Borrow</Text>
               <Text style={styles.featureText}>
-                Find textbooks, vacuums, tools, lamps, and other campus essentials
-                without having to buy everything new.
+                Find textbooks, vacuums, tools, lamps, and other campus
+                essentials without having to buy everything new.
               </Text>
               <View style={styles.featureChipRow}>
-                {["📚 textbooks", "🧹 vacuums", "🔧 tools"].map((label, idx) => {
-                  const animatedStyle = {
-                    opacity: chipAnim[idx],
-                    transform: [
-                      {
-                        translateY: chipAnim[idx].interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [12, 0],
-                        }),
-                      },
-                    ],
-                  };
+                {["📚 textbooks", "🧹 vacuums", "🔧 tools"].map(
+                  (label, idx) => {
+                    const animatedStyle = {
+                      opacity: chipAnim[idx],
+                      transform: [
+                        {
+                          translateY: chipAnim[idx].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [12, 0],
+                          }),
+                        },
+                      ],
+                    };
 
-                  return (
-                    <Animated.Text
-                      key={label}
-                      style={[styles.featureChip, animatedStyle]}
-                    >
-                      {label}
-                    </Animated.Text>
-                  );
-                })}
+                    return (
+                      <Animated.Text
+                        key={label}
+                        style={[styles.featureChip, animatedStyle]}
+                      >
+                        {label}
+                      </Animated.Text>
+                    );
+                  },
+                )}
               </View>
             </View>
 
@@ -365,8 +388,8 @@ export default function Onboarding() {
               </View>
               <Text style={styles.featureTitle}>Lend</Text>
               <Text style={styles.featureText}>
-                List the things you already own and help a neighbor out while your
-                stuff actually gets used.
+                List the things you already own and help a neighbor out while
+                your stuff actually gets used.
               </Text>
               <View style={styles.featureChipRow}>
                 {["🏡 dorm extras", "🎮 hobbies", "🌱 seasonal"].map(
@@ -392,7 +415,7 @@ export default function Onboarding() {
                         {label}
                       </Animated.Text>
                     );
-                  }
+                  },
                 )}
               </View>
             </View>
@@ -404,22 +427,24 @@ export default function Onboarding() {
           <Text style={styles.pageTitle}>Why we built Hey, Neighbor</Text>
           <Text style={styles.pageBody}>
             Our goal is to make borrowing feel normal and effortless on campus—
-            like knocking on your neighbor’s door, but more organized and with a lot more neighbors.
+            like knocking on your neighbor’s door, but more organized and with a
+            lot more neighbors.
           </Text>
 
           <Animated.View style={[styles.goalCard, goalParallax]}>
             <View style={styles.goalRow}>
               <Ionicons name="people-outline" size={27} color="#f97316" />
               <Text style={styles.goalText}>
-                Help Calvin students connect beyond class and build small, everyday
-                community.
+                Help Calvin students connect beyond class and build small,
+                everyday community.
               </Text>
             </View>
 
             <View style={styles.goalRow}>
               <Ionicons name="cash-outline" size={27} color="#15803d" />
               <Text style={styles.goalText}>
-                Save money by borrowing instead of buying new for every little thing.
+                Save money by borrowing instead of buying new for every little
+                thing.
               </Text>
             </View>
 
@@ -440,9 +465,10 @@ export default function Onboarding() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryButton} onPress={goToLogin}>
-            <Text style={styles.secondaryButtonText}>I already have an account</Text>
+            <Text style={styles.secondaryButtonText}>
+              I already have an account
+            </Text>
           </TouchableOpacity>
-
         </View>
       </Animated.ScrollView>
 

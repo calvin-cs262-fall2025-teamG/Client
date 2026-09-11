@@ -1,21 +1,21 @@
-import React, { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
+  Image,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  Alert,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
-import { users as usersApi, BASE_URL } from "../services/api";
-import * as FileSystem from "expo-file-system/legacy";
+import { BASE_URL, users as usersApi } from "../services/api";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -29,8 +29,9 @@ export default function EditProfile() {
   const [uploading, setUploading] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
 
-  const avatarUrl = localImageUri
-    || (user?.profile_picture?.startsWith('http')
+  const avatarUrl =
+    localImageUri ||
+    (user?.profile_picture?.startsWith("http")
       ? user.profile_picture
       : user?.profile_picture
         ? `${BASE_URL}/uploads/${user.profile_picture}`
@@ -39,12 +40,13 @@ export default function EditProfile() {
   const handleChangePhoto = async () => {
     try {
       // Request permissions
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
         Alert.alert(
           "Permission needed",
-          "Please grant photo library access to change your profile picture."
+          "Please grant photo library access to change your profile picture.",
         );
         return;
       }
@@ -80,7 +82,7 @@ export default function EditProfile() {
           fieldName: "photo",
           httpMethod: "POST",
           uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        }
+        },
       );
 
       if (uploadResult.status !== 200) {

@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  Image,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-  Platform,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Button,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { items } from "../services/api";
 
 export default function EditItem() {
@@ -52,7 +52,9 @@ export default function EditItem() {
         setCategory(item.category || "");
         setImageUrl(item.image_url || "");
         // Set status based on request_status from database
-        setStatus(item.request_status === "available" ? "available" : "borrowed");
+        setStatus(
+          item.request_status === "available" ? "available" : "borrowed",
+        );
       } catch (error) {
         console.error("Failed to load item:", error);
         Alert.alert("Error", "Could not load item details.");
@@ -96,48 +98,59 @@ export default function EditItem() {
     }
   };
 
-const handleDelete = async () => {
-  if (!id) {
-    Alert.alert("Error", "Invalid item ID.");
-    return;
-  }
-
-  const confirmed = Platform.OS === "web"
-    ? window.confirm("Delete item?\n\nThis will permanently remove the item from your listings.")
-    : await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          "Delete item?",
-          "This will permanently remove the item from your listings.",
-          [
-            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-            { text: "Delete", style: "destructive", onPress: () => resolve(true) },
-          ]
-        );
-      });
-
-  if (!confirmed) return;
-
-  setSaving(true);
-  try {
-    await items.delete(id);
-    if (Platform.OS === "web") {
-      window.alert("Item removed successfully.");
-      router.back();
-    } else {
-      Alert.alert("Deleted", "Item removed successfully.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+  const handleDelete = async () => {
+    if (!id) {
+      Alert.alert("Error", "Invalid item ID.");
+      return;
     }
-  } catch (error) {
-    console.error("Failed to delete item:", error);
-    if (Platform.OS === "web") {
-      window.alert("Could not delete the item.");
-    } else {
-      Alert.alert("Error", "Could not delete the item.");
+
+    const confirmed =
+      Platform.OS === "web"
+        ? window.confirm(
+            "Delete item?\n\nThis will permanently remove the item from your listings.",
+          )
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              "Delete item?",
+              "This will permanently remove the item from your listings.",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => resolve(true),
+                },
+              ],
+            );
+          });
+
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      await items.delete(id);
+      if (Platform.OS === "web") {
+        window.alert("Item removed successfully.");
+        router.back();
+      } else {
+        Alert.alert("Deleted", "Item removed successfully.", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to delete item:", error);
+      if (Platform.OS === "web") {
+        window.alert("Could not delete the item.");
+      } else {
+        Alert.alert("Error", "Could not delete the item.");
+      }
+      setSaving(false);
     }
-    setSaving(false);
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -173,7 +186,7 @@ const handleDelete = async () => {
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Image preview */}
-        {imageUrl && imageUrl.startsWith('http') && (
+        {imageUrl && imageUrl.startsWith("http") && (
           <Image
             source={{ uri: imageUrl }}
             style={styles.image}
@@ -205,50 +218,54 @@ const handleDelete = async () => {
           <View style={styles.statusToggle}>
             <TouchableOpacity
               style={[
-                styles.statusButton, 
-                status === 'available' && styles.statusActive
+                styles.statusButton,
+                status === "available" && styles.statusActive,
               ]}
-              onPress={() => setStatus('available')}
+              onPress={() => setStatus("available")}
               disabled={saving}
             >
-              <Ionicons 
-                name="checkmark-circle" 
-                size={20} 
-                color={status === 'available' ? '#16a34a' : '#9ca3af'} 
+              <Ionicons
+                name="checkmark-circle"
+                size={20}
+                color={status === "available" ? "#16a34a" : "#9ca3af"}
               />
-              <Text style={[
-                styles.statusText,
-                status === 'available' && styles.statusTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.statusText,
+                  status === "available" && styles.statusTextActive,
+                ]}
+              >
                 Available
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
-                styles.statusButton, 
-                status === 'borrowed' && styles.statusActive
+                styles.statusButton,
+                status === "borrowed" && styles.statusActive,
               ]}
-              onPress={() => setStatus('borrowed')}
+              onPress={() => setStatus("borrowed")}
               disabled={saving}
             >
-              <Ionicons 
-                name="time" 
-                size={20} 
-                color={status === 'borrowed' ? '#f97316' : '#9ca3af'} 
+              <Ionicons
+                name="time"
+                size={20}
+                color={status === "borrowed" ? "#f97316" : "#9ca3af"}
               />
-              <Text style={[
-                styles.statusText,
-                status === 'borrowed' && styles.statusTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.statusText,
+                  status === "borrowed" && styles.statusTextActive,
+                ]}
+              >
                 Borrowed
               </Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.statusHint}>
-            {status === 'available' 
-              ? 'Item is ready to lend out' 
-              : 'Item is currently borrowed by someone'}
+            {status === "available"
+              ? "Item is ready to lend out"
+              : "Item is currently borrowed by someone"}
           </Text>
         </View>
 
@@ -354,7 +371,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     marginTop: 12,
   },
-  
+
   // Status toggle styles
   statusSection: {
     marginTop: 8,
