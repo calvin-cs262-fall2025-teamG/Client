@@ -1,4 +1,10 @@
 import Constants from "expo-constants";
+import {
+  CreateItemRequest,
+  CreateMessageRequest,
+  UpdateItemRequest,
+  UpdateUserRequest,
+} from "./apiTypes";
 import type { User } from "./authServices";
 
 function getHost() {
@@ -18,7 +24,7 @@ console.log("BASE_URL:", BASE_URL);
 
 export async function apiRequest<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
 
@@ -34,7 +40,7 @@ export async function apiRequest<T>(
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(
-        error.error || `HTTP ${response.status}: ${response.statusText}`
+        error.error || `HTTP ${response.status}: ${response.statusText}`,
       );
     }
 
@@ -76,33 +82,13 @@ export const items = {
 
   getById: (id: number) => apiRequest(`/items/${id}`),
 
-  create: (data: {
-    name: string;
-    description?: string;
-    image_url?: string;
-    category?: string;
-    owner_id: number;
-    request_status?: string;
-    start_date?: string;
-    end_date?: string;
-  }) =>
+  create: (data: CreateItemRequest) =>
     apiRequest("/items", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  update: (
-    id: number,
-    data: {
-      name?: string;
-      description?: string;
-      image_url?: string;
-      category?: string;
-      request_status?: string;
-      start_date?: string;
-      end_date?: string;
-    }
-  ) =>
+  update: (id: number, data: UpdateItemRequest) =>
     apiRequest(`/items/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -119,12 +105,7 @@ export const messages = {
 
   getUserMessages: (userId: number) => apiRequest(`/messages/user/${userId}`),
 
-  create: (data: {
-    sender_id: number;
-    receiver_id: number;
-    item_id?: number;
-    content: string;
-  }) =>
+  create: (data: CreateMessageRequest) =>
     apiRequest("/messages", {
       method: "POST",
       body: JSON.stringify(data),
@@ -133,13 +114,10 @@ export const messages = {
 
 export const users = {
   getById: (id: number) => apiRequest<User>(`/users/${id}`),
-  
-  update: (id: number, data: {
-    name?: string;
-    profile_picture?: string;
-  }) =>
+
+  update: (id: number, data: UpdateUserRequest) =>
     apiRequest<User>(`/users/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     }),
 };
