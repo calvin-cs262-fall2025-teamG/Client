@@ -21,8 +21,8 @@ export default function EditProfile() {
   const router = useRouter();
   const { user, setUser } = useAuth();
 
-  console.log("User in edit-profile:", user);
-  console.log("Profile picture:", user?.profile_picture);
+  // console.log("User in edit-profile:", user);
+  // console.log("Profile picture:", user?.profile_picture);
 
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);

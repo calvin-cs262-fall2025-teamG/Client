@@ -4,6 +4,7 @@ import {
   CreateMessageRequest,
   UpdateItemRequest,
   UpdateUserRequest,
+  Item
 } from "./apiTypes";
 import type { User } from "./authServices";
 
@@ -20,7 +21,7 @@ const USE_DEPLOYED_BACKEND = true; //  true = the Azure-deployed backend instead
 export const BASE_URL = USE_DEPLOYED_BACKEND
   ? "https://bryn-monopoly-service-bpcuabdzg8bkdycb.westus3-01.azurewebsites.net"
   : `http://${getHost()}:3001`;
-console.log("BASE_URL:", BASE_URL);
+// console.log("BASE_URL:", BASE_URL);
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -78,9 +79,9 @@ export const auth = {
 };
 
 export const items = {
-  getAll: () => apiRequest("/items"),
+  getAll: () => apiRequest<Item[]>("/items"),
 
-  getById: (id: number) => apiRequest(`/items/${id}`),
+  getById: (id: number) => apiRequest<Item>(`/items/${id}`),
 
   create: (data: CreateItemRequest) =>
     apiRequest("/items", {

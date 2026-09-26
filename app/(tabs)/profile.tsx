@@ -57,9 +57,9 @@ export default function Profile() {
 
   const loadProfileUser = async () => {
     if (!user) return;
-    console.log("Loading profile for user:", user.user_id);
+    // console.log("Loading profile for user:", user.user_id);
     const u = await usersApi.getById(user.user_id);
-    console.log("Loaded user:", u);
+    // console.log("Loaded user:", u);
     setFullUser(u as User);
   };
 
@@ -69,7 +69,7 @@ export default function Profile() {
       return;
     }
 
-    console.log("Loading items for user:", user.user_id);
+    // console.log("Loading items for user:", user.user_id);
     const all = (await itemsApi.getAll()) as ApiItem[];
     const mine = all.filter((it) => it.owner_id === user.user_id);
 
