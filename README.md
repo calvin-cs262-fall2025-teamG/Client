@@ -1,11 +1,6 @@
 # Client
 Mobile application client built with React Native and Expo (SDK 57).
 
-## Other Repos
-
-* [Project](https://github.com/calvin-cs262-fall2025-teamG/Project)
-* [Service](https://github.com/calvin-cs262-fall2025-teamG/Service)
-
 ## Tech Stack
 
 - React Native
@@ -13,7 +8,12 @@ Mobile application client built with React Native and Expo (SDK 57).
 - TypeScript
 - Azure (data service)
 
-## **2025 Setup Instructions**
+## Other Repos
+
+* [Project](https://github.com/calvin-cs262-fall2025-teamG/Project)
+* [Service](https://github.com/calvin-cs262-fall2025-teamG/Service)
+
+# 2025 Setup Instructions
 
 ### 1. Install Dependencies
 
