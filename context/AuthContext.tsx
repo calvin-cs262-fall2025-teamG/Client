@@ -2,13 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../services/api";  // Import from api.ts
 import type { User } from "../services/authServices";
+import { supabase } from "../app/utils/supabase";
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
   setUser: (u: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<any>;  // Return type
+  signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -45,9 +46,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (email: string, password: string, name: string) => {
-    const response = await auth.signup(email, password, name);
-    // Don't set user yet - they need to verify email first
-    return response;
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: { display_name: name.trim() },
+        emailRedirectTo: "heynbr://auth/callback",
+      },
+    });
+
+    if (error) throw error;
   };
 
   const logout = async () => {

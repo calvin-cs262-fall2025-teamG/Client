@@ -180,7 +180,7 @@ export default function LoginScreen() {
             )}
 
             <Text style={[styles.label, !isLogin && { marginTop: 14 }]}>
-              Calvin email
+              Email address
             </Text>
             <View style={styles.inputRow}>
               <Ionicons
@@ -191,7 +191,7 @@ export default function LoginScreen() {
               />
               <TextInput
                 style={styles.input}
-                placeholder="you@calvin.edu"
+                placeholder="you@example.com"
                 placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -241,8 +241,8 @@ export default function LoginScreen() {
           {/* Helper text */}
           <Text style={styles.footerText}>
             {isLogin
-              ? "Use your @calvin.edu email to log in"
-              : "Create an account with your @calvin.edu email"}
+              ? "Sign in with your email address"
+              : "Create an account with your email address"}
           </Text>
         </View>
       </ScrollView>
