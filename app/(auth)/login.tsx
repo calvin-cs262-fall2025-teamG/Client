@@ -41,12 +41,6 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     setError(null);
 
-    // Validate Calvin email
-    if (!email.toLowerCase().endsWith("@calvin.edu")) {
-      setError("Please use your @calvin.edu email.");
-      return;
-    }
-
     if (!password) {
       setError("Please enter a password");
       return;
