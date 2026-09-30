@@ -56,7 +56,7 @@ export default function LoginScreen() {
 
       if (mode === "signup") {
         // Signup
-        await signup(email, password, name);
+        await signup({email, password, displayName: name});
 
         router.push({
           pathname: "/(auth)/verify-email",
@@ -65,7 +65,7 @@ export default function LoginScreen() {
       } else {
         // Login
         try {
-          await login(email, password);
+          await login({email, password});
           router.replace("/(tabs)");
         } catch (err: any) {
           console.error("Login error:", err);
