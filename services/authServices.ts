@@ -10,6 +10,14 @@ export type User = {
   created_at: string;
 };
 
+export type AppUser = {
+  id: string;              // profiles.id / auth user UUID
+  email: string | null;    // from the auth session
+  display_name: string;    // profiles.display_name
+  avatar_path: string | null;
+  created_at: string;
+};
+
 export type SignupData = {
   email: string;
   password: string;

@@ -1,20 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import {AppState, Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { User } from "../services/authServices";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { AppUser } from "../services/authServices";
 import { supabase } from "../app/utils/supabase";
+import { Session } from "@supabase/supabase-js";
 import { 
   SignInInput, 
   SignUpInput,
   signUp,
   signIn,
-  signOut
+  signOut,
  } from"../services/supabaseAuth";
 
 type AuthContextType = {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
-  setUser: (u: User | null) => void;
+  setUser: (u: AppUser | null) => void;
   login: (signInInput: SignInInput) => Promise<void>;
   signup: (signUpInput: SignUpInput) => Promise<void>;
   logout: () => Promise<void>;
@@ -22,14 +23,56 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_KEY = "@heyneighbor:user";
+// const USER_KEY = "@heyneighbor:user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function loadAppUser(session: Session | null): Promise<AppUser | null> {
+    if (!session?.user) return null;
+
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id, display_name, avatar_path, created_at")
+      .eq("id", session.user.id)
+      .single();
+
+    if (error || !profile) {
+      console.error("Profile load error:", error);
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      email: session.user.email ?? null,
+      display_name: profile.display_name,
+      avatar_path: profile.avatar_path,
+      created_at: profile.created_at,
+    };
+  }
+
   useEffect(() => {
-    loadUser();
+    let mounted = true;
+
+    supabase.auth.getSession().then(async ({ data: { session }, error}) => {
+      if (error) console.error("Session restore error:", error);
+      if (mounted) setUser(await loadAppUser(session));
+      if (mounted) setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setTimeout(async () => {
+          if (mounted) setUser(await loadAppUser(session));
+        }, 0);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -55,17 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.auth.stopAutoRefresh();
     };
   }, []);
-
-  const loadUser = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(USER_KEY);
-      if (stored) setUser(JSON.parse(stored));
-    } catch (error) {
-      console.error("Load user error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (signInInput: SignInInput) => {
     const { error } = await signIn(signInInput);
