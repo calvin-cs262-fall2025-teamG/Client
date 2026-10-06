@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { messages as messagesApi, users as usersApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import type { ImageSourcePropType } from "react-native";
+import { getMyCommunities, type CommunitySummary } from "../../services/chat";
 
 /* ---------------- AVATAR MAP ---------------- */
 
@@ -71,11 +72,18 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [avatarCache, setAvatarCache] = useState<Record<number, string>>({});
+  const [communities, setCommunities] = useState<CommunitySummary[]>([]);
 
   /* -------- LOAD CHATS -------- */
 
   const loadChats = async () => {
     if (!user?.user_id) return;
+
+    try {
+      setCommunities(await getMyCommunities());
+    } catch (error) {
+      console.error("Failed to load communities:", error);
+    }
 
     try {
       const data: any = await messagesApi.getUserMessages(user.user_id);
@@ -136,6 +144,11 @@ export default function Chat() {
     );
   }, [searchQuery, chats]);
 
+  const filteredCommunities = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return communities.filter((c) => c.name.toLowerCase().includes(q));
+  }, [searchQuery, communities]);
+
   /* -------- TIME FORMAT -------- */
 
   const getTimeAgo = (dateString: string) => {
@@ -188,6 +201,42 @@ export default function Chat() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {filteredCommunities.length > 0 && (
+          <View>
+            <Text style={styles.sectionHeader}>Communities</Text>
+            {filteredCommunities.map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                style={styles.chatItem}
+                onPress={() =>
+                  router.push({
+                    pathname: "/community-thread",
+                    params: { id: c.id, name: c.name },
+                  })
+                }
+              >
+                <View style={[styles.avatarImage, styles.communityIcon]}>
+                  <Ionicons name="people" size={26} color="#fff" />
+                </View>
+                <View style={styles.chatContent}>
+                  <View style={styles.chatHeader}>
+                    <Text style={styles.chatName}>{c.name}</Text>
+                    {c.last_message && (
+                      <Text style={styles.chatTime}>{getTimeAgo(c.last_message.created_at)}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.lastMessage} numberOfLines={1}>
+                    {c.last_message
+                      ? `${c.last_message.sender_name}: ${c.last_message.content}`
+                      : "No messages yet"}
+                  </Text>
+                </View>
+                {c.unread_count > 0 && <View style={styles.unreadDot} />}
+              </TouchableOpacity>
+            ))}
+            <Text style={styles.sectionHeader}>Recent messages</Text>
+          </View>
+        )}
         {filteredChats.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubbles-outline" size={60} color="#9ca3af" />
@@ -259,6 +308,29 @@ export default function Chat() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f9fafb" },
+
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6b7280",
+    textTransform: "uppercase",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+
+  communityIcon: {
+    backgroundColor: "#3b1b0d",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#f97316",
+    marginLeft: 8,
+  },
 
   loadingContainer: {
     flex: 1,
