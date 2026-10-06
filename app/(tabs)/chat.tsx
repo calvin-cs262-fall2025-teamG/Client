@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { messages as messagesApi, users as usersApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -126,6 +126,14 @@ export default function Chat() {
   useEffect(() => {
     loadChats();
   }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getMyCommunities()
+        .then(setCommunities)
+        .catch((e) => console.error("Failed to refresh communities:", e));
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

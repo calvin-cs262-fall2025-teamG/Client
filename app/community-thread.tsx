@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -15,6 +15,7 @@ import {
 export default function CommunityThread() {
   const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
   const { user } = useAuth();
+  const router = useRouter();
   const myId = String(user?.user_id ?? "");
 
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
@@ -77,7 +78,21 @@ export default function CommunityThread() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-      <Stack.Screen options={{ title: name ?? "Community" }} />
+        <Stack.Screen
+        options={{
+            title: name ?? "Community",
+            headerRight: () => (
+            <TouchableOpacity
+                onPress={() =>
+                router.push({ pathname: "/community-info", params: { id, name } })
+                }
+                hitSlop={10}
+            >
+                <Ionicons name="information-circle-outline" size={26} color="#3b1b0d" />
+            </TouchableOpacity>
+            ),
+        }}
+        />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

@@ -84,3 +84,82 @@ export function subscribeToCommunity(communityId: string, onMessage: Listener): 
   (listeners[communityId] ??= new Set()).add(onMessage);
   return () => listeners[communityId]?.delete(onMessage);
 }
+
+export type CommunityRole = "owner" | "admin" | "member";
+
+export interface CommunityMember {
+  user_id: string;
+  display_name: string;
+  avatar: string | null;
+  role: CommunityRole;
+}
+
+export interface CommunityDetails {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar: string | null;
+  my_role: CommunityRole;
+  members: CommunityMember[];
+}
+
+// admin in c1 and a plain member in c2 to view both
+const communityMeta: Record<
+  string,
+  { description: string | null; my_role: CommunityRole; members: CommunityMember[] }
+> = {
+  c1: {
+    description: "Church sharing tools, gear, and anything else we can lend.",
+    my_role: "admin",
+    members: [
+      { user_id: "u2", display_name: "Rose", avatar: null, role: "owner" },
+      { user_id: "u1", display_name: "Greg", avatar: null, role: "admin" },
+      { user_id: "u3", display_name: "Jacob", avatar: null, role: "member" },
+      { user_id: "u5", display_name: "Brook", avatar: null, role: "member" },
+    ],
+  },
+  c2: {
+    description: "KHVR Dorm sharing textbooks, supplies, and more.",
+    my_role: "member",
+    members: [
+      { user_id: "u4", display_name: "Rose", avatar: null, role: "owner" },
+      { user_id: "u6", display_name: "Chloe", avatar: null, role: "member" },
+    ],
+  },
+};
+
+const roleRank: Record<CommunityRole, number> = { owner: 0, admin: 1, member: 2 };
+
+export async function getCommunityDetails(
+  communityId: string,
+  me: { id: string; name: string }
+): Promise<CommunityDetails> {
+  await delay();
+  const community = communities.find((c) => c.id === communityId);
+  const meta = communityMeta[communityId];
+  if (!community || !meta) throw new Error("Community not found");
+
+  const members = [
+    ...meta.members,
+    { user_id: me.id, display_name: me.name, avatar: null, role: meta.my_role },
+  ].sort(
+    (a, b) =>
+      roleRank[a.role] - roleRank[b.role] ||
+      a.display_name.localeCompare(b.display_name)
+  );
+
+  return {
+    id: community.id,
+    name: community.name,
+    description: meta.description,
+    avatar: null,
+    my_role: meta.my_role,
+    members,
+  };
+}
+
+export async function leaveCommunity(communityId: string): Promise<void> {
+  await delay(100);
+  const index = communities.findIndex((c) => c.id === communityId);
+  if (index !== -1) communities.splice(index, 1);
+}
