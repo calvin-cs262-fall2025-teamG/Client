@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../services/api";  // Import from api.ts
 import type { User } from "../services/authServices";
@@ -20,11 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       const stored = await AsyncStorage.getItem(USER_KEY);
       if (stored) setUser(JSON.parse(stored));
@@ -33,7 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // This bootstrap is intentionally async and keeps the saved user session initialized on app start.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadUser();
+  }, [loadUser]);
 
   const login = async (email: string, password: string) => {
     const response: any = await auth.login(email, password);

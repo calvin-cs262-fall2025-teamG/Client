@@ -16,25 +16,30 @@ export default function ListerProfile() {
   const userId = id ? Number(id) : NaN;
 
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(!Number.isNaN(userId));
+  const [status, setStatus] = useState<"loading" | "done">(
+    Number.isNaN(userId) ? "done" : "loading"
+  );
+
+  const loading = status === "loading";
 
   useEffect(() => {
     if (Number.isNaN(userId)) return;
 
     let cancelled = false;
-    setLoading(true);
 
-    usersApi
-      .getById(userId)
-      .then((u) => {
-        if (!cancelled) setUser(u);
-      })
-      .catch((e) => {
+    const loadUser = async () => {
+      try {
+        setStatus("loading");
+        const loadedUser = await usersApi.getById(userId);
+        if (!cancelled) setUser(loadedUser);
+      } catch (e) {
         console.error("Failed to load user:", e);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      } finally {
+        if (!cancelled) setStatus("done");
+      }
+    };
+
+    void loadUser();
 
     return () => {
       cancelled = true;
