@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -76,7 +76,7 @@ export default function ChatThread() {
   const [sending, setSending] = useState(false);
 
   // Load messages between current user and other user
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     if (!user?.user_id || !otherUserId) {
       setLoading(false);
       return;
@@ -98,11 +98,15 @@ export default function ChatThread() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, otherUserId]);
 
   useEffect(() => {
-    loadMessages();
-  }, [user, otherUserId]);
+    const timeoutId = setTimeout(() => {
+      void loadMessages();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadMessages]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -125,11 +129,15 @@ export default function ChatThread() {
     };
 
     // Use avatar from params first, otherwise load from API
-    if (avatar && avatar.trim()) {
-      setOtherAvatar(avatar);
-    } else {
-      loadOtherUser();
-    }
+    const timeoutId = setTimeout(() => {
+      if (avatar && avatar.trim()) {
+        setOtherAvatar(avatar);
+      } else {
+        void loadOtherUser();
+      }
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [otherUserId, avatar]);
 
 

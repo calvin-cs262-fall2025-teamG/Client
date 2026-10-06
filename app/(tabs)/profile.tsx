@@ -51,19 +51,19 @@ export default function Profile() {
     router.replace("/(auth)/login");
   };
 
-  const clearOldHardcodedItems = async () => {
+  const clearOldHardcodedItems = useCallback(async () => {
     await AsyncStorage.removeItem("userItems");
-  };
+  }, []);
 
-  const loadProfileUser = async () => {
+  const loadProfileUser = useCallback(async () => {
     if (!user) return;
     console.log("Loading profile for user:", user.user_id);
     const u = await usersApi.getById(user.user_id);
     console.log("Loaded user:", u);
     setFullUser(u as User);
-  };
+  }, [user]);
 
-  const loadMyItems = async () => {
+  const loadMyItems = useCallback(async () => {
     if (!user) {
       setListings([]);
       return;
@@ -89,7 +89,7 @@ export default function Profile() {
     );
 
     setListings(itemsWithCounts);
-  };
+  }, [user]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -98,17 +98,21 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    clearOldHardcodedItems().catch(console.error);
-    loadProfileUser().catch(console.error);
-    loadMyItems().catch(console.error);
-  }, [user?.user_id]);
+    const timeoutId = setTimeout(() => {
+      void clearOldHardcodedItems();
+      void loadProfileUser();
+      void loadMyItems();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [clearOldHardcodedItems, loadProfileUser, loadMyItems]);
 
   // Reload items every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadProfileUser();
-      loadMyItems();
-    }, [user?.user_id])
+      void loadProfileUser();
+      void loadMyItems();
+    }, [loadProfileUser, loadMyItems])
   );
 
   const displayName = fullUser?.name ?? user?.name ?? "New User";

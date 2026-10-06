@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useBookmarks } from "../../context/BookmarksContext";
@@ -24,16 +24,20 @@ export default function BookmarkButton({
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadBookmarkCount();
-  }, [item.id]);
-
-  const loadBookmarkCount = async () => {
+  const loadBookmarkCount = useCallback(async () => {
     const itemId = Number(item.id);
     const count = await getBookmarkCount(itemId);
     setBookmarkCount(count);
     setLoading(false);
-  };
+  }, [item.id]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void loadBookmarkCount();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadBookmarkCount]);
 
   const handleToggle = async () => {
     if (!ctx || !user) return;
