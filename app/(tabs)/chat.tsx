@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -71,10 +71,11 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [avatarCache, setAvatarCache] = useState<Record<number, string>>({});
+  const [now, setNow] = useState(() => Date.now());
 
   /* -------- LOAD CHATS -------- */
 
-  const loadChats = async () => {
+  const loadChats = useCallback(async () => {
     if (!user?.user_id) return;
 
     try {
@@ -113,11 +114,23 @@ export default function Chat() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    loadChats();
-  }, [user]);
+    const timeoutId = setTimeout(() => {
+      void loadChats();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadChats]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setNow(Date.now());
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -140,7 +153,7 @@ export default function Chat() {
 
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
-    const diff = Date.now() - date.getTime();
+    const diff = now - date.getTime();
     const mins = Math.floor(diff / 60000);
     const hrs = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);

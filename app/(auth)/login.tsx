@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -22,19 +22,13 @@ export default function LoginScreen() {
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { login, signup } = useAuth();
 
-  const [mode, setMode] = useState<"login" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (tab === "login" || tab === "signup") {
-      setMode(tab);
-      setError(null);
-    }
-  }, [tab]);
+  const mode: "login" | "signup" = tab === "login" ? "login" : "signup";
 
   const handleSubmit = async () => {
     setError(null);
@@ -115,7 +109,7 @@ export default function LoginScreen() {
             <Text style={styles.brandText}>Hey, Neighbor!</Text>
           </View>
 
-          <Text style={styles.kicker}>Need it? A neighbor's got it.</Text>
+          <Text style={styles.kicker}>Need it? A neighbor’s got it.</Text>
           <Text style={styles.subKicker}>Your neighborhood starts here.</Text>
           <Text style={styles.heroTitle}>
             <Text style={styles.heroHighlight}>Hey,</Text> Neighbor
@@ -128,7 +122,6 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
               onPress={() => {
-                setMode("login");
                 router.setParams({ tab: "login" });
                 setError(null);
               }}
@@ -141,7 +134,6 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={[styles.toggleButton, !isLogin && styles.toggleButtonActive]}
               onPress={() => {
-                setMode("signup");
                 router.setParams({ tab: "signup" });
                 setError(null);
               }}
@@ -230,7 +222,7 @@ export default function LoginScreen() {
             {isLogin ? "Need an account?" : "Already have an account?"}{" "}
             <Text
               style={styles.footerLink}
-              onPress={() => setMode(isLogin ? "signup" : "login")}
+              onPress={() => router.setParams({ tab: isLogin ? "signup" : "login" })}
             >
               {isLogin ? "Sign up" : "Log in"}
             </Text>
