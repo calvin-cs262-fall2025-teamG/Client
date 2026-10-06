@@ -15,25 +15,27 @@ export default function ListerProfile() {
   const { name, id } = useLocalSearchParams<{ name: string; id?: string }>();
   const userId = id ? Number(id) : NaN;
 
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(!Number.isNaN(userId));
+  // Tag the fetched user with its id so loading is derived during render
+  // instead of being reset with setState inside the effect.
+  const [result, setResult] = useState<{ id: number; user: User | null } | null>(
+    null
+  );
+  const loading = !Number.isNaN(userId) && result?.id !== userId;
+  const user = result?.id === userId ? result.user : null;
 
   useEffect(() => {
     if (Number.isNaN(userId)) return;
 
     let cancelled = false;
-    setLoading(true);
 
     usersApi
       .getById(userId)
       .then((u) => {
-        if (!cancelled) setUser(u);
+        if (!cancelled) setResult({ id: userId, user: u });
       })
       .catch((e) => {
         console.error("Failed to load user:", e);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setResult({ id: userId, user: null });
       });
 
     return () => {

@@ -21,19 +21,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(USER_KEY);
+        if (stored) setUser(JSON.parse(stored));
+      } catch (error) {
+        console.error("Load user error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadUser();
   }, []);
-
-  const loadUser = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(USER_KEY);
-      if (stored) setUser(JSON.parse(stored));
-    } catch (error) {
-      console.error("Load user error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (email: string, password: string) => {
     const response: any = await auth.login(email, password);
