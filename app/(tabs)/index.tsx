@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useBookmarks } from "../../context/BookmarksContext";
@@ -78,7 +78,7 @@ export default function Index() {
   const searchInputRef = useRef<TextInput | null>(null);
 
   // Load bookmark counts for all items
-  const loadBookmarkCounts = async (itemsList: Item[]) => {
+  const loadBookmarkCounts = useCallback(async (itemsList: Item[]) => {
     const counts: Record<number, number> = {};
 
     await Promise.all(
@@ -88,10 +88,10 @@ export default function Index() {
     );
 
     setBookmarkCounts(counts);
-  };
+  }, []);
 
   // Load items from API
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     try {
       const data: any = await itemsApi.getAll();
       setItems(data);
@@ -101,11 +101,13 @@ export default function Index() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadBookmarkCounts]);
 
   useEffect(() => {
+    // Loader only sets state after awaiting the API, so this doesn't cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadItems();
-  }, []);
+  }, [loadItems]);
 
   const onRefresh = async () => {
     setRefreshing(true);

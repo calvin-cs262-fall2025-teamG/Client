@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -23,20 +23,22 @@ export default function LoginScreen() {
   const { login, signup } = useAuth();
 
   // Default to signup (so “Get Started” with no param still lands on signup)
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [mode, setMode] = useState<"login" | "signup">(tab === "login" ? "login" : "signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // when navigated here with params, open correct tab
-  useEffect(() => {
+  // when navigated here with a new tab param, open correct tab
+  const [prevTab, setPrevTab] = useState(tab);
+  if (tab !== prevTab) {
+    setPrevTab(tab);
     if (tab === "login" || tab === "signup") {
       setMode(tab);
       setError(null);
     }
-  }, [tab]);
+  }
 
   const handleSubmit = async () => {
     setError(null);

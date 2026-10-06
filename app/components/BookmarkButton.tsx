@@ -25,15 +25,14 @@ export default function BookmarkButton({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadBookmarkCount = async () => {
+      const count = await getBookmarkCount(Number(item.id));
+      setBookmarkCount(count);
+      setLoading(false);
+    };
+
     loadBookmarkCount();
   }, [item.id]);
-
-  const loadBookmarkCount = async () => {
-    const itemId = Number(item.id);
-    const count = await getBookmarkCount(itemId);
-    setBookmarkCount(count);
-    setLoading(false);
-  };
 
   const handleToggle = async () => {
     if (!ctx || !user) return;

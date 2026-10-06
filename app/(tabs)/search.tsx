@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -55,7 +55,7 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     try {
       const data = (await itemsApi.getAll()) as ApiItem[];
       setItems(data ?? []);
@@ -65,11 +65,13 @@ export default function DiscoverScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // Loader only sets state after awaiting the API, so this doesn't cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadItems();
-  }, []);
+  }, [loadItems]);
 
   const onRefresh = async () => {
     setRefreshing(true);

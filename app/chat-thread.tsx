@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -54,7 +54,7 @@ interface Message {
 }
 
 export default function ChatThread() {
-  const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
+  const [fetchedAvatar, setFetchedAvatar] = useState<string | null>(null);
 
   const { id, name, avatar } = useLocalSearchParams<{
     id?: string;
@@ -67,6 +67,8 @@ export default function ChatThread() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const otherUserId = id ? Number(id) : null;
+  // Use avatar from params first, otherwise the one loaded from the API
+  const otherAvatar = avatar?.trim() ? avatar : fetchedAvatar;
   const otherAvatarSource = resolveImageSource(otherAvatar, avatarMap);
   const headerInitial = String(name || "Chat").trim().charAt(0).toUpperCase() || "?";
 
@@ -76,11 +78,10 @@ export default function ChatThread() {
   const [sending, setSending] = useState(false);
 
   // Load messages between current user and other user
-  const loadMessages = async () => {
-    if (!user?.user_id || !otherUserId) {
-      setLoading(false);
-      return;
-    }
+  const userId = user?.user_id;
+
+  const loadMessages = useCallback(async () => {
+    if (!userId || !otherUserId) return;
 
     try {
       const allMessages: any = await messagesApi.getAll();
@@ -88,8 +89,8 @@ export default function ChatThread() {
       // Filter messages between these two users
       const filtered = allMessages.filter(
         (msg: Message) =>
-          (msg.sender_id === user.user_id && msg.receiver_id === otherUserId) ||
-          (msg.sender_id === otherUserId && msg.receiver_id === user.user_id)
+          (msg.sender_id === userId && msg.receiver_id === otherUserId) ||
+          (msg.sender_id === otherUserId && msg.receiver_id === userId)
       );
 
       setMessages(filtered);
@@ -98,11 +99,13 @@ export default function ChatThread() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, otherUserId]);
 
   useEffect(() => {
+    // Loader only sets state after awaiting the API, so this doesn't cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMessages();
-  }, [user, otherUserId]);
+  }, [loadMessages]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -112,24 +115,20 @@ export default function ChatThread() {
   }, [messages]);
 
   useEffect(() => {
-    const loadOtherUser = async () => {
-      if (!otherUserId) return;
+    // Avatar passed in via params; no need to fetch
+    if (avatar?.trim() || !otherUserId) return;
 
+    const loadOtherUser = async () => {
       try {
         const u: any = await usersApi.getById(otherUserId);
         console.log("OTHER USER profile_picture:", u?.profile_picture);
-        setOtherAvatar(u?.profile_picture ?? null);
+        setFetchedAvatar(u?.profile_picture ?? null);
       } catch (e) {
         console.error("Failed to load other user:", e);
       }
     };
 
-    // Use avatar from params first, otherwise load from API
-    if (avatar && avatar.trim()) {
-      setOtherAvatar(avatar);
-    } else {
-      loadOtherUser();
-    }
+    loadOtherUser();
   }, [otherUserId, avatar]);
 
 
@@ -176,7 +175,7 @@ export default function ChatThread() {
     return `${Math.floor(diffDays / 7)} weeks ago • ${timeStr}`;
   };
 
-  if (loading) {
+  if (loading && userId && otherUserId) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />

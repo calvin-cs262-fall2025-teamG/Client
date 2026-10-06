@@ -61,6 +61,21 @@ function resolveImageSource(
   return avatarMap[lower];
 }
 
+/* ---------------- TIME FORMAT ---------------- */
+
+function getTimeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  const hrs = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  if (hrs < 24) return `${hrs}h`;
+  return `${days}d`;
+}
+
 /* ---------------- SCREEN ---------------- */
 
 export default function Chat() {
@@ -76,8 +91,10 @@ export default function Chat() {
 
   /* -------- LOAD CHATS -------- */
 
-  const loadChats = async () => {
-    if (!user?.user_id) return;
+  const userId = user?.user_id;
+
+  const loadChats = useCallback(async () => {
+    if (!userId) return;
 
     try {
       setCommunities(await getMyCommunities());
@@ -86,7 +103,7 @@ export default function Chat() {
     }
 
     try {
-      const data: any = await messagesApi.getUserMessages(user.user_id);
+      const data: any = await messagesApi.getUserMessages(userId);
 
       // Sort chats by most recent first
       const sortedChats = data.sort((a: ChatPreview, b: ChatPreview) => {
@@ -121,11 +138,13 @@ export default function Chat() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
+    // Loader only sets state after awaiting the API, so this doesn't cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadChats();
-  }, [user]);
+  }, [loadChats]);
 
   useFocusEffect(
     useCallback(() => {
@@ -156,21 +175,6 @@ export default function Chat() {
     const q = searchQuery.toLowerCase();
     return communities.filter((c) => c.name.toLowerCase().includes(q));
   }, [searchQuery, communities]);
-
-  /* -------- TIME FORMAT -------- */
-
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const diff = Date.now() - date.getTime();
-    const mins = Math.floor(diff / 60000);
-    const hrs = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (mins < 1) return "now";
-    if (mins < 60) return `${mins}m`;
-    if (hrs < 24) return `${hrs}h`;
-    return `${days}d`;
-  };
 
   /* -------- LOADING -------- */
 

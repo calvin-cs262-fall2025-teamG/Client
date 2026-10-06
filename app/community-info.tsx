@@ -68,7 +68,7 @@ export default function CommunityInfo() {
                 {loading ? (
                     <ActivityIndicator size="large" color="#3b1b0d" />
                 ) : (
-                    <Text style={styles.muted}>Couldn't load this community.</Text>
+                    <Text style={styles.muted}>Couldn&apos;t load this community.</Text>
                 )}
             </View>
         );
