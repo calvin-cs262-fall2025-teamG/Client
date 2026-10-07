@@ -15,31 +15,28 @@ export default function ListerProfile() {
   const { name, id } = useLocalSearchParams<{ name: string; id?: string }>();
   const userId = id ? Number(id) : NaN;
 
-  const [user, setUser] = useState<User | null>(null);
-  const [status, setStatus] = useState<"loading" | "done">(
-    Number.isNaN(userId) ? "done" : "loading"
+  // Tag the fetched user with its id so loading is derived during render
+  // instead of being reset with setState inside the effect.
+  const [result, setResult] = useState<{ id: number; user: User | null } | null>(
+    null
   );
-
-  const loading = status === "loading";
+  const loading = !Number.isNaN(userId) && result?.id !== userId;
+  const user = result?.id === userId ? result.user : null;
 
   useEffect(() => {
     if (Number.isNaN(userId)) return;
 
     let cancelled = false;
 
-    const loadUser = async () => {
-      try {
-        setStatus("loading");
-        const loadedUser = await usersApi.getById(userId);
-        if (!cancelled) setUser(loadedUser);
-      } catch (e) {
+    usersApi
+      .getById(userId)
+      .then((u) => {
+        if (!cancelled) setResult({ id: userId, user: u });
+      })
+      .catch((e) => {
         console.error("Failed to load user:", e);
-      } finally {
-        if (!cancelled) setStatus("done");
-      }
-    };
-
-    void loadUser();
+        if (!cancelled) setResult({ id: userId, user: null });
+      });
 
     return () => {
       cancelled = true;

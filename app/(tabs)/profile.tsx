@@ -39,7 +39,7 @@ type ItemCard = {
 };
 
 export default function Profile() {
-  const [listings, setListings] = useState<ItemCard[]>([]);
+  const [loadedListings, setListings] = useState<ItemCard[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const { logout, user } = useAuth();
@@ -55,23 +55,22 @@ export default function Profile() {
     await AsyncStorage.removeItem("userItems");
   }, []);
 
+  const userId = user?.user_id;
+
   const loadProfileUser = useCallback(async () => {
-    if (!user) return;
-    console.log("Loading profile for user:", user.user_id);
-    const u = await usersApi.getById(user.user_id);
+    if (!userId) return;
+    console.log("Loading profile for user:", userId);
+    const u = await usersApi.getById(userId);
     console.log("Loaded user:", u);
     setFullUser(u as User);
-  }, [user]);
+  }, [userId]);
 
   const loadMyItems = useCallback(async () => {
-    if (!user) {
-      setListings([]);
-      return;
-    }
+    if (!userId) return;
 
-    console.log("Loading items for user:", user.user_id);
+    console.log("Loading items for user:", userId);
     const all = (await itemsApi.getAll()) as ApiItem[];
-    const mine = all.filter((it) => it.owner_id === user.user_id);
+    const mine = all.filter((it) => it.owner_id === userId);
 
     // Load bookmark counts for each item
     const itemsWithCounts = await Promise.all(
@@ -89,7 +88,7 @@ export default function Profile() {
     );
 
     setListings(itemsWithCounts);
-  }, [user]);
+  }, [userId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -98,14 +97,12 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void clearOldHardcodedItems();
-      void loadProfileUser();
-      void loadMyItems();
-    }, 0);
-
-    return () => clearTimeout(timeoutId);
-  }, [clearOldHardcodedItems, loadProfileUser, loadMyItems]);
+    clearOldHardcodedItems().catch(console.error);
+    // Loader only sets state after awaiting the API, so this doesn't cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadProfileUser().catch(console.error);
+    loadMyItems().catch(console.error);
+  }, [loadProfileUser, loadMyItems]);
 
   // Reload items every time the screen comes into focus
   useFocusEffect(
@@ -115,6 +112,7 @@ export default function Profile() {
     }, [loadProfileUser, loadMyItems])
   );
 
+  const listings = userId ? loadedListings : [];
   const displayName = fullUser?.name ?? user?.name ?? "New User";
   const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
 
