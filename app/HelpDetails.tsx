@@ -41,9 +41,9 @@ const HELP_SECTIONS = {
   signup: {
     title: "Signing up and logging in",
     steps: [
-      "Use your Calvin email to create an account and access all features.",
+      "Use your email to create an account and access all features.",
       'On the first screen, tap "Sign up."',
-      "Enter your @calvin.edu email and a password.",
+      "Enter email and a password.",
       'Tap "Create account."',
       "Open your email and tap the verification link.",
       'Return to the app, enter your email and password, and tap "Log in."',

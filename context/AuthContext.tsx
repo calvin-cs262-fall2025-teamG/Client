@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import {AppState, Platform } from "react-native";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AppUser } from "../services/authServices";
 import { supabase } from "../app/utils/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -22,8 +21,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// const USER_KEY = "@heyneighbor:user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
