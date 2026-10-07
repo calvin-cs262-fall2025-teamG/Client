@@ -104,9 +104,11 @@ export default function Index() {
   }, [loadBookmarkCounts]);
 
   useEffect(() => {
-    // Loader only sets state after awaiting the API, so this doesn't cascade renders
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadItems();
+    const timeoutId = setTimeout(() => {
+      void loadItems();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [loadItems]);
 
   const onRefresh = async () => {

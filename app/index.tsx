@@ -30,15 +30,15 @@ export default function Onboarding() {
   const [pageIndex, setPageIndex] = useState(0);
 
   // track horizontal scroll for tiny parallax
-  const scrollX = useState(() => new Animated.Value(0))[0];
+  const [scrollX] = useState(() => new Animated.Value(0));
 
   // gentle float animation for hero circle & badges
-  const floatAnim = useState(() => new Animated.Value(0))[0];
+  const [floatAnim] = useState(() => new Animated.Value(0));
 
   // intro animations for first page
-  const heroIntro = useState(() => new Animated.Value(0))[0];
-  const textIntro = useState(() => new Animated.Value(0))[0];
-  const previewIntro = useState(() => new Animated.Value(0))[0];
+  const [heroIntro] = useState(() => new Animated.Value(0));
+  const [textIntro] = useState(() => new Animated.Value(0));
+  const [previewIntro] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     // looped float (always running)

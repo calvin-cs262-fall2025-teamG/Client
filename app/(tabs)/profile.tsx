@@ -51,9 +51,9 @@ export default function Profile() {
     router.replace("/(auth)/login");
   };
 
-  const clearOldHardcodedItems = async () => {
+  const clearOldHardcodedItems = useCallback(async () => {
     await AsyncStorage.removeItem("userItems");
-  };
+  }, []);
 
   const userId = user?.user_id;
 
@@ -107,8 +107,8 @@ export default function Profile() {
   // Reload items every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadProfileUser();
-      loadMyItems();
+      void loadProfileUser();
+      void loadMyItems();
     }, [loadProfileUser, loadMyItems])
   );
 
