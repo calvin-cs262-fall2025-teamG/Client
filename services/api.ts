@@ -4,7 +4,6 @@ import {
   CreateMessageRequest,
   UpdateItemRequest,
   UpdateUserRequest,
-  Item
 } from "./apiTypes";
 import type { User } from "./authServices";
 
@@ -79,9 +78,9 @@ export const auth = {
 };
 
 export const items = {
-  getAll: () => apiRequest<Item[]>("/items"),
+  getAll: () => apiRequest("/items"),
 
-  getById: (id: number) => apiRequest<Item>(`/items/${id}`),
+  getById: (id: number) => apiRequest(`/items/${id}`),
 
   create: (data: CreateItemRequest) =>
     apiRequest("/items", {
