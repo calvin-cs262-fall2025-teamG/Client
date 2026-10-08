@@ -1,6 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -54,7 +52,7 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     try {
       const data = (await itemsApi.getAll()) as ApiItem[];
       setItems(data ?? []);
@@ -64,11 +62,15 @@ export default function DiscoverScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadItems();
-  }, []);
+    const timeoutId = setTimeout(() => {
+      void loadItems();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadItems]);
 
   const onRefresh = async () => {
     setRefreshing(true);

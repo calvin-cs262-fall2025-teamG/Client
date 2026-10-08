@@ -1,6 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Animated,
   Dimensions,
@@ -45,15 +43,15 @@ export default function Onboarding() {
   const [pageIndex, setPageIndex] = useState(0);
 
   // track horizontal scroll for tiny parallax
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const [scrollX] = useState(() => new Animated.Value(0));
 
   // gentle float animation for hero circle & badges
-  const floatAnim = useRef(new Animated.Value(0)).current;
+  const [floatAnim] = useState(() => new Animated.Value(0));
 
   // intro animations for first page
-  const heroIntro = useRef(new Animated.Value(0)).current;
-  const textIntro = useRef(new Animated.Value(0)).current;
-  const previewIntro = useRef(new Animated.Value(0)).current;
+  const [heroIntro] = useState(() => new Animated.Value(0));
+  const [textIntro] = useState(() => new Animated.Value(0));
+  const [previewIntro] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     // looped float (always running)
@@ -205,9 +203,9 @@ export default function Onboarding() {
   };
 
   // 6 animated values: 3 for Borrow chips, 3 for Lend chips
-  const chipAnim = useRef(
-    [0, 1, 2, 3, 4, 5].map(() => new Animated.Value(0)),
-  ).current;
+  const [chipAnim] = useState(() =>
+    [0, 1, 2, 3, 4, 5].map(() => new Animated.Value(0))
+  );
 
   useEffect(() => {
     if (pageIndex === 1) {
@@ -224,7 +222,7 @@ export default function Onboarding() {
     } else {
       chipAnim.forEach((a) => a.setValue(0));
     }
-  }, [pageIndex]);
+  }, [pageIndex, chipAnim]);
 
   const handleScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
