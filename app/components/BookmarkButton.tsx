@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
 import {

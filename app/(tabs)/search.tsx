@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { items as itemsApi } from "../../services/api";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 type ApiItem = {
   item_id: number;

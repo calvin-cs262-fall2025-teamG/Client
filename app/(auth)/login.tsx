@@ -12,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 const logo = require("../../assets/images/logo.png");
 
