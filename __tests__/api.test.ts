@@ -67,13 +67,13 @@ describe("apiRequest", () => {
 describe("Client endpoint requests", () => {
   const itemData = { name: "Drill", owner_id: 7 };
   const messageData = { sender_id: 7, receiver_id: 9, content: "Hello" };
-  const endpointCases: Array<{
+  const endpointCases: {
     name: string;
     call: () => Promise<unknown>;
     endpoint: string;
     method?: string;
     body?: unknown;
-  }> = [
+  }[] = [
     {
       name: "auth.signup",
       call: () => auth.signup("bryn@example.com", "secret123", "Bryn"),
@@ -153,15 +153,12 @@ describe("Client endpoint requests", () => {
 
     await expect(call()).resolves.toEqual(response);
 
-    const expectedOptions: Record<string, unknown> = {
-      headers: expect.objectContaining({ "Content-Type": "application/json" }),
-    };
-    if (method) expectedOptions.method = method;
-    if (body !== undefined) expectedOptions.body = JSON.stringify(body);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      `${BASE_URL}${endpoint}`,
-      expect.objectContaining(expectedOptions)
-    );
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe(`${BASE_URL}${endpoint}`);
+    expect(options.headers).toEqual(expect.objectContaining({ "Content-Type": "application/json" }));
+    // GETs must not send a method or body; parse bodies so key order doesn't matter
+    expect(options.method).toBe(method);
+    expect(options.body === undefined ? undefined : JSON.parse(options.body)).toEqual(body);
   });
 });

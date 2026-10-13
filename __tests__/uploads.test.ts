@@ -18,12 +18,13 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+function uploadResult(status: number, body: string): FileSystem.FileSystemUploadResult {
+  return { status, body, headers: {}, mimeType: null };
+}
+
 describe("photo uploads", () => {
   it("posts item photos as multipart form data and returns the filename", async () => {
-    mockUploadAsync.mockResolvedValue({
-      status: 200,
-      body: JSON.stringify({ filename: "drill.jpg" }),
-    });
+    mockUploadAsync.mockResolvedValue(uploadResult(200, JSON.stringify({ filename: "drill.jpg" })));
 
     await expect(uploadItemPhoto("file:///drill.jpg")).resolves.toBe("drill.jpg");
 
@@ -39,10 +40,7 @@ describe("photo uploads", () => {
   });
 
   it("posts profile photos to the selected user's upload endpoint", async () => {
-    mockUploadAsync.mockResolvedValue({
-      status: 200,
-      body: JSON.stringify({ filename: "profile.jpg" }),
-    });
+    mockUploadAsync.mockResolvedValue(uploadResult(200, JSON.stringify({ filename: "profile.jpg" })));
 
     await expect(uploadProfilePhoto(7, "file:///profile.jpg")).resolves.toBe("profile.jpg");
 
@@ -58,13 +56,13 @@ describe("photo uploads", () => {
   });
 
   it("rejects a failed item photo upload", async () => {
-    mockUploadAsync.mockResolvedValue({ status: 500, body: "Server error" });
+    mockUploadAsync.mockResolvedValue(uploadResult(500, "Server error"));
 
     await expect(uploadItemPhoto("file:///drill.jpg")).rejects.toThrow("Image upload failed");
   });
 
   it("includes the HTTP status when a profile photo upload fails", async () => {
-    mockUploadAsync.mockResolvedValue({ status: 413, body: "File too large" });
+    mockUploadAsync.mockResolvedValue(uploadResult(413, "File too large"));
 
     await expect(uploadProfilePhoto(7, "file:///profile.jpg")).rejects.toThrow(
       "Upload failed: 413"
