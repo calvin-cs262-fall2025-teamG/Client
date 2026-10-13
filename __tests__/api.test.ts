@@ -1,4 +1,4 @@
-import { apiRequest, auth, BASE_URL } from "../services/api";
+import { apiRequest, auth, BASE_URL, items, messages, users } from "../services/api";
 
 const mockFetch = jest.fn();
 
@@ -64,32 +64,104 @@ describe("apiRequest", () => {
   });
 });
 
-describe("auth", () => {
-  it("login POSTs the email and password as JSON", async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ user_id: 7 }));
+describe("Client endpoint requests", () => {
+  const itemData = { name: "Drill", owner_id: 7 };
+  const messageData = { sender_id: 7, receiver_id: 9, content: "Hello" };
+  const endpointCases: Array<{
+    name: string;
+    call: () => Promise<unknown>;
+    endpoint: string;
+    method?: string;
+    body?: unknown;
+  }> = [
+    {
+      name: "auth.signup",
+      call: () => auth.signup("bryn@example.com", "secret123", "Bryn"),
+      endpoint: "/auth/signup",
+      method: "POST",
+      body: { email: "bryn@example.com", password: "secret123", name: "Bryn" },
+    },
+    {
+      name: "auth.login",
+      call: () => auth.login("bryn@example.com", "secret123"),
+      endpoint: "/auth/login",
+      method: "POST",
+      body: { email: "bryn@example.com", password: "secret123" },
+    },
+    {
+      name: "auth.verifyCode",
+      call: () => auth.verifyCode("bryn@example.com", "123456"),
+      endpoint: "/auth/verify-code",
+      method: "POST",
+      body: { email: "bryn@example.com", code: "123456" },
+    },
+    {
+      name: "auth.resendVerification",
+      call: () => auth.resendVerification("bryn@example.com"),
+      endpoint: "/auth/resend-verification",
+      method: "POST",
+      body: { email: "bryn@example.com" },
+    },
+    { name: "items.getAll", call: () => items.getAll(), endpoint: "/items" },
+    { name: "items.getById", call: () => items.getById(42), endpoint: "/items/42" },
+    {
+      name: "items.create",
+      call: () => items.create(itemData),
+      endpoint: "/items",
+      method: "POST",
+      body: itemData,
+    },
+    {
+      name: "items.update",
+      call: () => items.update(42, { name: "Updated drill" }),
+      endpoint: "/items/42",
+      method: "PUT",
+      body: { name: "Updated drill" },
+    },
+    {
+      name: "items.delete",
+      call: () => items.delete(42),
+      endpoint: "/items/42",
+      method: "DELETE",
+    },
+    { name: "messages.getAll", call: () => messages.getAll(), endpoint: "/messages" },
+    {
+      name: "messages.getUserMessages",
+      call: () => messages.getUserMessages(7),
+      endpoint: "/messages/user/7",
+    },
+    {
+      name: "messages.create",
+      call: () => messages.create(messageData),
+      endpoint: "/messages",
+      method: "POST",
+      body: messageData,
+    },
+    { name: "users.getById", call: () => users.getById(7), endpoint: "/users/7" },
+    {
+      name: "users.update",
+      call: () => users.update(7, { name: "Bryn Updated" }),
+      endpoint: "/users/7",
+      method: "PUT",
+      body: { name: "Bryn Updated" },
+    },
+  ];
 
-    await auth.login("bryn@example.com", "secret123");
+  it.each(endpointCases)("$name sends the expected request", async ({ call, endpoint, method, body }) => {
+    const response = { accepted: true };
+    mockFetch.mockResolvedValue(jsonResponse(response));
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(`${BASE_URL}/auth/login`);
-    expect(options.method).toBe("POST");
-    expect(JSON.parse(options.body)).toEqual({
-      email: "bryn@example.com",
-      password: "secret123",
-    });
-  });
+    await expect(call()).resolves.toEqual(response);
 
-  it("signup POSTs email, password and name", async () => {
-    mockFetch.mockResolvedValue(jsonResponse({}));
+    const expectedOptions: Record<string, unknown> = {
+      headers: expect.objectContaining({ "Content-Type": "application/json" }),
+    };
+    if (method) expectedOptions.method = method;
+    if (body !== undefined) expectedOptions.body = JSON.stringify(body);
 
-    await auth.signup("bryn@example.com", "secret123", "Bryn");
-
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(`${BASE_URL}/auth/signup`);
-    expect(JSON.parse(options.body)).toEqual({
-      email: "bryn@example.com",
-      password: "secret123",
-      name: "Bryn",
-    });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BASE_URL}${endpoint}`,
+      expect.objectContaining(expectedOptions)
+    );
   });
 });

@@ -13,8 +13,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import PageContainer from "../components/PageContainer";
-import { items as itemsApi, BASE_URL } from "../../services/api";
-import * as FileSystem from "expo-file-system/legacy";
+import { items as itemsApi } from "../../services/api";
+import { uploadItemPhoto } from "../../services/uploads";
 
 export default function ListItem() {
   const router = useRouter();
@@ -51,23 +51,7 @@ export default function ListItem() {
     if (!imageUri) return null;
 
     try {
-      const uploadResult = await FileSystem.uploadAsync(
-        `${BASE_URL}/items/upload`,
-        imageUri,
-        {
-          fieldName: "photo",
-          httpMethod: "POST",
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        }
-      );
-
-      if (uploadResult.status !== 200) {
-        console.error("Upload failed:", uploadResult.status, uploadResult.body);
-        throw new Error("Image upload failed");
-      }
-
-      const data = JSON.parse(uploadResult.body);
-      return data.filename;
+      return await uploadItemPhoto(imageUri);
     } catch (error) {
       console.error("Upload error:", error);
       throw error;

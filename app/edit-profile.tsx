@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { users as usersApi, BASE_URL } from "../services/api";
-import * as FileSystem from "expo-file-system/legacy";
+import { uploadProfilePhoto } from "../services/uploads";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -73,26 +73,11 @@ export default function EditProfile() {
     try {
       setUploading(true);
 
-      const uploadResult = await FileSystem.uploadAsync(
-        `${BASE_URL}/users/${user!.user_id}/profile-picture`,
-        uri,
-        {
-          fieldName: "photo",
-          httpMethod: "POST",
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        }
-      );
-
-      if (uploadResult.status !== 200) {
-        console.error("Upload failed:", uploadResult.status, uploadResult.body);
-        throw new Error(`Upload failed: ${uploadResult.status}`);
-      }
-
-      const data = JSON.parse(uploadResult.body);
+      const filename = await uploadProfilePhoto(user!.user_id, uri);
 
       // Persist the new filename to the user's record, then update local state
       const updated = await usersApi.update(user!.user_id, {
-        profile_picture: data.filename,
+        profile_picture: filename,
       });
       setUser(updated as any);
     } catch (error) {
