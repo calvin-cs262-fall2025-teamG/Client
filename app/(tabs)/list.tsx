@@ -15,6 +15,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { BASE_URL, items as itemsApi } from "../../services/api";
 import PageContainer from "../components/PageContainer";
+import { items as itemsApi } from "../../services/api";
+import { uploadItemPhoto } from "../../services/uploads";
 
 export default function ListItem() {
   const router = useRouter();
@@ -55,23 +57,7 @@ export default function ListItem() {
     if (!imageUri) return null;
 
     try {
-      const uploadResult = await FileSystem.uploadAsync(
-        `${BASE_URL}/items/upload`,
-        imageUri,
-        {
-          fieldName: "photo",
-          httpMethod: "POST",
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        },
-      );
-
-      if (uploadResult.status !== 200) {
-        console.error("Upload failed:", uploadResult.status, uploadResult.body);
-        throw new Error("Image upload failed");
-      }
-
-      const data = JSON.parse(uploadResult.body);
-      return data.filename;
+      return await uploadItemPhoto(imageUri);
     } catch (error) {
       console.error("Upload error:", error);
       throw error;
