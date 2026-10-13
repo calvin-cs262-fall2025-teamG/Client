@@ -131,6 +131,7 @@ export default function CommunityThread() {
                         multiline
                     />
                     <TouchableOpacity
+                        accessibilityLabel="Send message"
                         style={[styles.sendButton, !text.trim() && styles.sendDisabled]}
                         onPress={handleSend}
                         disabled={!text.trim()}
