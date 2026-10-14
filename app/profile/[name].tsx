@@ -21,7 +21,6 @@ export default function ListerProfile() {
     if (Number.isNaN(userId)) return;
 
     let cancelled = false;
-
     usersApi
       .getById(userId)
       .then((u) => {
