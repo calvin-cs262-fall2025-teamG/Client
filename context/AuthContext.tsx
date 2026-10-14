@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import {AppState, Platform } from "react-native";
-import type { AppUser } from "../services/authServices";
 import { supabase } from "../app/utils/supabase";
 import { Session } from "@supabase/supabase-js";
 import { 
@@ -9,6 +8,7 @@ import {
   signUp,
   signIn,
   signOut,
+  AppUser,
  } from"../services/supabaseAuth";
 
 type AuthContextType = {
