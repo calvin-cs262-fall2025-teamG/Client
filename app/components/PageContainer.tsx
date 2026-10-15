@@ -1,9 +1,8 @@
-import React from "react";
 import {
-  ScrollView,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,7 +17,6 @@ export default function PageContainer({
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-
         <ScrollView contentContainerStyle={styles.container}>
           {children}
         </ScrollView>

@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from "react";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
+  View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
+import { BASE_URL, items as itemsApi } from "../../services/api";
 import PageContainer from "../components/PageContainer";
 import { items as itemsApi } from "../../services/api";
 import { uploadItemPhoto } from "../../services/uploads";
@@ -28,9 +30,13 @@ export default function ListItem() {
 
   useEffect(() => {
     (async () => {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission required", "Please grant photo library access.");
+        Alert.alert(
+          "Permission required",
+          "Please grant photo library access.",
+        );
       }
     })();
   }, []);
@@ -120,7 +126,8 @@ export default function ListItem() {
             source={{ uri: imageUri }}
             style={styles.imagePreview}
             resizeMode="cover"
-          />) : (
+          />
+        ) : (
           <View style={styles.addPhotoBox}>
             <Text style={styles.addPhotoText}>Add a Photo</Text>
             <Text style={styles.subText}>Tap to upload from your gallery</Text>

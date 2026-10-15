@@ -1,19 +1,19 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
-  View,
-  Text,
-  TextInput,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { items as itemsApi } from "../../services/api";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 type ApiItem = {
   item_id: number;
@@ -41,7 +41,6 @@ const getImageSource = (raw?: string | null) => {
 
   return null;
 };
-
 
 const banner = require("../../assets/images/banner.png");
 
@@ -109,7 +108,9 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* SEARCH BAR */}
         <View style={styles.searchBar}>
@@ -144,13 +145,17 @@ export default function DiscoverScreen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabText, activeCategory === cat && styles.activeTabText]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeCategory === cat && styles.activeTabText,
+                ]}
+              >
                 {cat}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-
 
         {/* ITEMS GRID */}
         {loading ? (
@@ -160,7 +165,8 @@ export default function DiscoverScreen() {
         ) : (
           <View style={styles.grid}>
             {filteredItems.map((it) => {
-              const isBorrowed = (it.request_status ?? "available") !== "available";
+              const isBorrowed =
+                (it.request_status ?? "available") !== "available";
               const src = getImageSource(it.image_url);
 
               return (
@@ -173,12 +179,24 @@ export default function DiscoverScreen() {
                   {src ? (
                     <Image
                       source={src}
-                      style={[styles.cardImage, isBorrowed && { opacity: 0.55 }]}
+                      style={[
+                        styles.cardImage,
+                        isBorrowed && { opacity: 0.55 },
+                      ]}
                       resizeMode="cover"
                     />
                   ) : (
-                    <View style={[styles.noImageBox, isBorrowed && { opacity: 0.55 }]}>
-                      <Ionicons name="image-outline" size={28} color="#9ca3af" />
+                    <View
+                      style={[
+                        styles.noImageBox,
+                        isBorrowed && { opacity: 0.55 },
+                      ]}
+                    >
+                      <Ionicons
+                        name="image-outline"
+                        size={28}
+                        color="#9ca3af"
+                      />
                     </View>
                   )}
 
@@ -241,7 +259,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 12,
   },
-
 
   tab: {
     paddingVertical: 10,
