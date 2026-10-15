@@ -1,59 +1,67 @@
-import { apiRequest } from './api';
+// import { apiRequest } from './api';
 
-export type User = {
-  user_id: number;
-  email: string | null;
-  name: string;
-  rating: number;
-  profile_picture?: string | null;
-  avatar_url?: string | null;
-  created_at: string;
-};
+// export type User = {
+//   user_id: number;
+//   email: string | null;
+//   name: string;
+//   rating: number;
+//   profile_picture?: string | null;
+//   avatar_url?: string | null;
+//   created_at: string;
+// };
 
-export type SignupData = {
-  email: string;
-  password: string;
-  name: string;
-};
+// export type AppUser = {
+//   id: string;              // profiles.id / auth user UUID
+//   email: string | null;    // from the auth session
+//   display_name: string;    // profiles.display_name
+//   avatar_path: string | null;
+//   created_at: string;
+// };
 
-export type LoginData = {
-  email: string;
-  password: string;
-};
+// export type SignupData = {
+//   email: string;
+//   password: string;
+//   name: string;
+// };
 
-type AuthResponse = {
-  message: string;
-  user: User;
-};
+// export type LoginData = {
+//   email: string;
+//   password: string;
+// };
 
-/**
- * Sign up a new user
- * POST /auth/signup
- */
-export async function signup(data: SignupData): Promise<User> {
-  const response = await apiRequest<AuthResponse>('/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-  return response.user;
-}
+// type AuthResponse = {
+//   message: string;
+//   user: User;
+// };
 
-/**
- * Login an existing user
- * POST /auth/login
- */
-export async function login(data: LoginData): Promise<User> {
-  const response = await apiRequest<AuthResponse>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-  return response.user;
-}
+// /**
+//  * Sign up a new user
+//  * POST /auth/signup
+//  */
+// export async function signup(data: SignupData): Promise<User> {
+//   const response = await apiRequest<AuthResponse>('/auth/signup', {
+//     method: 'POST',
+//     body: JSON.stringify(data),
+//   });
+//   return response.user;
+// }
 
-/**
- * Get user profile by ID
- * GET /users/:id
- */
-export async function getUserProfile(userId: number): Promise<User> {
-  return apiRequest<User>(`/users/${userId}`);
-}
+// /**
+//  * Login an existing user
+//  * POST /auth/login
+//  */
+// export async function login(data: LoginData): Promise<User> {
+//   const response = await apiRequest<AuthResponse>('/auth/login', {
+//     method: 'POST',
+//     body: JSON.stringify(data),
+//   });
+//   return response.user;
+// }
+
+// /**
+//  * Get user profile by ID
+//  * GET /users/:id
+//  */
+// export async function getUserProfile(userId: number): Promise<User> {
+//   return apiRequest<User>(`/users/${userId}`);
+// }

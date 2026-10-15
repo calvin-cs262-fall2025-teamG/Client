@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
+  ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  Image,
-  ActivityIndicator,
   SafeAreaView,
+  ScrollView,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import { messages as messagesApi, users as usersApi } from "../services/api";
-import type { ImageSourcePropType } from "react-native";
 
 const avatarMap: Record<string, any> = {
   "helen.png": require("../assets/images/helen.png"),
@@ -30,7 +28,7 @@ const avatarMap: Record<string, any> = {
 
 function resolveImageSource(
   key: string | null | undefined,
-  imageMap: Record<string, any>
+  imageMap: Record<string, any>,
 ): ImageSourcePropType | undefined {
   if (!key) return undefined;
   const trimmed = key.trim();
@@ -70,7 +68,11 @@ export default function ChatThread() {
   // Use avatar from params first, otherwise the one loaded from the API
   const otherAvatar = avatar?.trim() ? avatar : fetchedAvatar;
   const otherAvatarSource = resolveImageSource(otherAvatar, avatarMap);
-  const headerInitial = String(name || "Chat").trim().charAt(0).toUpperCase() || "?";
+  const headerInitial =
+    String(name || "Chat")
+      .trim()
+      .charAt(0)
+      .toUpperCase() || "?";
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -131,8 +133,6 @@ export default function ChatThread() {
     loadOtherUser();
   }, [otherUserId, avatar]);
 
-
-
   const handleSend = async () => {
     if (!inputText.trim() || !user?.user_id || !otherUserId || sending) return;
 
@@ -161,12 +161,23 @@ export default function ChatThread() {
     const date = new Date(dateString);
     const now = new Date();
 
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfMessageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfMessageDay = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+    );
     const diffMs = startOfToday.getTime() - startOfMessageDay.getTime();
     const diffDays = Math.floor(diffMs / 86400000);
 
-    const timeStr = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const timeStr = date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
 
     if (diffDays === 0) return `Today • ${timeStr}`;
     if (diffDays === 1) return `Yesterday • ${timeStr}`;
@@ -188,7 +199,9 @@ export default function ChatThread() {
             {otherAvatarSource ? (
               <Image source={otherAvatarSource} style={styles.headerAvatar} />
             ) : (
-              <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+              <View
+                style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}
+              >
                 <Text style={styles.headerAvatarText}>{headerInitial}</Text>
               </View>
             )}
@@ -209,7 +222,6 @@ export default function ChatThread() {
       </SafeAreaView>
     );
   }
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -234,7 +246,6 @@ export default function ChatThread() {
           </View>
         </View>
 
-
         <View style={{ width: 24 }} />
       </View>
 
@@ -253,7 +264,9 @@ export default function ChatThread() {
           {messages.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No messages yet</Text>
-              <Text style={styles.emptySub}>Send a message to start the conversation</Text>
+              <Text style={styles.emptySub}>
+                Send a message to start the conversation
+              </Text>
             </View>
           ) : (
             messages.map((msg) => {

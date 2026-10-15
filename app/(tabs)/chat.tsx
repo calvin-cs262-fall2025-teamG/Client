@@ -1,16 +1,16 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Image,
   ActivityIndicator,
+  Image,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -47,7 +47,7 @@ interface ChatPreview {
 /* ---------------- HELPERS ---------------- */
 
 function resolveImageSource(
-  key: string | null | undefined
+  key: string | null | undefined,
 ): ImageSourcePropType | undefined {
   if (!key) return undefined;
   const trimmed = key.trim();
@@ -116,9 +116,15 @@ export default function Chat() {
       const avatarPromises = data.map(async (chat: ChatPreview) => {
         try {
           const userData: any = await usersApi.getById(chat.other_user_id);
-          return { userId: chat.other_user_id, avatar: userData?.profile_picture };
+          return {
+            userId: chat.other_user_id,
+            avatar: userData?.profile_picture,
+          };
         } catch (error) {
-          console.error(`Failed to load avatar for user ${chat.other_user_id}:`, error);
+          console.error(
+            `Failed to load avatar for user ${chat.other_user_id}:`,
+            error,
+          );
           return null;
         }
       });
@@ -132,7 +138,7 @@ export default function Chat() {
         }
       });
 
-      setAvatarCache(prev => ({ ...prev, ...newAvatarCache }));
+      setAvatarCache((prev) => ({ ...prev, ...newAvatarCache }));
     } catch (error) {
       console.error("Failed to load chats:", error);
     } finally {
@@ -167,7 +173,7 @@ export default function Chat() {
     return chats.filter(
       (chat) =>
         chat.other_user_name.toLowerCase().includes(q) ||
-        chat.content.toLowerCase().includes(q)
+        chat.content.toLowerCase().includes(q),
     );
   }, [searchQuery, chats]);
 
@@ -264,7 +270,8 @@ export default function Chat() {
         ) : (
           filteredChats.map((chat) => {
             // Prioritize cached avatar (full URL) over chat data (filename only)
-            const avatarKey = avatarCache[chat.other_user_id] || chat.other_user_avatar;
+            const avatarKey =
+              avatarCache[chat.other_user_id] || chat.other_user_avatar;
             const avatarSource = resolveImageSource(avatarKey);
             const initial =
               chat.other_user_name?.trim()?.[0]?.toUpperCase() ?? "?";
@@ -294,9 +301,7 @@ export default function Chat() {
 
                 <View style={styles.chatContent}>
                   <View style={styles.chatHeader}>
-                    <Text style={styles.chatName}>
-                      {chat.other_user_name}
-                    </Text>
+                    <Text style={styles.chatName}>{chat.other_user_name}</Text>
                     <Text style={styles.chatTime}>
                       {getTimeAgo(chat.sent_at)}
                     </Text>

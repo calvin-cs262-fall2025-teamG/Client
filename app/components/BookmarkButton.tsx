@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarks } from "../../context/BookmarksContext";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { getBookmarkCount, updateBookmarkCount } from "../../services/bookmarkCount";
+import { useBookmarks } from "../../context/BookmarksContext";
+import {
+  getBookmarkCount,
+  updateBookmarkCount,
+} from "../../services/bookmarkCount";
 
 type Props = {
   item: { id: string; title: string };
@@ -47,7 +50,11 @@ export default function BookmarkButton({
 
     ctx.toggle(item);
 
-    const newCount = await updateBookmarkCount(itemId, wasBookmarked, bookmarkCount);
+    const newCount = await updateBookmarkCount(
+      itemId,
+      wasBookmarked,
+      bookmarkCount,
+    );
     setBookmarkCount(newCount);
   };
 
