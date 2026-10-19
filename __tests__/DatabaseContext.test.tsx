@@ -9,7 +9,7 @@ jest.mock("../context/AuthContext", () => ({ useAuth: () => mockUseAuth() }));
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
 jest.mock("../services/supabase_api", () => ({
-  profiles: { getCurrent: jest.fn(), update: jest.fn() },
+  profiles: { getCurrent: jest.fn(), getById: jest.fn(), update: jest.fn() },
   communities: { getMine: jest.fn(), create: jest.fn() },
   community_members: { requestToJoin: jest.fn(), leave: jest.fn() },
   items: { getMine: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
@@ -31,11 +31,22 @@ function Probe() {
   const db = useDatabase();
   return (
     <>
+      <Text>{`profile:${db.profile?.display_name ?? "none"}`}</Text>
       <Text>{`communities:${db.myCommunities.map((c) => c.name).join(",")}`}</Text>
       <Text>{`items:${db.myItems.map((i) => i.name).join(",")}`}</Text>
       <Text>{`error:${db.error ?? "none"}`}</Text>
+      <Text>{`known:${Object.keys(db.profilesById).join(",")}`}</Text>
       <Pressable accessibilityLabel="leave c1" onPress={() => db.leaveCommunity("c1")}>
         <Text>leave</Text>
+      </Pressable>
+      <Pressable
+        accessibilityLabel="fetch u2"
+        onPress={() => {
+          void db.getProfile("u2");
+          void db.getProfile("u2");
+        }}
+      >
+        <Text>fetch</Text>
       </Pressable>
     </>
   );
@@ -44,7 +55,9 @@ function Probe() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseAuth.mockReturnValue({ user: { id: "u1" } });
-  mocked(api.profiles.getCurrent).mockImplementation(() => ok({ id: "u1" }));
+  mocked(api.profiles.getCurrent).mockImplementation(() =>
+    ok({ id: "u1", display_name: "Bryn" })
+  );
   mocked(api.communities.getMine).mockImplementation(() =>
     ok([
       { id: "c1", name: "Calvin Seniors" },
@@ -85,7 +98,7 @@ it("removes a community from the list after leaving it", async () => {
   expect(api.community_members.leave).toHaveBeenCalledWith("c1");
 });
 
-it("shows the server's error message when a load fails", async () => {
+it("shows the error but still loads the data that worked", async () => {
   mocked(api.communities.getMine).mockImplementation(() =>
     Promise.resolve({ data: null, error: { message: "permission denied" } })
   );
@@ -93,4 +106,25 @@ it("shows the server's error message when a load fails", async () => {
   await render(<DatabaseProvider><Probe /></DatabaseProvider>);
 
   expect(await screen.findByText("error:permission denied")).toBeTruthy();
+  expect(screen.getByText("items:Drill")).toBeTruthy();
+  expect(screen.getByText("profile:Bryn")).toBeTruthy();
+  expect(screen.getByText("communities:")).toBeTruthy();
+});
+
+it("fetches a profile once and keeps it by uuid", async () => {
+  mocked(api.profiles.getById).mockImplementation((id: string) =>
+    ok({ id, display_name: "Greg" })
+  );
+
+  await render(<DatabaseProvider><Probe /></DatabaseProvider>);
+  await screen.findByText("communities:Calvin Seniors,Knollcrest");
+
+  // Two requests for the same person at the same time share one call
+  await fireEvent.press(screen.getByLabelText("fetch u2"));
+  await waitFor(() => expect(screen.getByText("known:u2")).toBeTruthy());
+
+  // A later request is served from the cache
+  await fireEvent.press(screen.getByLabelText("fetch u2"));
+  expect(api.profiles.getById).toHaveBeenCalledTimes(1);
+  expect(api.profiles.getById).toHaveBeenCalledWith("u2");
 });
