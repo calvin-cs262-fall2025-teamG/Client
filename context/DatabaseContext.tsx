@@ -3,7 +3,6 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -47,6 +46,8 @@ type DatabaseValue = {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  profilesById: Record<string, Profile>;
+  getProfile: (id: string) => Promise<Profile | null>;
 
   updateProfile: (data: UpdateProfileRequest) => Promise<Profile>;
 
@@ -80,6 +81,9 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
+  const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
+  const profileCache = useRef<Record<string, Profile>>({});
+  const inflightProfiles = useRef(new Map<string, Promise<Profile | null>>());
 
   const load = useCallback(async () => {
     const id = ++requestId.current;
@@ -95,13 +99,23 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
         borrowing_history.getMine(),
       ]);
       if (id !== requestId.current) return;
-      setProfile(unwrap(p));
-      setMyCommunities(unwrap(c) ?? []);
-      setMyItems(unwrap(i) ?? []);
-      setMyRequests(unwrap(mine) ?? []);
-      setIncomingRequests(unwrap(incoming) ?? []);
-      setBorrowingHistory(unwrap(history) ?? []);
+
+      // Apply each result on its own, so one failed call doesn't skip the rest.
+      // A list that failed keeps its previous value.
+      const failures: string[] = [];
+      const take = <T,>(result: RpcResult<T>, set: (value: T | null) => void) => {
+        if (result.error) failures.push(result.error.message);
+        else set(result.data);
+      };
+      take(p, setProfile);
+      take(c, (v) => setMyCommunities(v ?? []));
+      take(i, (v) => setMyItems(v ?? []));
+      take(mine, (v) => setMyRequests(v ?? []));
+      take(incoming, (v) => setIncomingRequests(v ?? []));
+      take(history, (v) => setBorrowingHistory(v ?? []));
+      if (failures.length > 0) setError(failures[0]);
     } catch (e) {
+      // Only reached if a call itself throws (for example, no network).
       if (id !== requestId.current) return;
       setError(e instanceof Error ? e.message : "Could not load your data");
     } finally {
@@ -113,8 +127,11 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
     if (!userId) {
       // Signed out: ignore any load still in flight and drop the old user's data.
       requestId.current++;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      profileCache.current = {};
+      inflightProfiles.current.clear();
+      /* eslint-disable react-hooks/set-state-in-effect */
       setProfile(null);
+      setProfilesById({});
       setMyCommunities([]);
       setMyItems([]);
       setMyRequests([]);
@@ -122,10 +139,29 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
       setBorrowingHistory([]);
       setLoading(false);
       setError(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
     void load();
   }, [userId, load]);
+
+  const getProfile = useCallback(async (id: string): Promise<Profile | null> => {
+    const cached = profileCache.current[id];
+    if (cached) return cached;
+    const pending = inflightProfiles.current.get(id);
+    if (pending) return pending;
+
+    const request = Promise.resolve(profiles.getById(id)).then((res) => {
+      inflightProfiles.current.delete(id);
+      if (res.error || !res.data) return null;
+      const found = res.data as Profile;
+      profileCache.current[id] = found;
+      setProfilesById((prev) => ({ ...prev, [id]: found }));
+      return found;
+    });
+    inflightProfiles.current.set(id, request);
+    return request;
+  }, []);
 
   // Profile
 
@@ -208,54 +244,31 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
     [load]
   );
 
-  const value = useMemo(
-    () => ({
-      profile,
-      myCommunities,
-      myItems,
-      myRequests,
-      incomingRequests,
-      borrowingHistory,
-      loading,
-      error,
-      refresh: load,
-      updateProfile,
-      createCommunity,
-      requestToJoin,
-      leaveCommunity,
-      createItem,
-      updateItem,
-      deleteItem,
-      requestToBorrow,
-      cancelRequest,
-      approveRequest,
-      declineRequest,
-      markReturned,
-    }),
-    [
-      profile,
-      myCommunities,
-      myItems,
-      myRequests,
-      incomingRequests,
-      borrowingHistory,
-      loading,
-      error,
-      load,
-      updateProfile,
-      createCommunity,
-      requestToJoin,
-      leaveCommunity,
-      createItem,
-      updateItem,
-      deleteItem,
-      requestToBorrow,
-      cancelRequest,
-      approveRequest,
-      declineRequest,
-      markReturned,
-    ]
-  );
+  const value: DatabaseValue = {
+    profile,
+    myCommunities,
+    myItems,
+    myRequests,
+    incomingRequests,
+    borrowingHistory,
+    loading,
+    error,
+    refresh: load,
+    profilesById,
+    getProfile,
+    updateProfile,
+    createCommunity,
+    requestToJoin,
+    leaveCommunity,
+    createItem,
+    updateItem,
+    deleteItem,
+    requestToBorrow,
+    cancelRequest,
+    approveRequest,
+    declineRequest,
+    markReturned,
+  };
 
   return <DatabaseContext.Provider value={value}>{children}</DatabaseContext.Provider>;
 }
