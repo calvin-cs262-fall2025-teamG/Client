@@ -28,6 +28,7 @@ import {
 import {
   isUnread,
   loadLastRead,
+  parseTimestamp,
   saveLastRead,
   type LastReadMap,
 } from "../../services/readState";
@@ -65,6 +66,7 @@ const otherUserId = (message: DirectMessage, myId: string) =>
   message.sender_id === myId ? message.receiver_id : message.sender_id;
 
 // A failed lookup leaves the id out, so the row falls back to "Unknown".
+// A missing profile can come back as a row of nulls, so check the id too.
 async function loadProfiles(ids: string[]): Promise<Record<string, Profile>> {
   const results = await Promise.all(
     ids.map(async (id) => {
@@ -75,7 +77,7 @@ async function loadProfiles(ids: string[]): Promise<Record<string, Profile>> {
   );
   const byId: Record<string, Profile> = {};
   results.forEach((p) => {
-    if (p) byId[p.id] = p;
+    if (p?.id) byId[p.id] = p;
   });
   return byId;
 }
@@ -83,8 +85,7 @@ async function loadProfiles(ids: string[]): Promise<Record<string, Profile>> {
 /* ---------------- TIME FORMAT ---------------- */
 
 function getTimeAgo(dateString: string) {
-  const date = new Date(dateString);
-  const diff = Date.now() - date.getTime();
+  const diff = Date.now() - parseTimestamp(dateString);
   const mins = Math.floor(diff / 60000);
   const hrs = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);

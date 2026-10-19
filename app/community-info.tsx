@@ -30,7 +30,8 @@ async function loadCommunity(id: string): Promise<{ community: Community; member
     ]);
     if (communityRes.error) throw communityRes.error;
     if (membersRes.error) throw membersRes.error;
-    if (!communityRes.data) throw new Error("Community not found");
+    // A missing community can come back as a row of nulls rather than null.
+    if (!communityRes.data?.id) throw new Error("Community not found");
 
     const members = await Promise.all(
         (membersRes.data ?? []).map(async (m): Promise<Member> => {
@@ -80,7 +81,7 @@ export default function CommunityInfo() {
         if (myRole === "owner") {
             Alert.alert(
                 "You're the owner",
-                "Transfer ownership to another member before leaving this community."
+                "Owners can't leave a community yet."
             );
             return;
         }

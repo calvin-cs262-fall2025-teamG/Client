@@ -22,6 +22,12 @@ export async function saveLastRead(userId: string, map: LastReadMap): Promise<vo
   }
 }
 
+// PostgREST sends microseconds ("…:00.123456+00:00"), which Hermes may not
+// parse. Keep at most 3 fractional digits before handing it to Date.parse.
+export function parseTimestamp(iso: string): number {
+  return Date.parse(iso.replace(/(\.\d{3})\d+/, "$1"));
+}
+
 export function isUnread(
   lastRead: LastReadMap,
   chatKey: string,
@@ -30,5 +36,5 @@ export function isUnread(
 ): boolean {
   if (!latest || latest.sender_id === myId) return false;
   const seen = lastRead[chatKey];
-  return !seen || Date.parse(latest.created_at) > Date.parse(seen);
+  return !seen || parseTimestamp(latest.created_at) > parseTimestamp(seen);
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, Text } from "react-native";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { DatabaseProvider, useDatabase } from "../context/DatabaseContext";
 import * as api from "../services/supabase_api";
 
@@ -127,4 +127,23 @@ it("fetches a profile once and keeps it by uuid", async () => {
   await fireEvent.press(screen.getByLabelText("fetch u2"));
   expect(api.profiles.getById).toHaveBeenCalledTimes(1);
   expect(api.profiles.getById).toHaveBeenCalledWith("u2");
+});
+it("treats an all-null profile row as not found and doesn't cache it", async () => {
+  // get_profile returns a row of nulls when no profile has that id
+  mocked(api.profiles.getById).mockImplementation(() =>
+    ok({ id: null, display_name: null, avatar_path: null, created_at: null, updated_at: null })
+  );
+
+  await render(<DatabaseProvider><Probe /></DatabaseProvider>);
+  await screen.findByText("communities:Calvin Seniors,Knollcrest");
+
+  await fireEvent.press(screen.getByLabelText("fetch u2"));
+  await act(async () => {});
+  expect(screen.getByText("known:")).toBeTruthy();
+
+  // Not cached, so the next request asks the server again
+  await fireEvent.press(screen.getByLabelText("fetch u2"));
+  await act(async () => {});
+  expect(api.profiles.getById).toHaveBeenCalledTimes(2);
+  expect(screen.getByText("known:")).toBeTruthy();
 });

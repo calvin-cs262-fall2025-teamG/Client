@@ -153,7 +153,8 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
 
     const request = Promise.resolve(profiles.getById(id)).then((res) => {
       inflightProfiles.current.delete(id);
-      if (res.error || !res.data) return null;
+      // A missing profile can come back as a row of nulls, so check the id too.
+      if (res.error || !res.data?.id) return null;
       const found = res.data as Profile;
       profileCache.current[id] = found;
       setProfilesById((prev) => ({ ...prev, [id]: found }));

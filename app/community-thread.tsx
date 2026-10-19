@@ -8,7 +8,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { community_messages, profiles, type CommunityMessage } from "../services/supabase_api";
-import { loadLastRead, saveLastRead } from "../services/readState";
+import { loadLastRead, parseTimestamp, saveLastRead } from "../services/readState";
 
 export default function CommunityThread() {
     const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
@@ -79,7 +79,7 @@ export default function CommunityThread() {
     };
 
     const formatTime = (iso: string) =>
-        new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        new Date(parseTimestamp(iso)).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
     const renderMessage = ({ item }: { item: CommunityMessage }) => {
         const mine = item.sender_id === myId;
