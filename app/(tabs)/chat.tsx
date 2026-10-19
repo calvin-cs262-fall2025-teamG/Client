@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -14,10 +14,23 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { messages as messagesApi, users as usersApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { useDatabase } from "../../context/DatabaseContext";
 import type { ImageSourcePropType } from "react-native";
-import { getMyCommunities, type CommunitySummary } from "../../services/chat";
+import {
+  community_messages,
+  direct_messages,
+  profiles,
+  type CommunityMessage,
+  type DirectMessage,
+  type Profile,
+} from "../../services/supabase_api";
+import {
+  isUnread,
+  loadLastRead,
+  saveLastRead,
+  type LastReadMap,
+} from "../../services/readState";
 
 /* ---------------- AVATAR MAP ---------------- */
 
@@ -30,19 +43,6 @@ const avatarMap: Record<string, any> = {
   "laila.png": require("../../assets/images/laila.png"),
   "chloe.png": require("../../assets/images/chloe.png"),
 };
-
-/* ---------------- TYPES ---------------- */
-
-interface ChatPreview {
-  message_id: number;
-  other_user_id: number;
-  other_user_name: string;
-  other_user_avatar: string | null;
-  content: string;
-  sent_at: string;
-  sender_id: number;
-  receiver_id: number;
-}
 
 /* ---------------- HELPERS ---------------- */
 
@@ -59,6 +59,25 @@ function resolveImageSource(
 
   const lower = trimmed.toLowerCase();
   return avatarMap[lower];
+}
+
+const otherUserId = (message: DirectMessage, myId: string) =>
+  message.sender_id === myId ? message.receiver_id : message.sender_id;
+
+// A failed lookup leaves the id out, so the row falls back to "Unknown".
+async function loadProfiles(ids: string[]): Promise<Record<string, Profile>> {
+  const results = await Promise.all(
+    ids.map(async (id) => {
+      const { data, error } = await profiles.getById(id);
+      if (error) console.error(`Failed to load profile ${id}:`, error);
+      return data;
+    }),
+  );
+  const byId: Record<string, Profile> = {};
+  results.forEach((p) => {
+    if (p) byId[p.id] = p;
+  });
+  return byId;
 }
 
 /* ---------------- TIME FORMAT ---------------- */
@@ -81,106 +100,116 @@ function getTimeAgo(dateString: string) {
 export default function Chat() {
   const router = useRouter();
   const { user } = useAuth();
+  const { myCommunities, refresh: refreshDatabase } = useDatabase();
+  const userId = user?.id;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [chats, setChats] = useState<ChatPreview[]>([]);
+  // Latest message of each DM conversation, newest first
+  const [chats, setChats] = useState<DirectMessage[]>([]);
+  const [latestByCommunity, setLatestByCommunity] = useState<
+    Record<string, CommunityMessage>
+  >({});
+  const [people, setPeople] = useState<Record<string, Profile>>({});
+  const [lastRead, setLastRead] = useState<LastReadMap>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [avatarCache, setAvatarCache] = useState<Record<number, string>>({});
-  const [communities, setCommunities] = useState<CommunitySummary[]>([]);
+  const requestId = useRef(0);
 
   /* -------- LOAD CHATS -------- */
 
-  const userId = user?.user_id;
-
   const loadChats = useCallback(async () => {
-    if (!userId) return;
-
-    try {
-      setCommunities(await getMyCommunities());
-    } catch (error) {
-      console.error("Failed to load communities:", error);
+    if (!userId) {
+      setLoading(false);
+      return;
     }
+    const id = ++requestId.current;
 
     try {
-      const data: any = await messagesApi.getUserMessages(userId);
+      const [conversations, latest, read] = await Promise.all([
+        direct_messages.getConversations(),
+        Promise.all(
+          myCommunities.map((c) =>
+            community_messages.getByCommunity(c.id, { limit: 1 }),
+          ),
+        ),
+        loadLastRead(userId),
+      ]);
+      if (conversations.error) throw conversations.error;
 
-      // Sort chats by most recent first
-      const sortedChats = data.sort((a: ChatPreview, b: ChatPreview) => {
-        return new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime();
-      });
-
-      setChats(sortedChats);
-
-      // Load avatars for ALL users to ensure we have them
-      const avatarPromises = data.map(async (chat: ChatPreview) => {
-        try {
-          const userData: any = await usersApi.getById(chat.other_user_id);
-          return {
-            userId: chat.other_user_id,
-            avatar: userData?.profile_picture,
-          };
-        } catch (error) {
-          console.error(
-            `Failed to load avatar for user ${chat.other_user_id}:`,
-            error,
-          );
-          return null;
+      const dms = conversations.data ?? [];
+      const latestMap: Record<string, CommunityMessage> = {};
+      latest.forEach((result, i) => {
+        if (result.error) {
+          console.error("Failed to load community messages:", result.error);
+          return;
         }
+        const newest = result.data?.[0];
+        if (newest) latestMap[myCommunities[i].id] = newest;
       });
 
-      const avatarResults = await Promise.all(avatarPromises);
-      const newAvatarCache: Record<number, string> = {};
+      const ids = new Set<string>();
+      dms.forEach((m) => ids.add(otherUserId(m, userId)));
+      Object.values(latestMap).forEach((m) => ids.add(m.sender_id));
+      ids.delete(userId);
+      const profileMap = await loadProfiles([...ids]);
 
-      avatarResults.forEach((result) => {
-        if (result && result.avatar) {
-          newAvatarCache[result.userId] = result.avatar;
-        }
-      });
-
-      setAvatarCache((prev) => ({ ...prev, ...newAvatarCache }));
+      if (id !== requestId.current) return;
+      setChats(dms);
+      setLatestByCommunity(latestMap);
+      setPeople(profileMap);
+      setLastRead(read);
     } catch (error) {
       console.error("Failed to load chats:", error);
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
-  }, [userId]);
+  }, [userId, myCommunities]);
 
-  useEffect(() => {
-    // Loader only sets state after awaiting the API, so this doesn't cascade renders
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadChats();
-  }, [loadChats]);
-
+  // Runs on mount and on every return to this tab, so new messages and
+  // read state saved by a thread screen show up.
   useFocusEffect(
     useCallback(() => {
-      getMyCommunities()
-        .then(setCommunities)
-        .catch((e) => console.error("Failed to refresh communities:", e));
-    }, [])
+      void loadChats();
+    }, [loadChats]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadChats();
+    await Promise.all([refreshDatabase(), loadChats()]);
     setRefreshing(false);
+  };
+
+  // Opening a DM shows its newest message, so record it as seen right away.
+  const markDmRead = async (otherId: string, createdAt: string) => {
+    if (!userId) return;
+    const key = `dm:${otherId}`;
+    setLastRead((prev) => ({ ...prev, [key]: createdAt }));
+    // Reload before saving so a thread's own save isn't overwritten.
+    const saved = await loadLastRead(userId);
+    await saveLastRead(userId, { ...saved, [key]: createdAt });
   };
 
   /* -------- FILTER -------- */
 
+  const nameOf = useCallback(
+    (id: string) => people[id]?.display_name ?? "Unknown",
+    [people],
+  );
+
   const filteredChats = useMemo(() => {
+    if (!userId) return [];
     const q = searchQuery.toLowerCase();
     return chats.filter(
       (chat) =>
-        chat.other_user_name.toLowerCase().includes(q) ||
+        nameOf(otherUserId(chat, userId)).toLowerCase().includes(q) ||
         chat.content.toLowerCase().includes(q),
     );
-  }, [searchQuery, chats]);
+  }, [searchQuery, chats, nameOf, userId]);
 
   const filteredCommunities = useMemo(() => {
     const q = searchQuery.toLowerCase();
-    return communities.filter((c) => c.name.toLowerCase().includes(q));
-  }, [searchQuery, communities]);
+    return myCommunities.filter((c) => c.name.toLowerCase().includes(q));
+  }, [searchQuery, myCommunities]);
 
   /* -------- LOADING -------- */
 
@@ -195,6 +224,8 @@ export default function Chat() {
       </SafeAreaView>
     );
   }
+
+  const myId = userId ?? "";
 
   /* ---------------- RENDER ---------------- */
 
@@ -222,36 +253,43 @@ export default function Chat() {
         {filteredCommunities.length > 0 && (
           <View>
             <Text style={styles.sectionHeader}>Communities</Text>
-            {filteredCommunities.map((c) => (
-              <TouchableOpacity
-                key={c.id}
-                style={styles.chatItem}
-                onPress={() =>
-                  router.push({
-                    pathname: "/community-thread",
-                    params: { id: c.id, name: c.name },
-                  })
-                }
-              >
-                <View style={[styles.avatarImage, styles.communityIcon]}>
-                  <Ionicons name="people" size={26} color="#fff" />
-                </View>
-                <View style={styles.chatContent}>
-                  <View style={styles.chatHeader}>
-                    <Text style={styles.chatName}>{c.name}</Text>
-                    {c.last_message && (
-                      <Text style={styles.chatTime}>{getTimeAgo(c.last_message.created_at)}</Text>
-                    )}
+            {filteredCommunities.map((c) => {
+              const last = latestByCommunity[c.id] ?? null;
+              const unread = isUnread(lastRead, `community:${c.id}`, last, myId);
+              const sender = last
+                ? last.sender_id === myId
+                  ? "You"
+                  : nameOf(last.sender_id)
+                : null;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={styles.chatItem}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/community-thread",
+                      params: { id: c.id, name: c.name },
+                    })
+                  }
+                >
+                  <View style={[styles.avatarImage, styles.communityIcon]}>
+                    <Ionicons name="people" size={26} color="#fff" />
                   </View>
-                  <Text style={styles.lastMessage} numberOfLines={1}>
-                    {c.last_message
-                      ? `${c.last_message.sender_name}: ${c.last_message.content}`
-                      : "No messages yet"}
-                  </Text>
-                </View>
-                {c.unread_count > 0 && <View style={styles.unreadDot} />}
-              </TouchableOpacity>
-            ))}
+                  <View style={styles.chatContent}>
+                    <View style={styles.chatHeader}>
+                      <Text style={styles.chatName}>{c.name}</Text>
+                      {last && (
+                        <Text style={styles.chatTime}>{getTimeAgo(last.created_at)}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.lastMessage} numberOfLines={1}>
+                      {last ? `${sender}: ${last.content}` : "No messages yet"}
+                    </Text>
+                  </View>
+                  {unread && <View style={styles.unreadDot} />}
+                </TouchableOpacity>
+              );
+            })}
             <Text style={styles.sectionHeader}>Recent messages</Text>
           </View>
         )}
@@ -269,27 +307,28 @@ export default function Chat() {
           </View>
         ) : (
           filteredChats.map((chat) => {
-            // Prioritize cached avatar (full URL) over chat data (filename only)
-            const avatarKey =
-              avatarCache[chat.other_user_id] || chat.other_user_avatar;
+            const otherId = otherUserId(chat, myId);
+            const otherName = nameOf(otherId);
+            const avatarKey = people[otherId]?.avatar_path ?? null;
             const avatarSource = resolveImageSource(avatarKey);
-            const initial =
-              chat.other_user_name?.trim()?.[0]?.toUpperCase() ?? "?";
+            const initial = otherName.trim()[0]?.toUpperCase() ?? "?";
+            const unread = isUnread(lastRead, `dm:${otherId}`, chat, myId);
 
             return (
               <TouchableOpacity
-                key={chat.message_id}
+                key={chat.id}
                 style={styles.chatItem}
-                onPress={() =>
+                onPress={() => {
+                  void markDmRead(otherId, chat.created_at);
                   router.push({
                     pathname: "/chat-thread",
                     params: {
-                      id: chat.other_user_id,
-                      name: chat.other_user_name,
+                      id: otherId,
+                      name: otherName,
                       avatar: avatarKey ?? "",
                     },
-                  })
-                }
+                  });
+                }}
               >
                 {avatarSource ? (
                   <Image source={avatarSource} style={styles.avatarImage} />
@@ -301,17 +340,18 @@ export default function Chat() {
 
                 <View style={styles.chatContent}>
                   <View style={styles.chatHeader}>
-                    <Text style={styles.chatName}>{chat.other_user_name}</Text>
+                    <Text style={styles.chatName}>{otherName}</Text>
                     <Text style={styles.chatTime}>
-                      {getTimeAgo(chat.sent_at)}
+                      {getTimeAgo(chat.created_at)}
                     </Text>
                   </View>
 
                   <Text style={styles.lastMessage} numberOfLines={1}>
-                    {chat.sender_id === user?.user_id ? "You: " : ""}
+                    {chat.sender_id === myId ? "You: " : ""}
                     {chat.content}
                   </Text>
                 </View>
+                {unread && <View style={styles.unreadDot} />}
               </TouchableOpacity>
             );
           })
