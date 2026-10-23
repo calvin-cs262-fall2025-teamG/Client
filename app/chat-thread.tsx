@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,8 +13,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
-import { messages as messagesApi, users as usersApi } from "../services/api";
+import { useDatabase } from "../context/DatabaseContext";
+import {
+  direct_messages,
+  type DirectMessage,
+  type Profile,
+} from "../services/supabase_api";
+import {
+  loadLastRead,
+  parseTimestamp,
+  saveLastRead,
+} from "../services/readState";
 
 const avatarMap: Record<string, any> = {
   "helen.png": require("../assets/images/helen.png"),
@@ -42,60 +54,57 @@ function resolveImageSource(
   return imageMap[lower];
 }
 
-interface Message {
-  message_id: number;
-  sender_id: number;
-  receiver_id: number;
-  item_id?: number;
-  content: string;
-  sent_at: string;
-}
-
 export default function ChatThread() {
-  const [fetchedAvatar, setFetchedAvatar] = useState<string | null>(null);
+  const [otherProfile, setOtherProfile] = useState<Profile | null>(null);
 
-  const { id, name, avatar } = useLocalSearchParams<{
+  const { id, name, avatar, draft, itemId } = useLocalSearchParams<{
     id?: string;
     name?: string;
     avatar?: string;
+    draft?: string;
+    itemId?: string;
   }>();
 
   const router = useRouter();
   const { user } = useAuth();
+  const { getProfile } = useDatabase();
   const scrollViewRef = useRef<ScrollView>(null);
+  // Attach the item to the first message sent from this screen only
+  const pendingItemIdRef = useRef(itemId || undefined);
 
-  const otherUserId = id ? Number(id) : null;
-  // Use avatar from params first, otherwise the one loaded from the API
-  const otherAvatar = avatar?.trim() ? avatar : fetchedAvatar;
+  const otherUserId = id || null;
+  // Use name and avatar from params first, otherwise the loaded profile's
+  const otherName = name?.trim() ? name : otherProfile?.display_name;
+  const otherAvatar = avatar?.trim() ? avatar : otherProfile?.avatar_path;
   const otherAvatarSource = resolveImageSource(otherAvatar, avatarMap);
   const headerInitial =
-    String(name || "Chat")
+    String(otherName || "Chat")
       .trim()
       .charAt(0)
       .toUpperCase() || "?";
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState("");
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  // A draft from the route only prefills the input; nothing is sent automatically
+  const [inputText, setInputText] = useState(draft ?? "");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
   // Load messages between current user and other user
-  const userId = user?.user_id;
+  const userId = user?.id;
 
   const loadMessages = useCallback(async () => {
     if (!userId || !otherUserId) return;
 
     try {
-      const allMessages: any = await messagesApi.getAll();
+      const { data, error } = await direct_messages.getConversation(otherUserId);
+      if (error) throw error;
 
-      // Filter messages between these two users
-      const filtered = allMessages.filter(
-        (msg: Message) =>
-          (msg.sender_id === userId && msg.receiver_id === otherUserId) ||
-          (msg.sender_id === otherUserId && msg.receiver_id === userId)
+      // Oldest first
+      const sorted = [...(data ?? [])].sort(
+        (a, b) => parseTimestamp(a.created_at) - parseTimestamp(b.created_at),
       );
 
-      setMessages(filtered);
+      setMessages(sorted);
     } catch (error) {
       console.error("Failed to load messages:", error);
     } finally {
@@ -117,36 +126,50 @@ export default function ChatThread() {
   }, [messages]);
 
   useEffect(() => {
-    // Avatar passed in via params; no need to fetch
-    if (avatar?.trim() || !otherUserId) return;
+    if (!otherUserId) return;
 
     const loadOtherUser = async () => {
       try {
-        const u: any = await usersApi.getById(otherUserId);
-        console.log("OTHER USER profile_picture:", u?.profile_picture);
-        setFetchedAvatar(u?.profile_picture ?? null);
+        setOtherProfile(await getProfile(otherUserId));
       } catch (e) {
         console.error("Failed to load other user:", e);
       }
     };
 
     loadOtherUser();
-  }, [otherUserId, avatar]);
+  }, [otherUserId, getProfile]);
+
+  // Record the newest message on screen as seen, on load and after sending.
+  const newest = messages[messages.length - 1]?.created_at;
+  useEffect(() => {
+    if (!userId || !otherUserId || !newest) return;
+    const key = `dm:${otherUserId}`;
+    loadLastRead(userId)
+      .then((map) => saveLastRead(userId, { ...map, [key]: newest }))
+      .catch((e) => console.error("Failed to save read state:", e));
+  }, [userId, otherUserId, newest]);
 
   const handleSend = async () => {
-    if (!inputText.trim() || !user?.user_id || !otherUserId || sending) return;
+    const content = inputText.trim();
+    if (!content || !userId || !otherUserId || sending) return;
 
     setSending(true);
 
     try {
-      await messagesApi.create({
-        sender_id: user.user_id,
+      const pendingItemId = pendingItemIdRef.current;
+      const { data, error } = await direct_messages.create({
         receiver_id: otherUserId,
-        content: inputText.trim(),
+        content,
+        ...(pendingItemId ? { item_id: pendingItemId } : {}),
       });
+      if (error) throw error;
+      pendingItemIdRef.current = undefined;
 
-      // Reload messages to get the new one
-      await loadMessages();
+      if (data) {
+        setMessages((prev) =>
+          prev.some((m) => m.id === data.id) ? prev : [...prev, data],
+        );
+      }
 
       setInputText("");
     } catch (error) {
@@ -157,8 +180,8 @@ export default function ChatThread() {
   };
 
   // Format timestamp
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatTime = (createdAt: string) => {
+    const date = new Date(parseTimestamp(createdAt));
     const now = new Date();
 
     const startOfToday = new Date(
@@ -207,7 +230,7 @@ export default function ChatThread() {
             )}
 
             <View>
-              <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+              <Text style={styles.headerTitle}>{otherName || "Chat"}</Text>
               <Text style={styles.headerSubtitle}>Active now</Text>
             </View>
           </View>
@@ -241,7 +264,7 @@ export default function ChatThread() {
           )}
 
           <View>
-            <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+            <Text style={styles.headerTitle}>{otherName || "Chat"}</Text>
             <Text style={styles.headerSubtitle}>Active now</Text>
           </View>
         </View>
@@ -270,10 +293,10 @@ export default function ChatThread() {
             </View>
           ) : (
             messages.map((msg) => {
-              const isUser = msg.sender_id === user?.user_id;
+              const isUser = msg.sender_id === user?.id;
 
               return (
-                <View key={msg.message_id}>
+                <View key={msg.id}>
                   <View
                     style={[
                       styles.messageBubble,
@@ -296,7 +319,7 @@ export default function ChatThread() {
                       isUser ? styles.timestampRight : styles.timestampLeft,
                     ]}
                   >
-                    {formatTime(msg.sent_at)}
+                    {formatTime(msg.created_at)}
                   </Text>
                 </View>
               );

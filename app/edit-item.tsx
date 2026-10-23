@@ -15,7 +15,20 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { items } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { useDatabase } from "../context/DatabaseContext";
+import { items as itemsApi } from "../services/supabase_api";
+
+type ItemStatus = "available" | "pending" | "borrowed";
+
+const ITEM_STATUSES: ItemStatus[] = ["available", "pending", "borrowed"];
+
+// Status is read-only here: the borrowing workflow (approve / return) sets it
+const STATUS_LABELS: Record<ItemStatus, string> = {
+  available: "Available",
+  pending: "Pending request",
+  borrowed: "Borrowed",
+};
 
 export default function EditItem() {
   const router = useRouter();
@@ -27,12 +40,16 @@ export default function EditItem() {
     image?: string;
   }>();
 
-  const id = params.id ? Number(params.id) : null;
+  const id = params.id || null;
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { updateItem, deleteItem } = useDatabase();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [status, setStatus] = useState<"available" | "borrowed">("available"); // ADD THIS
+  const [status, setStatus] = useState<ItemStatus | null>(null);
+  const [notOwner, setNotOwner] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,14 +63,26 @@ export default function EditItem() {
       }
 
       try {
-        const item: any = await items.getById(id);
+        const { data: item, error } = await itemsApi.getById(id);
+        if (error) throw error;
+        // A missing item can come back as a row of nulls, so check the id too.
+        if (!item?.id) throw new Error(`Item ${id} not found`);
+
+        if (item.owner_id !== userId) {
+          setNotOwner(true);
+          Alert.alert("Error", "You can only edit your own items.");
+          router.back();
+          return;
+        }
+
         setTitle(item.name || "");
         setDescription(item.description || "");
         setCategory(item.category || "");
-        setImageUrl(item.image_url || "");
-        // Set status based on request_status from database
+        setImageUrl(item.image_path || "");
         setStatus(
-          item.request_status === "available" ? "available" : "borrowed",
+          ITEM_STATUSES.includes(item.status as ItemStatus)
+            ? (item.status as ItemStatus)
+            : "available",
         );
       } catch (error) {
         console.error("Failed to load item:", error);
@@ -64,7 +93,7 @@ export default function EditItem() {
     };
 
     loadItem();
-  }, [id]);
+  }, [id, userId, router]);
 
   const handleSave = async () => {
     if (!id) {
@@ -80,11 +109,10 @@ export default function EditItem() {
     setSaving(true);
 
     try {
-      await items.update(id, {
+      await updateItem(id, {
         name: title.trim(),
         description: description.trim(),
         category: category.trim() || undefined,
-        request_status: status, // Save the status
       });
 
       Alert.alert("Success", "Item updated successfully!", [
@@ -132,7 +160,7 @@ export default function EditItem() {
 
     setSaving(true);
     try {
-      await items.delete(id);
+      await deleteItem(id);
       if (Platform.OS === "web") {
         window.alert("Item removed successfully.");
         router.back();
@@ -173,6 +201,11 @@ export default function EditItem() {
     );
   }
 
+  // Leaving the screen; don't show another user's item in the form meanwhile
+  if (notOwner) {
+    return <SafeAreaView style={styles.safeArea} edges={["top"]} />;
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Back button header */}
@@ -194,6 +227,19 @@ export default function EditItem() {
           />
         )}
 
+        {status && (
+          <View style={styles.statusSection}>
+            <Text style={styles.label}>Item Status</Text>
+            <Text style={styles.statusText}>{STATUS_LABELS[status]}</Text>
+            {status === "pending" && (
+              <Text style={styles.statusHint}>
+                A borrow request is waiting on this item. Approve or decline it
+                from your Profile.
+              </Text>
+            )}
+          </View>
+        )}
+
         <Text style={styles.label}>Title *</Text>
         <TextInput
           value={title}
@@ -211,63 +257,6 @@ export default function EditItem() {
           style={styles.input}
           editable={!saving}
         />
-
-        {/* STATUS TOGGLE */}
-        <View style={styles.statusSection}>
-          <Text style={styles.label}>Item Status</Text>
-          <View style={styles.statusToggle}>
-            <TouchableOpacity
-              style={[
-                styles.statusButton,
-                status === "available" && styles.statusActive,
-              ]}
-              onPress={() => setStatus("available")}
-              disabled={saving}
-            >
-              <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color={status === "available" ? "#16a34a" : "#9ca3af"}
-              />
-              <Text
-                style={[
-                  styles.statusText,
-                  status === "available" && styles.statusTextActive,
-                ]}
-              >
-                Available
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.statusButton,
-                status === "borrowed" && styles.statusActive,
-              ]}
-              onPress={() => setStatus("borrowed")}
-              disabled={saving}
-            >
-              <Ionicons
-                name="time"
-                size={20}
-                color={status === "borrowed" ? "#f97316" : "#9ca3af"}
-              />
-              <Text
-                style={[
-                  styles.statusText,
-                  status === "borrowed" && styles.statusTextActive,
-                ]}
-              >
-                Borrowed
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.statusHint}>
-            {status === "available"
-              ? "Item is ready to lend out"
-              : "Item is currently borrowed by someone"}
-          </Text>
-        </View>
 
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -372,40 +361,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  // Status toggle styles
+  // Status styles
   statusSection: {
     marginTop: 8,
     marginBottom: 4,
-  },
-  statusToggle: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-  statusButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f9fafb",
-  },
-  statusActive: {
-    borderColor: "#f97316",
-    backgroundColor: "#fff7ed",
   },
   statusText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#6b7280",
-  },
-  statusTextActive: {
-    color: "#f97316",
   },
   statusHint: {
     marginTop: 6,

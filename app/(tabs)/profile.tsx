@@ -14,37 +14,23 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
-import { items as itemsApi, users as usersApi } from "../../services/api";
-import type { User } from "../../services/authServices";
-import { getBookmarkCount } from "../../services/bookmarkCount";
+import { useDatabase } from "../../context/DatabaseContext";
 import BookmarkButton from "../components/BookmarkButton";
 
-type ApiItem = {
-  item_id: number;
-  name: string;
-  description?: string;
-  image_url?: string | null;
-  category?: string | null;
-  owner_id: number;
-  request_status?: string;
-};
-
 type ItemCard = {
-  id: number;
+  id: string;
   name: string;
-  count: number;
   image: string | null;
   category: string;
   status: string;
 };
 
 export default function Profile() {
-  const [loadedListings, setListings] = useState<ItemCard[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const { logout, user } = useAuth();
+  const { profile, myItems, incomingRequests, refresh } = useDatabase();
   const router = useRouter();
-  const [fullUser, setFullUser] = useState<User | null>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -55,66 +41,39 @@ export default function Profile() {
     await AsyncStorage.removeItem("userItems");
   }, []);
 
-  const userId = user?.user_id;
-
-  const loadProfileUser = useCallback(async () => {
-    if (!userId) return;
-    console.log("Loading profile for user:", userId);
-    const u = await usersApi.getById(userId);
-    console.log("Loaded user:", u);
-    setFullUser(u as User);
-  }, [userId]);
-
-  const loadMyItems = useCallback(async () => {
-    if (!userId) return;
-
-    console.log("Loading items for user:", userId);
-    const all = (await itemsApi.getAll()) as ApiItem[];
-    const mine = all.filter((it) => it.owner_id === userId);
-
-    // Load bookmark counts for each item
-    const itemsWithCounts = await Promise.all(
-      mine.map(async (it) => {
-        const bookmarkCount = await getBookmarkCount(it.item_id);
-        return {
-          id: it.item_id,
-          name: it.name,
-          count: bookmarkCount,
-          image: it.image_url ?? null,
-          category: it.category ?? "",
-          status: it.request_status ?? "available",
-        };
-      }),
-    );
-
-    setListings(itemsWithCounts);
-  }, [userId]);
-
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadProfileUser(), loadMyItems()]);
+    await refresh();
     setRefreshing(false);
   };
 
   useEffect(() => {
     clearOldHardcodedItems().catch(console.error);
-    // Loader only sets state after awaiting the API, so this doesn't cascade renders
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadProfileUser().catch(console.error);
-    loadMyItems().catch(console.error);
-  }, [loadProfileUser, loadMyItems]);
+  }, [clearOldHardcodedItems]);
 
-  // Reload items every time the screen comes into focus
+  // Refresh on focus: new requests and cancellations come from other people's
+  // devices, and deleting an item doesn't drop its requests from the context
   useFocusEffect(
     useCallback(() => {
-      void loadProfileUser();
-      void loadMyItems();
-    }, [loadProfileUser, loadMyItems])
+      void refresh();
+    }, [refresh])
   );
 
-  const listings = userId ? loadedListings : [];
-  const displayName = fullUser?.name ?? user?.name ?? "New User";
-  const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
+  const listings: ItemCard[] = user
+    ? myItems.map((it) => ({
+        id: it.id,
+        name: it.name,
+        image: it.image_path ?? null,
+        category: it.category ?? "",
+        status: it.status,
+      }))
+    : [];
+  const pendingRequestCount = incomingRequests.filter(
+    (r) => r.status === "pending",
+  ).length;
+  const displayName = profile?.display_name ?? user?.display_name ?? "New User";
+  const avatarPath = profile?.avatar_path ?? null;
+  const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -165,6 +124,30 @@ export default function Profile() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => router.push("/requests")}
+            activeOpacity={0.9}
+            accessibilityLabel={
+              pendingRequestCount > 0
+                ? `Requests, ${pendingRequestCount} pending`
+                : "Requests"
+            }
+          >
+            <View style={styles.requestsInner}>
+              <Text style={styles.editProfileText} numberOfLines={1}>
+                Requests
+              </Text>
+              {pendingRequestCount > 0 && (
+                <View style={styles.requestsBadge}>
+                  <Text style={styles.requestsBadgeText}>
+                    {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.smallHelpButton}
             onPress={() => router.push("/HelpList")}
             activeOpacity={0.9}
@@ -205,14 +188,17 @@ export default function Profile() {
             </View>
           ) : (
             listings.map((item) => {
-              const isBorrowed = item.status !== "available";
+              const isBorrowed = item.status === "borrowed";
+              const imageUrl = item.image?.startsWith("http")
+                ? item.image
+                : null;
 
               return (
                 <View key={item.id} style={styles.recommendedItem}>
                   <View style={styles.recommendedImageContainer}>
-                    {item.image ? (
+                    {imageUrl ? (
                       <Image
-                        source={{ uri: item.image }}
+                        source={{ uri: imageUrl }}
                         style={[
                           styles.recommendedImage,
                           isBorrowed && { opacity: 0.55 },
@@ -247,7 +233,7 @@ export default function Profile() {
                       onPress={() =>
                         router.push({
                           pathname: "/edit-item",
-                          params: { id: item.id.toString() },
+                          params: { id: item.id },
                         })
                       }
                       activeOpacity={0.9}
@@ -269,7 +255,7 @@ export default function Profile() {
 
                     <View style={styles.countRow}>
                       <BookmarkButton
-                        item={{ id: String(item.id), title: item.name }}
+                        item={{ id: item.id, title: item.name }}
                         size={16}
                         showCount={true}
                       />
@@ -365,6 +351,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#111827",
+  },
+
+  requestsInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  requestsBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  requestsBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   smallHelpButton: {

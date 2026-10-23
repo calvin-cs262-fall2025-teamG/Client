@@ -2,46 +2,43 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
-import { BASE_URL, users as usersApi } from "../../services/api";
-import type { User } from "../../services/authServices";
+import { useDatabase } from "../../context/DatabaseContext";
+import type { Profile } from "../../services/supabase_api";
 
 export default function ListerProfile() {
   const { name, id } = useLocalSearchParams<{ name: string; id?: string }>();
-  const userId = id ? Number(id) : NaN;
+  const userId = id || undefined;
+  const { getProfile } = useDatabase();
 
-  // Tag the fetched user with its id so loading is derived during render
+  // Tag the fetched profile with its id so loading is derived during render
   // instead of being reset with setState inside the effect.
-  const [result, setResult] = useState<{ id: number; user: User | null } | null>(
-    null
-  );
-  const loading = !Number.isNaN(userId) && result?.id !== userId;
-  const user = result?.id === userId ? result.user : null;
+  const [result, setResult] = useState<
+    { id: string; profile: Profile | null } | null
+  >(null);
+  const loading = !!userId && result?.id !== userId;
+  const profile = result && result.id === userId ? result.profile : null;
 
   useEffect(() => {
-    if (Number.isNaN(userId)) return;
+    if (!userId) return;
 
     let cancelled = false;
-    usersApi
-      .getById(userId)
-      .then((u) => {
-        if (!cancelled) setResult({ id: userId, user: u });
+    getProfile(userId)
+      .then((p) => {
+        if (!cancelled) setResult({ id: userId, profile: p });
       })
       .catch((e) => {
         console.error("Failed to load user:", e);
-        if (!cancelled) setResult({ id: userId, user: null });
+        if (!cancelled) setResult({ id: userId, profile: null });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, getProfile]);
 
-  const displayName = user?.name || name;
-  const avatarUrl = user?.profile_picture?.startsWith("http")
-    ? user.profile_picture
-    : user?.profile_picture
-      ? `${BASE_URL}/uploads/${user.profile_picture}`
-      : null;
+  const displayName = profile?.display_name || name;
+  const avatarPath = profile?.avatar_path ?? null;
+  const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
 
   return (
     <View style={styles.container}>
