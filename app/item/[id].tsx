@@ -14,7 +14,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
-import { items as itemsApi, messages as messagesApi } from "../../services/api";
+import { useDatabase } from "../../context/DatabaseContext";
+import {
+  direct_messages,
+  items as itemsApi,
+  type Item,
+  type Profile,
+} from "../../services/supabase_api";
 
 const imageMap: Record<string, any> = {
   // item images
@@ -73,31 +79,21 @@ function resolveImageSource(
   return imageMap[lower];
 }
 
-interface ItemDetails {
-  item_id: number;
-  name: string;
-  description?: string;
-  image_url?: string;
-  category?: string;
-  owner_id: number;
-  request_status: string;
-  start_date?: string;
-  end_date?: string;
-  owner_name?: string;
-  owner_avatar?: string;
-}
-
 export default function ItemDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  const numericId = Array.isArray(id) ? Number(id[0]) : Number(id);
+  const itemId = Array.isArray(id) ? id[0] : id;
 
-  const [item, setItem] = useState<ItemDetails | null>(null);
+  const [item, setItem] = useState<Item | null>(null);
+  const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const { user } = useAuth();
+  const { getProfile, myRequests, requestToBorrow } = useDatabase();
   const [sending, setSending] = useState(false);
+
+  const ownerName = owner?.display_name || "Neighbor";
 
   const sendBorrowRequestMessage = async () => {
     if (!user) {
@@ -110,18 +106,20 @@ export default function ItemDetail() {
     try {
       const content = `Hi! I’d love to borrow your ${item.name}.`;
 
-      await messagesApi.create({
-        sender_id: user.user_id,
+      await requestToBorrow(item.id);
+
+      const { error } = await direct_messages.create({
         receiver_id: item.owner_id,
         content,
-        item_id: item.item_id,
+        item_id: item.id,
       });
+      if (error) throw error;
 
       router.push({
         pathname: "/chat-thread",
         params: {
           id: item.owner_id,
-          name: item.owner_name || `User ${item.owner_id}`,
+          name: ownerName,
         },
       });
     } catch (e) {
@@ -135,32 +133,22 @@ export default function ItemDetail() {
     }
   };
 
-  // Load item from API
+  // Load item and its owner from Supabase
   useEffect(() => {
     const loadItem = async () => {
-      if (Number.isNaN(numericId)) {
+      if (!itemId) {
         setLoading(false);
         return;
       }
 
       try {
-        const data: any = await itemsApi.getById(numericId);
-
-        console.log("ITEM DETAILS RAW:", JSON.stringify(data, null, 2));
-
-        console.log("owner_avatar raw:", data.owner_avatar);
-        console.log(
-          "owner_avatar normalized:",
-          (data.owner_avatar ?? "").trim().toLowerCase(),
-        );
-
-        console.log("profile_picture raw:", data.profile_picture);
-        console.log(
-          "profile_picture normalized:",
-          (data.profile_picture ?? "").trim().toLowerCase(),
-        );
+        const { data, error } = await itemsApi.getById(itemId);
+        if (error) throw error;
+        // A missing item can come back as a row of nulls, so check the id too.
+        if (!data?.id) return;
 
         setItem(data);
+        setOwner(await getProfile(data.owner_id));
       } catch (error) {
         console.error("Failed to load item:", error);
       } finally {
@@ -169,7 +157,7 @@ export default function ItemDetail() {
     };
 
     loadItem();
-  }, [numericId]);
+  }, [itemId, getProfile]);
 
   if (loading) {
     return (
@@ -182,7 +170,7 @@ export default function ItemDetail() {
     );
   }
 
-  if (!item || Number.isNaN(numericId)) {
+  if (!item) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centerContainer}>
@@ -192,17 +180,13 @@ export default function ItemDetail() {
     );
   }
 
-  const isBorrowed = item.request_status !== "available";
-  const itemImageSource = resolveImageSource(item.image_url);
-
-  // try multiple possible fields for avatar coming from API
-  const avatarKey =
-    item.owner_avatar ??
-    (item as any).profile_picture ??
-    (item as any).owner_profile_picture ??
-    null;
-
-  const ownerAvatarSource = resolveImageSource(avatarKey);
+  const isBorrowed = item.status === "borrowed";
+  const isOwnItem = item.owner_id === user?.id;
+  const hasPendingRequest = myRequests.some(
+    (r) => r.item_id === item.id && r.status === "pending",
+  );
+  const itemImageSource = resolveImageSource(item.image_path);
+  const ownerAvatarSource = resolveImageSource(owner?.avatar_path);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -250,15 +234,13 @@ export default function ItemDetail() {
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarText}>
-                {item.owner_name?.charAt(0) || "?"}
+                {ownerName.charAt(0)}
               </Text>
             </View>
           )}
 
           <View style={styles.listerInfo}>
-            <Text style={styles.listerName}>
-              {item.owner_name || `User ${item.owner_id}`}
-            </Text>
+            <Text style={styles.listerName}>{ownerName}</Text>
           </View>
 
           <TouchableOpacity
@@ -268,7 +250,7 @@ export default function ItemDetail() {
                 pathname: "/chat-thread",
                 params: {
                   id: item.owner_id,
-                  name: item.owner_name || `User ${item.owner_id}`,
+                  name: ownerName,
                 },
               })
             }
@@ -278,10 +260,19 @@ export default function ItemDetail() {
         </View>
 
         {/* ACTION BUTTONS */}
-        {!isBorrowed ? (
+        {isBorrowed ? (
+          <View style={styles.borrowedContainer}>
+            <Text style={styles.borrowedText}>
+              This item is currently borrowed
+            </Text>
+          </View>
+        ) : isOwnItem ? null : (
           <TouchableOpacity
-            style={[styles.borrowButton, sending && { opacity: 0.6 }]}
-            disabled={sending}
+            style={[
+              styles.borrowButton,
+              (sending || hasPendingRequest) && { opacity: 0.6 },
+            ]}
+            disabled={sending || hasPendingRequest}
             onPress={() =>
               Alert.alert(
                 "Borrow Request",
@@ -297,15 +288,13 @@ export default function ItemDetail() {
             }
           >
             <Text style={styles.borrowText}>
-              {sending ? "Sending..." : "Request to Borrow"}
+              {sending
+                ? "Sending..."
+                : hasPendingRequest
+                  ? "Request sent"
+                  : "Request to Borrow"}
             </Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.borrowedContainer}>
-            <Text style={styles.borrowedText}>
-              This item is currently borrowed
-            </Text>
-          </View>
         )}
       </ScrollView>
     </SafeAreaView>
