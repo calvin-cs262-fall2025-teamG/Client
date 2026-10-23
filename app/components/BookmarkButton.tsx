@@ -28,7 +28,7 @@ export default function BookmarkButton({
   const [loading, setLoading] = useState(true);
 
   const loadBookmarkCount = useCallback(async () => {
-    const itemId = Number(item.id);
+    const itemId = item.id;
     const count = await getBookmarkCount(itemId);
     setBookmarkCount(count);
     setLoading(false);
@@ -45,7 +45,7 @@ export default function BookmarkButton({
   const handleToggle = async () => {
     if (!ctx || !user) return;
 
-    const itemId = Number(item.id);
+    const itemId = item.id;
     const wasBookmarked = ctx.isSaved(itemId);
 
     ctx.toggle(item);
@@ -69,7 +69,7 @@ export default function BookmarkButton({
     );
   }
 
-  const itemId = Number(item.id);
+  const itemId = item.id;
   const saved = ctx.isSaved(itemId);
 
   return (
