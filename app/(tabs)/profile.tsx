@@ -29,7 +29,7 @@ export default function Profile() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { logout, user } = useAuth();
-  const { profile, myItems, refresh } = useDatabase();
+  const { profile, myItems, incomingRequests, refresh } = useDatabase();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -51,8 +51,8 @@ export default function Profile() {
     clearOldHardcodedItems().catch(console.error);
   }, [clearOldHardcodedItems]);
 
-  // Refresh on focus: the create/edit item screens don't update the context yet,
-  // so this is how new or edited listings show up when you come back here
+  // Refresh on focus: new requests and cancellations come from other people's
+  // devices, and deleting an item doesn't drop its requests from the context
   useFocusEffect(
     useCallback(() => {
       void refresh();
@@ -68,6 +68,9 @@ export default function Profile() {
         status: it.status,
       }))
     : [];
+  const pendingRequestCount = incomingRequests.filter(
+    (r) => r.status === "pending",
+  ).length;
   const displayName = profile?.display_name ?? user?.display_name ?? "New User";
   const avatarPath = profile?.avatar_path ?? null;
   const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
@@ -118,6 +121,30 @@ export default function Profile() {
             <Text style={styles.editProfileText} numberOfLines={1}>
               Edit profile
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => router.push("/requests")}
+            activeOpacity={0.9}
+            accessibilityLabel={
+              pendingRequestCount > 0
+                ? `Requests, ${pendingRequestCount} pending`
+                : "Requests"
+            }
+          >
+            <View style={styles.requestsInner}>
+              <Text style={styles.editProfileText} numberOfLines={1}>
+                Requests
+              </Text>
+              {pendingRequestCount > 0 && (
+                <View style={styles.requestsBadge}>
+                  <Text style={styles.requestsBadgeText}>
+                    {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -324,6 +351,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#111827",
+  },
+
+  requestsInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  requestsBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  requestsBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   smallHelpButton: {

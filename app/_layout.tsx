@@ -18,6 +18,7 @@ export default function RootLayout() {
             <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
             <Stack.Screen name="item/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="chat-thread" options={{ headerShown: false }} />
+            <Stack.Screen name="requests" options={{ headerShown: false }} />
             <Stack.Screen name="HelpDetails" options={{ headerShown: false }} />
             <Stack.Screen name="HelpList" options={{ headerShown: false }} />
           </Stack>
