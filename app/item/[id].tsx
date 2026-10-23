@@ -16,7 +16,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import {
-  direct_messages,
   items as itemsApi,
   type Item,
   type Profile,
@@ -104,33 +103,28 @@ export default function ItemDetail() {
 
     setSending(true);
     try {
-      const content = `Hi! I’d love to borrow your ${item.name}.`;
-
       await requestToBorrow(item.id);
-
-      const { error } = await direct_messages.create({
-        receiver_id: item.owner_id,
-        content,
-        item_id: item.id,
-      });
-      if (error) throw error;
-
-      router.push({
-        pathname: "/chat-thread",
-        params: {
-          id: item.owner_id,
-          name: ownerName,
-        },
-      });
     } catch (e) {
-      console.error("Failed to send borrow request message:", e);
+      console.error("Failed to send borrow request:", e);
       Alert.alert(
         "Message failed",
         "Could not send your request. Please try again.",
       );
+      return;
     } finally {
       setSending(false);
     }
+
+    // The user reviews and sends the prefilled message themselves
+    router.push({
+      pathname: "/chat-thread",
+      params: {
+        id: item.owner_id,
+        name: ownerName,
+        draft: `Hi! I'd love to borrow your ${item.name}.`,
+        itemId: item.id,
+      },
+    });
   };
 
   // Load item and its owner from Supabase

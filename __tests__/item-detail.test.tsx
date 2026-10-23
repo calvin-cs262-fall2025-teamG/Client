@@ -81,7 +81,7 @@ it("shows currently borrowed for a borrowed item", async () => {
   expect(screen.queryByText("Request to Borrow")).toBeNull();
 });
 
-it("pressing Request sends the request and message, then opens the chat", async () => {
+it("pressing Request sends the request, then opens the chat with a draft", async () => {
   // Press the "Send Request" button in the confirmation alert
   jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons) => {
     buttons?.find((b) => b.text === "Send Request")?.onPress?.();
@@ -94,15 +94,33 @@ it("pressing Request sends the request and message, then opens the chat", async 
   await waitFor(() =>
     expect(mockPush).toHaveBeenCalledWith({
       pathname: "/chat-thread",
-      params: { id: "greg", name: "Greg" },
+      params: {
+        id: "greg",
+        name: "Greg",
+        draft: "Hi! I'd love to borrow your Drill.",
+        itemId: "item-1",
+      },
     })
   );
   expect(mockRequestToBorrow).toHaveBeenCalledWith("item-1");
-  expect(api.direct_messages.create).toHaveBeenCalledWith({
-    receiver_id: "greg",
-    content: "Hi! I’d love to borrow your Drill.",
-    item_id: "item-1",
+  expect(api.direct_messages.create).not.toHaveBeenCalled();
+});
+
+it("shows the failure alert and stays put when the request fails", async () => {
+  jest.spyOn(console, "error").mockImplementation(() => {});
+  const alert = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons) => {
+    buttons?.find((b) => b.text === "Send Request")?.onPress?.();
   });
+  mockRequestToBorrow.mockRejectedValue(new Error("nope"));
+  await render(<ItemDetail />);
+  await screen.findByText("Greg");
+
+  await fireEvent.press(screen.getByText("Request to Borrow"));
+
+  await waitFor(() =>
+    expect(alert).toHaveBeenCalledWith("Message failed", "Could not send your request. Please try again.")
+  );
+  expect(mockPush).not.toHaveBeenCalled();
 });
 
 it("hides the request button for your own item", async () => {
