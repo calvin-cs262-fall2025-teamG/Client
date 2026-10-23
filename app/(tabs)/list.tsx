@@ -1,11 +1,8 @@
-import * as FileSystem from "expo-file-system/legacy";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -13,55 +10,29 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
-import { BASE_URL, items as itemsApi } from "../../services/api";
+import { useDatabase } from "../../context/DatabaseContext";
 import PageContainer from "../components/PageContainer";
-import { items as itemsApi } from "../../services/api";
-import { uploadItemPhoto } from "../../services/uploads";
 
 export default function ListItem() {
   const router = useRouter();
   const { user } = useAuth();
+  const { myCommunities, createItem } = useDatabase();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
+    null,
+  );
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission required",
-          "Please grant photo library access.",
-        );
-      }
-    })();
-  }, []);
+  // With one community there is nothing to choose; with several the user picks
+  const communityId =
+    myCommunities.length === 1 ? myCommunities[0].id : selectedCommunityId;
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
-
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageUri) return null;
-
-    try {
-      return await uploadItemPhoto(imageUri);
-    } catch (error) {
-      console.error("Upload error:", error);
-      throw error;
-    }
+  // Photo upload returns with the Supabase Storage migration
+  const handleAddPhoto = () => {
+    Alert.alert("Coming soon", "Photo upload is being moved to the new server.");
   };
 
   const handleSubmit = async () => {
@@ -70,29 +41,33 @@ export default function ListItem() {
       return;
     }
 
-    if (!user?.user_id) {
+    if (!user?.id) {
       Alert.alert("Error", "You must be logged in to list an item.");
+      return;
+    }
+
+    if (myCommunities.length === 0) {
+      Alert.alert(
+        "Join a community first",
+        "Items are shared within a community, so join one before listing.",
+      );
+      return;
+    }
+
+    if (!communityId) {
+      Alert.alert("Community required", "Please choose a community for your item.");
       return;
     }
 
     try {
       setUploading(true);
 
-      let imageFilename = null;
-      if (imageUri) {
-        imageFilename = await uploadImage();
-      }
-
-      // Create item in database
-      await itemsApi.create({
+      // The server sets the owner to the signed-in user and status to "available"
+      await createItem({
+        community_id: communityId,
         name: title.trim(),
         description: description.trim() || undefined,
-        image_url: imageFilename || undefined,
         category: category.trim() || "Other",
-        owner_id: user.user_id,
-        request_status: "available",
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       });
 
       Alert.alert("Success", "Your item has been listed!", [
@@ -103,7 +78,7 @@ export default function ListItem() {
       setTitle("");
       setDescription("");
       setCategory("");
-      setImageUri(null);
+      setSelectedCommunityId(null);
     } catch (error) {
       console.error("Failed to create item:", error);
       Alert.alert("Error", "Failed to list item. Please try again.");
@@ -118,21 +93,13 @@ export default function ListItem() {
 
       <TouchableOpacity
         style={styles.imagePicker}
-        onPress={pickImage}
+        onPress={handleAddPhoto}
         disabled={uploading}
       >
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.imagePreview}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.addPhotoBox}>
-            <Text style={styles.addPhotoText}>Add a Photo</Text>
-            <Text style={styles.subText}>Tap to upload from your gallery</Text>
-          </View>
-        )}
+        <View style={styles.addPhotoBox}>
+          <Text style={styles.addPhotoText}>Add a Photo</Text>
+          <Text style={styles.subText}>Photos are coming soon</Text>
+        </View>
       </TouchableOpacity>
 
       <TextInput
@@ -162,6 +129,33 @@ export default function ListItem() {
         multiline
         editable={!uploading}
       />
+
+      {myCommunities.length > 1 && (
+        <View style={styles.communityList}>
+          <Text style={styles.communityLabel}>Community</Text>
+          {myCommunities.map((c) => {
+            const selected = c.id === selectedCommunityId;
+            return (
+              <TouchableOpacity
+                key={c.id}
+                style={[styles.input, selected && styles.communitySelected]}
+                onPress={() => setSelectedCommunityId(c.id)}
+                disabled={uploading}
+                accessibilityState={{ selected }}
+              >
+                <Text
+                  style={[
+                    styles.communityText,
+                    selected && styles.communityTextSelected,
+                  ]}
+                >
+                  {c.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       <TouchableOpacity
         style={[styles.button, uploading && styles.buttonDisabled]}
@@ -206,11 +200,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6b7280",
   },
-  imagePreview: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
   input: {
     backgroundColor: "#f9fafb",
     borderWidth: 1,
@@ -224,6 +213,26 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+  },
+  communityList: {
+    marginBottom: 4,
+  },
+  communityLabel: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginBottom: 6,
+  },
+  communitySelected: {
+    borderColor: "#f97316",
+    backgroundColor: "#fff7ed",
+  },
+  communityText: {
+    fontSize: 16,
+    color: "#111827",
+  },
+  communityTextSelected: {
+    fontWeight: "600",
+    color: "#f97316",
   },
   button: {
     backgroundColor: "#f97316",
