@@ -12,49 +12,48 @@ export default function AuthCallbackScreen() {
 		}>();
 	const router = useRouter();
 	const handled = useRef(false);
-	const [message, setMessage] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (handled.current) return;
-		handled.current = true;
-
-		const authCode = Array.isArray(code) ? code[0] : code;
+	
+	const authCode = Array.isArray(code) ? code[0] : code;
 		const authError = Array.isArray(error) ? error[0] : error;
 		const authErrorDescription = Array.isArray(errorDescription)
 			? errorDescription[0]
 			: errorDescription;
-
-		if (authError || !authCode) {
-			setMessage(
-				authErrorDescription ||
-					(authError
+	
+	const paramError = 
+		authError || !authCode
+			? authErrorDescription ||
+				(authError
 						? "This confirmation link is invalid or has expired."
-						: "The confirmation link is missing its sign-in code."),
-			);
-			return;
-		}
+            : "The confirmation link is missing its sign-in code.")
+      : null;
+	
+	const [exchangeMessage, setExchangeMessage] = useState<string | null>(null);
+	const message = paramError ?? exchangeMessage;
+
+	useEffect(() => {
+		if (paramError || !authCode || handled.current) return;
+		handled.current = true;
 
 		void supabase.auth
 			.exchangeCodeForSession(authCode)
 			.then(({ error: exchangeError, data }) => {
 				if (exchangeError || !data.session) {
-					setMessage(
+					setExchangeMessage(
 						exchangeError?.message ||
 							"This confirmation link is invalid or has expired.",
 					);
 					return;
 				}
-
 				router.replace("/(tabs)");
 			})
 			.catch((exchangeError: unknown) => {
-				setMessage(
+				setExchangeMessage(
 					exchangeError instanceof Error
 						? exchangeError.message
 						: "Unable to complete email confirmation.",
 				);
 			});
-	}, [code, error, errorDescription, router]);
+	}, [authCode, paramError, router]);
 
 	return (
 		<View style={styles.container}>
