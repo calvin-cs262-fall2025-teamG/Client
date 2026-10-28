@@ -1,3 +1,4 @@
+// import { Image } from "react-native";
 import { supabase } from "../app/utils/supabase";
 import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types";
 
@@ -20,12 +21,44 @@ export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_message
 
 export type CommunityMemberRole = "owner" | "admin" | "member";
 
+type ImageInput = { data: ArrayBuffer; ext?: string };
+
+async function uploadImage(bucket: string, path: string, img: ImageInput) {
+  const ext = img.ext ?? "jpg";
+  const fullPath = `${path}.${ext}`;
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(fullPath, img.data, { contentType: `image/${ext}`, upsert: true });
+  return { path: fullPath, error };
+}
+
+async function getCurrentUserId() {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+}
+
+async function removeFolder(bucket: string, folder: string) {
+  const { data } = await supabase.storage.from(bucket).list(folder);
+  if (data?.length) {
+    await supabase.storage.from(bucket).remove(data.map((file) => `${folder}/${file.name}`));
+  }
+}
+
 export const profiles = {
   getById: (id: string) => supabase.rpc("get_profile", { p_id: id }),
 
   getCurrent: () => supabase.rpc("get_my_profile"),
 
-  update: (data: UpdateProfileRequest) => supabase.rpc("update_my_profile", { p_data: data }),
+  update: async (data: UpdateProfileRequest, image?: ImageInput) => {
+    if (image) {
+      const userId = await getCurrentUserId();
+      if (!userId) return { data: null, error: new Error("Not signed in") };
+      const up = await uploadImage("profile-pictures", `${userId}/avatar`, image);
+      if (up.error) return { data: null, error: up.error };
+      data = { ...data, avatar_path: up.path };
+    }
+    return supabase.rpc("update_my_profile", { p_data: data });
+  },
 };
 
 export const communities = {
@@ -35,12 +68,29 @@ export const communities = {
 
   getById: (id: string) => supabase.rpc("get_community", { p_community_id: id }),
 
-  create: (data: CreateCommunityRequest) => supabase.rpc("create_community", { p_data: data }),
+  create: async (data: CreateCommunityRequest, image?: ImageInput) => {
+    const res = await supabase.rpc("create_community", { p_data: data });
+    if (!image || res.error) return res;
+    // community-images/{community_id}/...
+    const up = await uploadImage("community-images", `${res.data.id}/avatar`, image);
+    if (up.error) return { ...res, error: up.error };
+    return supabase.rpc("update_community", { p_community_id: res.data.id, p_data: { avatar_path: up.path } });
+  },
 
-  update: (id: string, data: UpdateCommunityRequest) =>
-    supabase.rpc("update_community", { p_community_id: id, p_data: data }),
+  update: async (id: string, data: UpdateCommunityRequest, image?: ImageInput) => {
+    if (image) {
+      const up = await uploadImage("community-images", `${id}/avatar`, image);
+      if (up.error) return { data: null, error: up.error };
+      data = { ...data, avatar_path: up.path };
+    }
+    return supabase.rpc("update_community", { p_community_id: id, p_data: data });
+  },
 
-  delete: (id: string) => supabase.rpc("delete_community", { p_community_id: id }),
+  delete: async (id: string) => {
+    // Storage policies require the community to exist, so clean up files first.
+    await removeFolder("community-images", id);
+    return supabase.rpc("delete_community", { p_community_id: id });
+  },
 };
 
 export const community_members = {
@@ -124,11 +174,33 @@ export const items = {
 
   getById: (id: string) => supabase.rpc("get_item", { p_item_id: id }),
 
-  create: (data: CreateItemRequest) => supabase.rpc("create_item", { p_data: data }),
+  create: async (data: CreateItemRequest, image?: ImageInput) => {
+    const res = await supabase.rpc("create_item", { p_data: data });
+    if (!image || res.error) return res;
+    // item-images/{owner_id}/{item_id}/...
+    const item = res.data as Item;
+    const up = await uploadImage("item-images", `${item.owner_id}/${item.id}/main`, image);
+    if (up.error) return { ...res, error: up.error };
+    return supabase.rpc("update_item", { p_item_id: item.id, p_data: { image_path: up.path } });
+  },
 
-  update: (id: string, data: UpdateItemRequest) => supabase.rpc("update_item", { p_item_id: id, p_data: data }),
+  update: async (id: string, data: UpdateItemRequest, image?: ImageInput) => {
+    if (image) {
+      const userId = await getCurrentUserId();
+      if (!userId) return { data: null, error: new Error("Not signed in") };
+      const up = await uploadImage("item-images", `${userId}/${id}/main`, image);
+      if (up.error) return { data: null, error: up.error };
+      data = { ...data, image_path: up.path };
+    }
+    return supabase.rpc("update_item", { p_item_id: id, p_data: data });
+  },
 
-  delete: (id: string) => supabase.rpc("delete_item", { p_item_id: id }),
+  delete: async (id: string) => {
+    const res = await supabase.rpc("delete_item", { p_item_id: id });
+    const userId = await getCurrentUserId();
+    if (!res.error && userId) await removeFolder("item-images", `${userId}/${id}`);
+    return res;
+  },
 };
 
 export const borrowing_requests = {
