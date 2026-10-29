@@ -2,11 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // bookmark counts are per-item, stored locally on this device.
 // not tied to a specific user - the count is a property of the item.
-function keyFor(itemId: number): string {
+function keyFor(itemId: string): string {
   return `bookmark-count:${itemId}`;
 }
 
-export async function getBookmarkCount(itemId: number): Promise<number> {
+export async function getBookmarkCount(itemId: string): Promise<number> {
   try {
     const stored = await AsyncStorage.getItem(keyFor(itemId));
     return stored ? parseInt(stored, 10) : 0;
@@ -19,7 +19,7 @@ export async function getBookmarkCount(itemId: number): Promise<number> {
 // call this right after toggling a bookmark - pass whether it WAS bookmarked
 // before the toggle, and this returns the new count after saving it
 export async function updateBookmarkCount(
-  itemId: number,
+  itemId: string,
   wasBookmarked: boolean,
   currentCount: number
 ): Promise<number> {

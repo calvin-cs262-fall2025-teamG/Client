@@ -11,19 +11,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { items as itemsApi } from "../../services/api";
+import { items as itemsApi, type Item } from "../../services/supabase_api";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
-type ApiItem = {
-  item_id: number;
-  name: string;
-  description?: string | null;
-  image_url?: string | null;
-  category?: string | null;
-  owner_id: number;
-  request_status?: string | null;
-};
 
 const imageMap: Record<string, any> = {
   "drill.jpg": require("../../assets/images/drill.jpg"),
@@ -50,13 +40,14 @@ export default function DiscoverScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const [items, setItems] = useState<ApiItem[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadItems = useCallback(async () => {
     try {
-      const data = (await itemsApi.getAll()) as ApiItem[];
+      const { data, error } = await itemsApi.getAll();
+      if (error) throw error;
       setItems(data ?? []);
     } catch (e) {
       console.error("Failed to load items:", e);
@@ -165,15 +156,14 @@ export default function DiscoverScreen() {
         ) : (
           <View style={styles.grid}>
             {filteredItems.map((it) => {
-              const isBorrowed =
-                (it.request_status ?? "available") !== "available";
-              const src = getImageSource(it.image_url);
+              const isBorrowed = it.status === "borrowed";
+              const src = getImageSource(it.image_path);
 
               return (
                 <TouchableOpacity
-                  key={it.item_id}
+                  key={it.id}
                   style={styles.card}
-                  onPress={() => router.push(`/item/${it.item_id}`)}
+                  onPress={() => router.push(`/item/${it.id}`)}
                   activeOpacity={0.9}
                 >
                   {src ? (

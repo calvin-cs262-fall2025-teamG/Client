@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
     KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -7,18 +7,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import {
-    getCommunityMessages, sendCommunityMessage, subscribeToCommunity,
-    type CommunityMessage,
-} from "../services/chat";
+import { community_messages, profiles, type CommunityMessage } from "../services/supabase_api";
+import { loadLastRead, parseTimestamp, saveLastRead } from "../services/readState";
 
 export default function CommunityThread() {
     const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
     const { user } = useAuth();
     const router = useRouter();
-    const myId = String(user?.user_id ?? "");
+    const myId = user?.id ?? "";
 
+    // Newest first, which is what the inverted list wants
     const [messages, setMessages] = useState<CommunityMessage[]>([]);
+    const [senderNames, setSenderNames] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [text, setText] = useState("");
 
@@ -26,32 +26,52 @@ export default function CommunityThread() {
         if (!id) return;
         let active = true;
 
-        getCommunityMessages(id)
-            .then((data) => active && setMessages(data))
+        const load = async () => {
+            const { data, error } = await community_messages.getByCommunity(id);
+            if (error) throw error;
+            const rows = data ?? [];
+            if (active) setMessages(rows);
+
+            const senderIds = [...new Set(rows.map((m) => m.sender_id))];
+            const names: Record<string, string> = {};
+            await Promise.all(
+                senderIds.map(async (senderId) => {
+                    const { data: profile } = await profiles.getById(senderId);
+                    if (profile) names[senderId] = profile.display_name;
+                })
+            );
+            if (active) setSenderNames(names);
+        };
+
+        load()
             .catch((e) => console.error("Failed to load community messages:", e))
             .finally(() => active && setLoading(false));
 
-        const unsubscribe = subscribeToCommunity(id, (incoming) => {
-            setMessages((prev) =>
-                prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]
-            );
-        });
-
         return () => {
             active = false;
-            unsubscribe();
         };
     }, [id]);
 
-    // inverted list wants newest first
-    const listData = useMemo(() => [...messages].reverse(), [messages]);
+    // Record the newest message on screen as seen, on load and after sending.
+    const newest = messages[0]?.created_at;
+    useEffect(() => {
+        if (!id || !myId || !newest) return;
+        const key = `community:${id}`;
+        loadLastRead(myId)
+            .then((map) => saveLastRead(myId, { ...map, [key]: newest }))
+            .catch((e) => console.error("Failed to save read state:", e));
+    }, [id, myId, newest]);
 
     const handleSend = async () => {
         const content = text.trim();
         if (!content || !id || !user) return;
         setText("");
         try {
-            await sendCommunityMessage(id, { id: myId, name: user.name }, content);
+            const { data, error } = await community_messages.create({ community_id: id, content });
+            if (error) throw error;
+            if (data) {
+                setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [data, ...prev]));
+            }
         } catch (e) {
             console.error("Failed to send message:", e);
             setText(content);
@@ -59,14 +79,16 @@ export default function CommunityThread() {
     };
 
     const formatTime = (iso: string) =>
-        new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        new Date(parseTimestamp(iso)).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
     const renderMessage = ({ item }: { item: CommunityMessage }) => {
         const mine = item.sender_id === myId;
         return (
             <View style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}>
                 <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                    {!mine && <Text style={styles.sender}>{item.sender_name}</Text>}
+                    {!mine && (
+                        <Text style={styles.sender}>{senderNames[item.sender_id] ?? "Neighbor"}</Text>
+                    )}
                     <Text style={mine ? styles.textMine : styles.textTheirs}>{item.content}</Text>
                     <Text style={mine ? styles.timeMine : styles.timeTheirs}>
                         {formatTime(item.created_at)}
@@ -110,7 +132,7 @@ export default function CommunityThread() {
                 ) : (
                     <FlatList
                         style={styles.flex}
-                        data={listData}
+                        data={messages}
                         inverted
                         keyExtractor={(m) => m.id}
                         renderItem={renderMessage}

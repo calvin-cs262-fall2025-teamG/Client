@@ -8,18 +8,24 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 );
 
 // mutable so tests can switch users and rerender
-let mockUser: { user_id: number; name: string } | null = null;
+let mockUser: { id: string; display_name: string } | null = null;
 jest.mock("../context/AuthContext", () => ({
   useAuth: () => ({ user: mockUser }),
 }));
 
-const keyFor = (userId: number | "anon") => `bookmarks_byId_v2:${userId}`;
+const keyFor = (userId: string) => `bookmarks_byId_v3:${userId}`;
+
+const USER_A = "user-a-uuid";
+const USER_B = "user-b-uuid";
+const DRILL = "1f0c2a4e-0000-4000-8000-000000000042";
+const BIKE = "1f0c2a4e-0000-4000-8000-000000000043";
+const TENT = "1f0c2a4e-0000-4000-8000-000000000005";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <BookmarksProvider>{children}</BookmarksProvider>
 );
 
-async function storedFor(userId: number) {
+async function storedFor(userId: string) {
   const raw = await AsyncStorage.getItem(keyFor(userId));
   return raw ? JSON.parse(raw) : null;
 }
@@ -34,7 +40,7 @@ async function renderBookmarks() {
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
-  mockUser = { user_id: 7, name: "Bryn" };
+  mockUser = { id: USER_A, display_name: "Bryn" };
   jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -45,30 +51,30 @@ afterEach(() => {
 describe("loading", () => {
   it("restores saved bookmarks and rebuilds their images", async () => {
     await AsyncStorage.setItem(
-      keyFor(7),
+      keyFor(USER_A),
       JSON.stringify({
-        42: { id: 42, title: "Drill", status: "none", count: 0, imageKey: "drill.jpg" },
-        43: { id: 43, title: "Bike", status: "none", count: 0, imageKey: "https://x.test/bike.png" },
+        [DRILL]: { id: DRILL, title: "Drill", status: "none", count: 0, imageKey: "drill.jpg" },
+        [BIKE]: { id: BIKE, title: "Bike", status: "none", count: 0, imageKey: "https://x.test/bike.png" },
       })
     );
 
     const { result } = await renderBookmarks();
 
-    await waitFor(() => expect(result.current.isSaved(42)).toBe(true));
-    expect(result.current.byId[42].image).toBeDefined();
-    expect(result.current.byId[43].image).toEqual({ uri: "https://x.test/bike.png" });
+    await waitFor(() => expect(result.current.isSaved(DRILL)).toBe(true));
+    expect(result.current.byId[DRILL].image).toBeDefined();
+    expect(result.current.byId[BIKE].image).toEqual({ uri: "https://x.test/bike.png" });
   });
 
   it("does not overwrite saved bookmarks before loading finishes", async () => {
-    const saved = { 42: { id: 42, title: "Drill", status: "none", count: 0, imageKey: null } };
-    await AsyncStorage.setItem(keyFor(7), JSON.stringify(saved));
+    const saved = { [DRILL]: { id: DRILL, title: "Drill", status: "none", count: 0, imageKey: null } };
+    await AsyncStorage.setItem(keyFor(USER_A), JSON.stringify(saved));
     const setItem = jest.spyOn(AsyncStorage, "setItem");
 
     const { result } = await renderBookmarks();
-    await waitFor(() => expect(result.current.isSaved(42)).toBe(true));
+    await waitFor(() => expect(result.current.isSaved(DRILL)).toBe(true));
 
-    expect(setItem).not.toHaveBeenCalledWith(keyFor(7), "{}");
-    expect(await storedFor(7)).toEqual(saved);
+    expect(setItem).not.toHaveBeenCalledWith(keyFor(USER_A), "{}");
+    expect(await storedFor(USER_A)).toEqual(saved);
   });
 
   it("is empty when signed out and never persists", async () => {
@@ -76,13 +82,24 @@ describe("loading", () => {
     const setItem = jest.spyOn(AsyncStorage, "setItem");
 
     const { result } = await renderBookmarks();
-    await act(async () => result.current.toggle({ id: 42, title: "Drill" }));
+    await act(async () => result.current.toggle({ id: DRILL, title: "Drill" }));
 
     expect(setItem).not.toHaveBeenCalled();
   });
 
+  it("ignores bookmarks saved under the old v2 key", async () => {
+    await AsyncStorage.setItem(
+      `bookmarks_byId_v2:${USER_A}`,
+      JSON.stringify({ 42: { id: 42, title: "Drill", status: "none", count: 0, imageKey: null } })
+    );
+
+    const { result } = await renderBookmarks();
+
+    expect(result.current.byId).toEqual({});
+  });
+
   it("starts empty when stored data is corrupt", async () => {
-    await AsyncStorage.setItem(keyFor(7), "{not json");
+    await AsyncStorage.setItem(keyFor(USER_A), "{not json");
 
     const { result } = await renderBookmarks();
 
@@ -94,33 +111,33 @@ describe("toggle / remove / clear", () => {
   it("toggle adds then removes an item and persists each change", async () => {
     const { result } = await renderBookmarks();
 
-    await act(async () => result.current.toggle({ id: 42, title: "Drill" }));
-    expect(result.current.isSaved(42)).toBe(true);
-    await waitFor(async () => expect(Object.keys((await storedFor(7)) ?? {})).toEqual(["42"]));
+    await act(async () => result.current.toggle({ id: DRILL, title: "Drill" }));
+    expect(result.current.isSaved(DRILL)).toBe(true);
+    await waitFor(async () => expect(Object.keys((await storedFor(USER_A)) ?? {})).toEqual([DRILL]));
 
-    await act(async () => result.current.toggle({ id: 42, title: "Drill" }));
-    expect(result.current.isSaved(42)).toBe(false);
-    await waitFor(async () => expect(await storedFor(7)).toEqual({}));
+    await act(async () => result.current.toggle({ id: DRILL, title: "Drill" }));
+    expect(result.current.isSaved(DRILL)).toBe(false);
+    await waitFor(async () => expect(await storedFor(USER_A)).toEqual({}));
   });
 
   it("remove deletes one item and ignores unknown ids", async () => {
     const { result } = await renderBookmarks();
     await act(async () => {
-      result.current.toggle({ id: 1, title: "A" });
-      result.current.toggle({ id: 2, title: "B" });
+      result.current.toggle({ id: "a", title: "A" });
+      result.current.toggle({ id: "b", title: "B" });
     });
 
-    await act(async () => result.current.remove(1));
-    await act(async () => result.current.remove(999));
+    await act(async () => result.current.remove("a"));
+    await act(async () => result.current.remove("unknown"));
 
-    expect(Object.keys(result.current.byId)).toEqual(["2"]);
+    expect(Object.keys(result.current.byId)).toEqual(["b"]);
   });
 
   it("clear removes everything", async () => {
     const { result } = await renderBookmarks();
     await act(async () => {
-      result.current.toggle({ id: 1, title: "A" });
-      result.current.toggle({ id: 2, title: "B" });
+      result.current.toggle({ id: "a", title: "A" });
+      result.current.toggle({ id: "b", title: "B" });
     });
 
     await act(async () => result.current.clear());
@@ -132,28 +149,38 @@ describe("toggle / remove / clear", () => {
 describe("item normalization", () => {
   const cases: { name: string; raw: any; expected: Record<string, unknown> }[] = [
     {
-      name: "API item shape (item_id, name, request_status)",
-      raw: { item_id: "42", name: "  Drill ", request_status: "pending", category: "Tools" },
-      expected: { id: 42, title: "Drill", status: "pending", category: "Tools", count: 0 },
+      name: "Supabase item shape (id, name, status, image_path)",
+      raw: { id: DRILL, name: "  Drill ", status: "pending", category: "Tools", image_path: "drill.jpg" },
+      expected: { id: DRILL, title: "Drill", status: "pending", category: "Tools", count: 0, imageKey: "drill.jpg" },
+    },
+    {
+      name: "legacy item shape (item_id, request_status)",
+      raw: { item_id: DRILL, name: "Drill", request_status: "pending" },
+      expected: { id: DRILL, title: "Drill", status: "pending" },
+    },
+    {
+      name: "prefers image_path over image_url",
+      raw: { id: DRILL, title: "Drill", image_path: "drill.jpg", image_url: "https://x.test/d.jpg" },
+      expected: { imageKey: "drill.jpg" },
     },
     {
       name: "defaults status to none",
-      raw: { id: 42, title: "Drill" },
+      raw: { id: DRILL, title: "Drill" },
       expected: { status: "none", imageKey: null },
     },
     {
       name: "remote image_url",
-      raw: { id: 42, title: "Drill", image_url: "https://x.test/d.jpg" },
+      raw: { id: DRILL, title: "Drill", image_url: "https://x.test/d.jpg" },
       expected: { image: { uri: "https://x.test/d.jpg" }, imageKey: "https://x.test/d.jpg" },
     },
     {
       name: "local filename is lowercased",
-      raw: { id: 42, title: "Drill", image: "Drill.JPG" },
+      raw: { id: DRILL, title: "Drill", image: "Drill.JPG" },
       expected: { imageKey: "drill.jpg" },
     },
     {
       name: "{ uri } image object",
-      raw: { id: 42, title: "Drill", image: { uri: " file:///d.jpg " } },
+      raw: { id: DRILL, title: "Drill", image: { uri: " file:///d.jpg " } },
       expected: { image: { uri: "file:///d.jpg" }, imageKey: "file:///d.jpg" },
     },
   ];
@@ -163,13 +190,14 @@ describe("item normalization", () => {
 
     await act(async () => result.current.toggle(raw));
 
-    expect(result.current.byId[42]).toEqual(expect.objectContaining(expected));
+    expect(result.current.byId[DRILL]).toEqual(expect.objectContaining(expected));
   });
 
   it.each([
     { name: "missing id", raw: { title: "Drill" } },
-    { name: "non-numeric id", raw: { id: "abc", title: "Drill" } },
-    { name: "blank title", raw: { id: 42, title: "   " } },
+    { name: "blank id", raw: { id: "   ", title: "Drill" } },
+    { name: "object id", raw: { id: { value: DRILL }, title: "Drill" } },
+    { name: "blank title", raw: { id: DRILL, title: "   " } },
     { name: "null", raw: null },
   ])("ignores an item with $name", async ({ raw }) => {
     const { result } = await renderBookmarks();
@@ -183,32 +211,32 @@ describe("item normalization", () => {
 describe("switching users", () => {
   it("keeps each user's bookmarks separate", async () => {
     await AsyncStorage.setItem(
-      keyFor(9),
-      JSON.stringify({ 5: { id: 5, title: "Tent", status: "none", count: 0, imageKey: null } })
+      keyFor(USER_B),
+      JSON.stringify({ [TENT]: { id: TENT, title: "Tent", status: "none", count: 0, imageKey: null } })
     );
     const { result, rerender } = await renderBookmarks();
-    await act(async () => result.current.toggle({ id: 42, title: "Drill" }));
+    await act(async () => result.current.toggle({ id: DRILL, title: "Drill" }));
 
-    mockUser = { user_id: 9, name: "Greg" };
+    mockUser = { id: USER_B, display_name: "Greg" };
     await rerender({});
-    await waitFor(() => expect(result.current.isSaved(5)).toBe(true));
+    await waitFor(() => expect(result.current.isSaved(TENT)).toBe(true));
 
-    expect(result.current.isSaved(42)).toBe(false);
-    expect(Object.keys((await storedFor(7)) ?? {})).toEqual(["42"]);
+    expect(result.current.isSaved(DRILL)).toBe(false);
+    expect(Object.keys((await storedFor(USER_A)) ?? {})).toEqual([DRILL]);
   });
 
   it("does not reload when only the profile changes", async () => {
     const getItem = jest.spyOn(AsyncStorage, "getItem");
     const { result, rerender } = await renderBookmarks();
 
-    await act(async () => result.current.toggle({ id: 42, title: "Drill" }));
+    await act(async () => result.current.toggle({ id: DRILL, title: "Drill" }));
     const readsBefore = getItem.mock.calls.length;
-    mockUser = { user_id: 7, name: "Bryn Updated" };
+    mockUser = { id: USER_A, display_name: "Bryn Updated" };
     await rerender({});
     await act(async () => {});
 
     expect(getItem).toHaveBeenCalledTimes(readsBefore);
-    expect(result.current.isSaved(42)).toBe(true);
+    expect(result.current.isSaved(DRILL)).toBe(true);
   });
 });
 
