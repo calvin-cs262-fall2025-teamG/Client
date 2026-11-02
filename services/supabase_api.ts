@@ -4,7 +4,7 @@ import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.typ
 
 export type Profile = Tables<"profiles">;
 export type Community = Tables<"communities">;
-export type CommunityMember = Tables<"community_members">;
+export type CommunityMember = Omit<TablesInsert<"community_members">, "last_read_at">;
 export type CommunityMessage = Tables<"community_messages">;
 export type DirectMessage = Tables<"direct_messages">;
 export type Item = Tables<"items">;
@@ -157,7 +157,7 @@ export const community_members = {
 
   leave: (communityId: string) => supabase.rpc("leave_community", { p_community_id: communityId }),
 
-  markRead: (communityId: string) => supabase.rpc("mark_community_read", { p_community_id: communityId }),
+  // markRead: (communityId: string) => supabase.rpc("mark_community_read", { p_community_id: communityId }),
 
   isMember: (communityId: string) => supabase.rpc("is_community_member", { target_community_id: communityId }),
 
