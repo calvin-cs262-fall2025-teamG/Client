@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,8 +14,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
-import { users as usersApi, BASE_URL } from "../services/api";
-import * as FileSystem from "expo-file-system/legacy";
+import {
+  getSignedUrl,
+  users as usersApi,
+  uploadImage as uploadStorageImage,
+  BASE_URL,
+} from "../services/api";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -28,12 +32,39 @@ export default function EditProfile() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  const [signedAvatar, setSignedAvatar] = useState<{
+    path: string;
+    url: string;
+  } | null>(null);
 
+  useEffect(() => {
+    const profilePicture = user?.profile_picture;
+    if (!profilePicture || /^https?:\/\//i.test(profilePicture) || !profilePicture.includes("/")) {
+      return;
+    }
+
+    let active = true;
+    getSignedUrl("profile-pictures", profilePicture)
+      .then((url) => {
+        if (active) setSignedAvatar({ path: profilePicture, url });
+      })
+      .catch((error) => console.error("Could not load profile picture:", error));
+
+    return () => {
+      active = false;
+    };
+  }, [user?.profile_picture]);
+
+  const profilePicture = user?.profile_picture;
   const avatarUrl = localImageUri
-    || (user?.profile_picture?.startsWith('http')
-      ? user.profile_picture
-      : user?.profile_picture
-        ? `${BASE_URL}/uploads/${user.profile_picture}`
+    || (profilePicture?.includes("/") && !/^https?:\/\//i.test(profilePicture)
+      ? signedAvatar?.path === profilePicture
+        ? signedAvatar.url
+        : null
+      : profilePicture?.startsWith('http')
+        ? profilePicture
+        : profilePicture
+          ? `${BASE_URL}/uploads/${profilePicture}`
         : null);
 
   const handleChangePhoto = async () => {
@@ -62,39 +93,29 @@ export default function EditProfile() {
       setLocalImageUri(imageUri);
 
       // Upload immediately
-      await uploadImage(imageUri);
+      await uploadImage(imageUri, result.assets[0].mimeType);
     } catch (error) {
       console.error("Error picking image:", error);
       Alert.alert("Error", "Failed to select image.");
     }
   };
 
-  const uploadImage = async (uri: string) => {
+  const uploadImage = async (uri: string, mimeType?: string | null) => {
     try {
       setUploading(true);
 
-      const uploadResult = await FileSystem.uploadAsync(
-        `${BASE_URL}/users/${user!.user_id}/profile-picture`,
+      const imagePath = await uploadStorageImage(
+        "profile-pictures",
+        user!.user_id,
         uri,
-        {
-          fieldName: "photo",
-          httpMethod: "POST",
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        }
+        mimeType
       );
-
-      if (uploadResult.status !== 200) {
-        console.error("Upload failed:", uploadResult.status, uploadResult.body);
-        throw new Error(`Upload failed: ${uploadResult.status}`);
-      }
-
-      const data = JSON.parse(uploadResult.body);
 
       // Persist the new filename to the user's record, then update local state
       const updated = await usersApi.update(user!.user_id, {
-        profile_picture: data.filename,
+        profile_picture: imagePath,
       });
-      setUser(updated as any);
+      setUser({ ...updated, profile_picture: imagePath });
     } catch (error) {
       console.error("Error uploading image:", error);
       Alert.alert("Error", "Failed to upload photo. Please try again.");

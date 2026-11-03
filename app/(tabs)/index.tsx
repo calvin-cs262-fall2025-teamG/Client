@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
+import { canBookmarkItem, canEditItem } from "../../services/itemRoles.mjs";
 
 const imageMap: Record<string, any> = {
   "banner.png": require("../../assets/images/banner.png"),
@@ -277,7 +278,7 @@ export default function Index() {
                   {/* IMAGE + BOOKMARK */}
                   <View style={styles.recommendedImageContainer}>
                     {/* Edit icon for own items, bookmark for others */}
-                    {item.owner_id === user?.user_id ? (
+                    {canEditItem(item.owner_id, user?.user_id) ? (
                       <TouchableOpacity
                         style={styles.editIconContainer}
                         onPress={() => router.push({
@@ -293,7 +294,7 @@ export default function Index() {
                           color="#fff"
                         />
                       </TouchableOpacity>
-                    ) : (
+                    ) : canBookmarkItem(item.owner_id, user?.user_id) ? (
                       <TouchableOpacity
                         style={styles.bookmarkIconContainer}
                         onPress={() => handleBookmarkToggle(item)}
@@ -310,7 +311,7 @@ export default function Index() {
                     {/* Navigate via image */}
                     <TouchableOpacity
                       onPress={() => {
-                        if (item.owner_id === user?.user_id) {
+                        if (canEditItem(item.owner_id, user?.user_id)) {
                           router.push({
                             pathname: "/edit-item",
                             params: { id: item.item_id }

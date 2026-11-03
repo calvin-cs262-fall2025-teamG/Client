@@ -15,6 +15,7 @@ import { items as itemsApi, messages as messagesApi } from "../../services/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import type { ImageSourcePropType } from "react-native";
+import { canRequestBorrow, getItemRole } from "../../services/itemRoles.mjs";
 
 const imageMap: Record<string, any> = {
   // item images
@@ -271,7 +272,7 @@ export default function ItemDetail() {
         </View>
 
         {/* ACTION BUTTONS */}
-        {!isBorrowed ? (
+        {!isBorrowed && canRequestBorrow(item.owner_id, user?.user_id, item.request_status) ? (
           <TouchableOpacity
             style={[styles.borrowButton, sending && { opacity: 0.6 }]}
             disabled={sending}
@@ -291,12 +292,18 @@ export default function ItemDetail() {
             </Text>
           </TouchableOpacity>
 
-        ) : (
+        ) : isBorrowed ? (
           <View style={styles.borrowedContainer}>
             <Text style={styles.borrowedText}>
               This item is currently borrowed
             </Text>
           </View>
+        ) : (
+          <Text style={styles.description}>
+            {getItemRole(item.owner_id, user?.user_id) === "owner"
+              ? "This is your listing."
+              : "Log in to request this item."}
+          </Text>
         )}
       </ScrollView>
     </SafeAreaView >

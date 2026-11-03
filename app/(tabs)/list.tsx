@@ -13,8 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import PageContainer from "../components/PageContainer";
-import { items as itemsApi, BASE_URL } from "../../services/api";
-import * as FileSystem from "expo-file-system/legacy";
+import { items as itemsApi, uploadImage as uploadStorageImage } from "../../services/api";
 
 export default function ListItem() {
   const router = useRouter();
@@ -24,6 +23,7 @@ export default function ListItem() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -44,6 +44,7 @@ export default function ListItem() {
 
     if (!result.canceled) {
       setImageUri(result.assets[0].uri);
+      setImageMimeType(result.assets[0].mimeType ?? null);
     }
   };
 
@@ -51,23 +52,12 @@ export default function ListItem() {
     if (!imageUri) return null;
 
     try {
-      const uploadResult = await FileSystem.uploadAsync(
-        `${BASE_URL}/items/upload`,
+      return await uploadStorageImage(
+        "item-images",
+        user!.user_id,
         imageUri,
-        {
-          fieldName: "photo",
-          httpMethod: "POST",
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        }
+        imageMimeType
       );
-
-      if (uploadResult.status !== 200) {
-        console.error("Upload failed:", uploadResult.status, uploadResult.body);
-        throw new Error("Image upload failed");
-      }
-
-      const data = JSON.parse(uploadResult.body);
-      return data.filename;
     } catch (error) {
       console.error("Upload error:", error);
       throw error;
