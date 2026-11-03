@@ -1,29 +1,19 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
-  View,
-  Text,
-  TextInput,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { items as itemsApi, type Item } from "../../services/supabase_api";
 import { useRouter } from "expo-router";
-import { items as itemsApi } from "../../services/api";
-
-type ApiItem = {
-  item_id: number;
-  name: string;
-  description?: string | null;
-  image_url?: string | null;
-  category?: string | null;
-  owner_id: number;
-  request_status?: string | null;
-};
+import { Ionicons } from "@expo/vector-icons";
 
 const imageMap: Record<string, any> = {
   "drill.jpg": require("../../assets/images/drill.jpg"),
@@ -42,7 +32,6 @@ const getImageSource = (raw?: string | null) => {
   return null;
 };
 
-
 const banner = require("../../assets/images/banner.png");
 
 export default function DiscoverScreen() {
@@ -51,13 +40,14 @@ export default function DiscoverScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const [items, setItems] = useState<ApiItem[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadItems = useCallback(async () => {
     try {
-      const data = (await itemsApi.getAll()) as ApiItem[];
+      const { data, error } = await itemsApi.getAll();
+      if (error) throw error;
       setItems(data ?? []);
     } catch (e) {
       console.error("Failed to load items:", e);
@@ -109,7 +99,9 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* SEARCH BAR */}
         <View style={styles.searchBar}>
@@ -144,13 +136,17 @@ export default function DiscoverScreen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabText, activeCategory === cat && styles.activeTabText]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeCategory === cat && styles.activeTabText,
+                ]}
+              >
                 {cat}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-
 
         {/* ITEMS GRID */}
         {loading ? (
@@ -160,25 +156,37 @@ export default function DiscoverScreen() {
         ) : (
           <View style={styles.grid}>
             {filteredItems.map((it) => {
-              const isBorrowed = (it.request_status ?? "available") !== "available";
-              const src = getImageSource(it.image_url);
+              const isBorrowed = it.status === "borrowed";
+              const src = getImageSource(it.image_path);
 
               return (
                 <TouchableOpacity
-                  key={it.item_id}
+                  key={it.id}
                   style={styles.card}
-                  onPress={() => router.push(`/item/${it.item_id}`)}
+                  onPress={() => router.push(`/item/${it.id}`)}
                   activeOpacity={0.9}
                 >
                   {src ? (
                     <Image
                       source={src}
-                      style={[styles.cardImage, isBorrowed && { opacity: 0.55 }]}
+                      style={[
+                        styles.cardImage,
+                        isBorrowed && { opacity: 0.55 },
+                      ]}
                       resizeMode="cover"
                     />
                   ) : (
-                    <View style={[styles.noImageBox, isBorrowed && { opacity: 0.55 }]}>
-                      <Ionicons name="image-outline" size={28} color="#9ca3af" />
+                    <View
+                      style={[
+                        styles.noImageBox,
+                        isBorrowed && { opacity: 0.55 },
+                      ]}
+                    >
+                      <Ionicons
+                        name="image-outline"
+                        size={28}
+                        color="#9ca3af"
+                      />
                     </View>
                   )}
 
@@ -241,7 +249,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 12,
   },
-
 
   tab: {
     paddingVertical: 10,

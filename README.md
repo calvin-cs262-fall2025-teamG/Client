@@ -6,7 +6,7 @@ Mobile application client built with React Native and Expo.
 - React Native
 - Expo
 - TypeScript
-- Azure (data service)
+- Supabase (authentication, database, and storage)
 
 ## Setup Instructions
 
@@ -24,18 +24,17 @@ npm test
 
 ### Supabase Image Storage
 
-Add the Supabase publishable key to `.env.local`:
+Add the Supabase project URL and publishable key to `.env.local`:
 
 ```env
+EXPO_PUBLIC_SUPABASE_URL=https://bhrqwrzwjcrfalqjlmrn.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-The project URL is configured in `services/api.ts`. Images are stored in the
-`profile-pictures`, `community-images`, and `item-images` buckets. These buckets
-are private; configure Storage access policies for the app's requests. The
-current app login is handled by the Azure service, not Supabase Auth, so do not
-use a Supabase service-role key in the client. For user-scoped access, use a
-trusted server or Edge Function to authorize uploads and sign URLs.
+Images use the `profile-pictures`, `community-images`, and `item-images`
+buckets. Keep these buckets private and configure Storage policies for
+authenticated users. The app uses Supabase Auth; never put a service-role key in
+the client.
 
 ### 2. Start the Client
 

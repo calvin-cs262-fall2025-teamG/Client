@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ImageSourcePropType } from "react-native";
 import { useAuth } from "./AuthContext";
 
-const STORAGE_KEY_BASE = "bookmarks_byId_v2";
+const STORAGE_KEY_BASE = "bookmarks_byId_v3";
 
 // maps local seed-data filenames to actual bundled images
 // add new images here as they get used in the app
@@ -38,7 +38,7 @@ const imageMap: Record<string, any> = {
 };
 
 export type BookmarkItem = {
-  id: number;
+  id: string;
   title: string;
   status?: string;
   count?: number;
@@ -48,18 +48,18 @@ export type BookmarkItem = {
 };
 
 type BookmarksContextValue = {
-  byId: Record<number, BookmarkItem>;
-  isSaved: (id: number) => boolean;
+  byId: Record<string, BookmarkItem>;
+  isSaved: (id: string) => boolean;
   toggle: (item: any) => void;
-  remove: (id: number) => void;
+  remove: (id: string) => void;
   clear: () => void;
 };
 
 const BookmarksContext = createContext<BookmarksContextValue | null>(null);
 
-function normalizeId(raw: any): number {
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : NaN;
+function normalizeId(raw: any): string {
+  if (typeof raw !== "string" && typeof raw !== "number") return "";
+  return String(raw).trim();
 }
 
 function normalizeImage(rawImage: any): { image?: ImageSourcePropType; imageKey?: string | null } {
@@ -86,7 +86,7 @@ function normalizeImage(rawImage: any): { image?: ImageSourcePropType; imageKey?
 
 function normalizeBookmarkItem(raw: any): BookmarkItem | null {
   const id = normalizeId(raw?.id ?? raw?.item_id);
-  if (!Number.isFinite(id)) return null;
+  if (!id) return null;
 
   const title = String(raw?.title ?? raw?.name ?? "").trim();
   if (!title) return null;
@@ -95,7 +95,7 @@ function normalizeBookmarkItem(raw: any): BookmarkItem | null {
   const count = typeof raw?.count === "number" ? raw.count : 0;
   const category = raw?.category ? String(raw.category) : undefined;
 
-  const rawImage = raw?.image_url ?? raw?.image;
+  const rawImage = raw?.image_path ?? raw?.image_url ?? raw?.image;
   const { image, imageKey } = normalizeImage(rawImage);
 
   return { id, title, status, count, category, image, imageKey };
@@ -107,9 +107,9 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
   // separate storage per user so logging in as someone else doesn't show their bookmarks
-  const storageKey = `${STORAGE_KEY_BASE}:${user?.user_id ?? "anon"}`;
+  const storageKey = `${STORAGE_KEY_BASE}:${user?.id ?? "anon"}`;
 
-  const [byId, setById] = useState<Record<number, BookmarkItem>>({});
+  const [byId, setById] = useState<Record<string, BookmarkItem>>({});
 
   // tracks whether we've finished loading from storage for the current storageKey
   // needed so the save effect below doesn't fire with a stale/empty byId and
@@ -134,11 +134,10 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const parsed = JSON.parse(raw) as Record<number, PersistedBookmarkItem>;
+        const parsed = JSON.parse(raw) as Record<string, PersistedBookmarkItem>;
 
-        const rebuilt: Record<number, BookmarkItem> = {};
-        for (const [idStr, item] of Object.entries(parsed)) {
-          const id = Number(idStr);
+        const rebuilt: Record<string, BookmarkItem> = {};
+        for (const [id, item] of Object.entries(parsed)) {
           const { image } = normalizeImage(item.imageKey ?? null);
           rebuilt[id] = { ...item, id, image };
         }
@@ -155,13 +154,13 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-    // Intentionally depends on user?.user_id (stable across profile edits), not
+    // Intentionally depends on user?.id (stable across profile edits), not
     // `user` itself. Depending on the full object would re-trigger this load effect
     // on every setUser() call from edit-profile.tsx (name/photo updates), racing
     // against the save effect below and silently overwriting bookmark toggles made
     // during the reload. See hasLoadedRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.user_id, storageKey]);
+  }, [user?.id, storageKey]);
 
   // save bookmarks whenever byId changes - but skip until the load above has finished,
   // otherwise this fires first with an empty byId and wipes out what's already saved
@@ -174,9 +173,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       try {
         if (!user) return;
 
-        const toPersist: Record<number, PersistedBookmarkItem> = {};
-        for (const [idStr, item] of Object.entries(byId)) {
-          const id = Number(idStr);
+        const toPersist: Record<string, PersistedBookmarkItem> = {};
+        for (const [id, item] of Object.entries(byId)) {
           toPersist[id] = {
             id,
             title: item.title,
@@ -198,17 +196,17 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-    // Same reasoning as the load effect above (depends on user?.user_id, not the
+    // Same reasoning as the load effect above (depends on user?.id, not the
     // full `user` object), but unlike that effect, a stray re-trigger here is
     // harmless: the hasLoadedRef guard just causes a redundant write of the same
     // data, not a race.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [byId, user?.user_id, storageKey]);
+  }, [byId, user?.id, storageKey]);
 
   const value = useMemo<BookmarksContextValue>(() => {
     return {
       byId,
-      isSaved: (id: number) => !!byId[id],
+      isSaved: (id: string) => !!byId[id],
 
       toggle: (raw: any) => {
         const normalized = normalizeBookmarkItem(raw);
@@ -224,13 +222,13 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         });
       },
 
-      remove: (id: number) => {
-        const n = Number(id);
-        if (!Number.isFinite(n)) return;
+      remove: (id: string) => {
+        const key = normalizeId(id);
+        if (!key) return;
         setById((prev) => {
-          if (!prev[n]) return prev;
+          if (!prev[key]) return prev;
           const copy = { ...prev };
-          delete copy[n];
+          delete copy[key];
           return copy;
         });
       },

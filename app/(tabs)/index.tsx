@@ -1,23 +1,26 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarks } from "../../context/BookmarksContext";
-import { items as itemsApi } from "../../services/api";
-import { getBookmarkCount, updateBookmarkCount } from "../../services/bookmarkCount";
 import {
-  Image,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  RefreshControl,
   ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
-import { canBookmarkItem, canEditItem } from "../../services/itemRoles.mjs";
+import { useBookmarks } from "../../context/BookmarksContext";
+import { items as itemsApi, type Item } from "../../services/supabase_api";
+import {
+  getBookmarkCount,
+  updateBookmarkCount,
+} from "../../services/bookmarkCount";
+import { canBookmarkItem, canEditItem } from "../../services/itemRoles";
 
 const imageMap: Record<string, any> = {
   "banner.png": require("../../assets/images/banner.png"),
@@ -50,18 +53,6 @@ const imageMap: Record<string, any> = {
   "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
 };
 
-interface Item {
-  item_id: number;
-  name: string;
-  description?: string;
-  image_url?: string;
-  category?: string;
-  owner_id: number;
-  request_status: string;
-  start_date?: string;
-  end_date?: string;
-}
-
 export default function Index() {
   const router = useRouter();
   const { user } = useAuth();
@@ -71,7 +62,9 @@ export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bookmarkCounts, setBookmarkCounts] = useState<Record<number, number>>({});
+  const [bookmarkCounts, setBookmarkCounts] = useState<Record<string, number>>(
+    {},
+  );
 
   const { byId, isSaved, toggle } = useBookmarks();
   const bookmarkCount = Object.keys(byId).length;
@@ -80,12 +73,12 @@ export default function Index() {
 
   // Load bookmark counts for all items
   const loadBookmarkCounts = useCallback(async (itemsList: Item[]) => {
-    const counts: Record<number, number> = {};
+    const counts: Record<string, number> = {};
 
     await Promise.all(
       itemsList.map(async (item) => {
-        counts[item.item_id] = await getBookmarkCount(item.item_id);
-      })
+        counts[item.id] = await getBookmarkCount(item.id);
+      }),
     );
 
     setBookmarkCounts(counts);
@@ -94,9 +87,11 @@ export default function Index() {
   // Load items from API
   const loadItems = useCallback(async () => {
     try {
-      const data: any = await itemsApi.getAll();
-      setItems(data);
-      await loadBookmarkCounts(data);
+      const { data, error } = await itemsApi.getAll();
+      if (error) throw error;
+      const list = data ?? [];
+      setItems(list);
+      await loadBookmarkCounts(list);
     } catch (error) {
       console.error("Failed to load items:", error);
     } finally {
@@ -119,30 +114,35 @@ export default function Index() {
   };
 
   const handleBookmarkToggle = async (item: Item) => {
-    const wasBookmarked = isSaved(item.item_id);
+    const wasBookmarked = isSaved(item.id);
 
     toggle({
-      id: item.item_id,
+      id: item.id,
       title: item.name,
-      image_url: item.image_url ?? null,
+      image_path: item.image_path ?? null,
       count: 0,
-      status: item.request_status === "available" ? "none" : "borrowed",
+      status: item.status === "borrowed" ? "borrowed" : "none",
       category: item.category || "Other",
     });
 
-    const currentCount = bookmarkCounts[item.item_id] || 0;
-    const newCount = await updateBookmarkCount(item.item_id, wasBookmarked, currentCount);
+    const currentCount = bookmarkCounts[item.id] || 0;
+    const newCount = await updateBookmarkCount(
+      item.id,
+      wasBookmarked,
+      currentCount,
+    );
 
-    setBookmarkCounts(prev => ({
+    setBookmarkCounts((prev) => ({
       ...prev,
-      [item.item_id]: newCount
+      [item.id]: newCount,
     }));
   };
 
   const filteredItems = items.filter((item) => {
     const matchesCategory =
       activeTab === "Popular" ||
-      (item.category && item.category.toLowerCase() === activeTab.toLowerCase());
+      (item.category &&
+        item.category.toLowerCase().startsWith(activeTab.toLowerCase()));
 
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
@@ -153,7 +153,16 @@ export default function Index() {
     return matchesCategory && matchesSearch;
   });
 
-  const categories = ["Popular", "Home", "Books", "Tools", "Outdoor", "School", "Electronics", "Kitchen"];
+  const categories = [
+    "Popular",
+    "Home",
+    "Books",
+    "Tools",
+    "Outdoor",
+    "School",
+    "Electronics",
+    "Kitchen",
+  ];
 
   if (loading) {
     return (
@@ -264,37 +273,37 @@ export default function Index() {
             <Ionicons name="cube-outline" size={60} color="#9ca3af" />
             <Text style={styles.emptyText}>No items found</Text>
             <Text style={styles.emptySub}>
-              {searchQuery ? "Try a different search" : "Check back later for new items"}
+              {searchQuery
+                ? "Try a different search"
+                : "Check back later for new items"}
             </Text>
           </View>
         ) : (
           <View style={styles.recommendedGrid}>
             {filteredItems.map((item) => {
-              const isBookmarked = isSaved(item.item_id);
-              const isBorrowed = item.request_status !== "available";
+              const isBookmarked = isSaved(item.id);
+              const isBorrowed = item.status === "borrowed";
 
               return (
-                <View key={item.item_id} style={styles.recommendedItem}>
+                <View key={item.id} style={styles.recommendedItem}>
                   {/* IMAGE + BOOKMARK */}
                   <View style={styles.recommendedImageContainer}>
                     {/* Edit icon for own items, bookmark for others */}
-                    {canEditItem(item.owner_id, user?.user_id) ? (
+                    {canEditItem(item.owner_id, user?.id) ? (
                       <TouchableOpacity
                         style={styles.editIconContainer}
-                        onPress={() => router.push({
-                          pathname: "/edit-item",
-                          params: { id: item.item_id }
-                        })}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/edit-item",
+                            params: { id: item.id },
+                          })
+                        }
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         activeOpacity={0.7}
                       >
-                        <Ionicons
-                          name="pencil"
-                          size={16}
-                          color="#fff"
-                        />
+                        <Ionicons name="pencil" size={16} color="#fff" />
                       </TouchableOpacity>
-                    ) : canBookmarkItem(item.owner_id, user?.user_id) ? (
+                    ) : canBookmarkItem(item.owner_id, user?.id) ? (
                       <TouchableOpacity
                         style={styles.bookmarkIconContainer}
                         onPress={() => handleBookmarkToggle(item)}
@@ -311,42 +320,60 @@ export default function Index() {
                     {/* Navigate via image */}
                     <TouchableOpacity
                       onPress={() => {
-                        if (canEditItem(item.owner_id, user?.user_id)) {
+                        if (canEditItem(item.owner_id, user?.id)) {
                           router.push({
                             pathname: "/edit-item",
-                            params: { id: item.item_id }
+                            params: { id: item.id },
                           });
                         } else {
-                          router.push(`/item/${item.item_id}`);
+                          router.push(`/item/${item.id}`);
                         }
                       }}
                       activeOpacity={0.8}
                     >
-                      {item.image_url ? (
-                        imageMap[item.image_url] ? (
+                      {item.image_path ? (
+                        imageMap[item.image_path] ? (
                           <Image
-                            source={imageMap[item.image_url]}
+                            source={imageMap[item.image_path]}
                             style={[
                               styles.recommendedImage,
                               isBorrowed && { opacity: 0.55 },
                             ]}
                           />
-                        ) : item.image_url.startsWith('http') ? (
+                        ) : item.image_path.startsWith("http") ? (
                           <Image
-                            source={{ uri: item.image_url }}
+                            source={{ uri: item.image_path }}
                             style={[
                               styles.recommendedImage,
                               isBorrowed && { opacity: 0.55 },
                             ]}
                           />
                         ) : (
-                          <View style={[styles.recommendedImage, styles.placeholderImage]}>
-                            <Ionicons name="image-outline" size={40} color="#9ca3af" />
+                          <View
+                            style={[
+                              styles.recommendedImage,
+                              styles.placeholderImage,
+                            ]}
+                          >
+                            <Ionicons
+                              name="image-outline"
+                              size={40}
+                              color="#9ca3af"
+                            />
                           </View>
                         )
                       ) : (
-                        <View style={[styles.recommendedImage, styles.placeholderImage]}>
-                          <Ionicons name="image-outline" size={40} color="#9ca3af" />
+                        <View
+                          style={[
+                            styles.recommendedImage,
+                            styles.placeholderImage,
+                          ]}
+                        >
+                          <Ionicons
+                            name="image-outline"
+                            size={40}
+                            color="#9ca3af"
+                          />
                         </View>
                       )}
                     </TouchableOpacity>
@@ -361,7 +388,7 @@ export default function Index() {
 
                   {/* Navigate via info section */}
                   <TouchableOpacity
-                    onPress={() => router.push(`/item/${item.item_id}`)}
+                    onPress={() => router.push(`/item/${item.id}`)}
                     activeOpacity={0.8}
                     style={styles.recommendedInfo}
                   >

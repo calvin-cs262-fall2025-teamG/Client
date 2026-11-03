@@ -1,81 +1,64 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
-import {
-  getSignedUrl,
-  users as usersApi,
-  uploadImage as uploadStorageImage,
-  BASE_URL,
-} from "../services/api";
+import { useDatabase } from "../context/DatabaseContext";
+import { getSignedUrl, imageInputFromUri } from "../services/supabase_api";
 
 export default function EditProfile() {
   const router = useRouter();
   const { user, setUser } = useAuth();
+  const { profile, updateProfile } = useDatabase();
 
-  console.log("User in edit-profile:", user);
-  console.log("Profile picture:", user?.profile_picture);
-
-  const [name, setName] = useState(user?.name ?? "");
+  const [name, setName] = useState(
+    profile?.display_name ?? user?.display_name ?? "",
+  );
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
-  const [signedAvatar, setSignedAvatar] = useState<{
-    path: string;
-    url: string;
-  } | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
+  const [signedAvatarUrl, setSignedAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const profilePicture = user?.profile_picture;
-    if (!profilePicture || /^https?:\/\//i.test(profilePicture) || !profilePicture.includes("/")) {
+    const path = profile?.avatar_path;
+    if (!path || /^https?:\/\//i.test(path)) {
+      setSignedAvatarUrl(path ?? null);
       return;
     }
 
     let active = true;
-    getSignedUrl("profile-pictures", profilePicture)
-      .then((url) => {
-        if (active) setSignedAvatar({ path: profilePicture, url });
+    getSignedUrl("profile-pictures", path)
+      .then(({ signedUrl, error }) => {
+        if (active) setSignedAvatarUrl(error ? null : signedUrl);
       })
       .catch((error) => console.error("Could not load profile picture:", error));
 
     return () => {
       active = false;
     };
-  }, [user?.profile_picture]);
+  }, [profile?.avatar_path]);
 
-  const profilePicture = user?.profile_picture;
-  const avatarUrl = localImageUri
-    || (profilePicture?.includes("/") && !/^https?:\/\//i.test(profilePicture)
-      ? signedAvatar?.path === profilePicture
-        ? signedAvatar.url
-        : null
-      : profilePicture?.startsWith('http')
-        ? profilePicture
-        : profilePicture
-          ? `${BASE_URL}/uploads/${profilePicture}`
-        : null);
+  const avatarPath = profile?.avatar_path ?? null;
+  const avatarUrl = localImageUri ?? signedAvatarUrl ??
+    (avatarPath?.startsWith("http") ? avatarPath : null);
 
   const handleChangePhoto = async () => {
     try {
-      // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
       if (status !== "granted") {
         Alert.alert(
           "Permission needed",
-          "Please grant photo library access to change your profile picture."
+          "Please grant photo library access to change your profile picture.",
         );
         return;
       }
@@ -88,45 +71,16 @@ export default function EditProfile() {
       });
 
       if (result.canceled) return;
-
-      const imageUri = result.assets[0].uri;
-      setLocalImageUri(imageUri);
-
-      // Upload immediately
-      await uploadImage(imageUri, result.assets[0].mimeType);
+      setLocalImageUri(result.assets[0].uri);
+      setImageMimeType(result.assets[0].mimeType ?? null);
     } catch (error) {
-      console.error("Error picking image:", error);
+      console.error("Error selecting image:", error);
       Alert.alert("Error", "Failed to select image.");
     }
   };
 
-  const uploadImage = async (uri: string, mimeType?: string | null) => {
-    try {
-      setUploading(true);
-
-      const imagePath = await uploadStorageImage(
-        "profile-pictures",
-        user!.user_id,
-        uri,
-        mimeType
-      );
-
-      // Persist the new filename to the user's record, then update local state
-      const updated = await usersApi.update(user!.user_id, {
-        profile_picture: imagePath,
-      });
-      setUser({ ...updated, profile_picture: imagePath });
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      Alert.alert("Error", "Failed to upload photo. Please try again.");
-      setLocalImageUri(null); // revert the optimistic preview on failure
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSave = async () => {
-    if (!user?.user_id) {
+    if (!user?.id) {
       Alert.alert("Error", "User session expired. Please log in again.");
       return;
     }
@@ -138,10 +92,13 @@ export default function EditProfile() {
 
     try {
       setSaving(true);
-      const updated = await usersApi.update(user.user_id, {
-        name: name.trim(),
-      });
-      setUser(updated as any);
+      const image = localImageUri
+        ? await imageInputFromUri(localImageUri, imageMimeType)
+        : undefined;
+      const updated = image
+        ? await updateProfile({ display_name: name.trim() }, image)
+        : await updateProfile({ display_name: name.trim() });
+      setUser({ ...user, display_name: updated.display_name });
 
       Alert.alert("Success", "Profile updated!");
       router.back();
@@ -180,16 +137,8 @@ export default function EditProfile() {
           </View>
         )}
 
-        {uploading && (
-          <View style={styles.uploadingOverlay}>
-            <ActivityIndicator size="large" color="#fff" />
-          </View>
-        )}
-
-        <TouchableOpacity onPress={handleChangePhoto} disabled={uploading}>
-          <Text style={[styles.changePhoto, uploading && { opacity: 0.5 }]}>
-            {uploading ? "Uploading..." : "Change profile photo"}
-          </Text>
+        <TouchableOpacity onPress={handleChangePhoto}>
+          <Text style={styles.changePhoto}>Change profile photo</Text>
         </TouchableOpacity>
       </View>
 

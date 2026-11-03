@@ -1,4 +1,3 @@
-import React from "react";
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";

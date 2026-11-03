@@ -1,21 +1,34 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  Image,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-  Platform,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { items } from "../services/api";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Button,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../context/AuthContext";
+import { useDatabase } from "../context/DatabaseContext";
+import { items as itemsApi } from "../services/supabase_api";
+
+type ItemStatus = "available" | "pending" | "borrowed";
+
+const ITEM_STATUSES: ItemStatus[] = ["available", "pending", "borrowed"];
+
+// Status is read-only here: the borrowing workflow (approve / return) sets it
+const STATUS_LABELS: Record<ItemStatus, string> = {
+  available: "Available",
+  pending: "Pending request",
+  borrowed: "Borrowed",
+};
 
 export default function EditItem() {
   const router = useRouter();
@@ -27,12 +40,16 @@ export default function EditItem() {
     image?: string;
   }>();
 
-  const id = params.id ? Number(params.id) : null;
+  const id = params.id || null;
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { updateItem, deleteItem } = useDatabase();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [status, setStatus] = useState<"available" | "borrowed">("available"); // ADD THIS
+  const [status, setStatus] = useState<ItemStatus | null>(null);
+  const [notOwner, setNotOwner] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,13 +63,27 @@ export default function EditItem() {
       }
 
       try {
-        const item: any = await items.getById(id);
+        const { data: item, error } = await itemsApi.getById(id);
+        if (error) throw error;
+        // A missing item can come back as a row of nulls, so check the id too.
+        if (!item?.id) throw new Error(`Item ${id} not found`);
+
+        if (item.owner_id !== userId) {
+          setNotOwner(true);
+          Alert.alert("Error", "You can only edit your own items.");
+          router.back();
+          return;
+        }
+
         setTitle(item.name || "");
         setDescription(item.description || "");
         setCategory(item.category || "");
-        setImageUrl(item.image_url || "");
-        // Set status based on request_status from database
-        setStatus(item.request_status === "available" ? "available" : "borrowed");
+        setImageUrl(item.image_path || "");
+        setStatus(
+          ITEM_STATUSES.includes(item.status as ItemStatus)
+            ? (item.status as ItemStatus)
+            : "available",
+        );
       } catch (error) {
         console.error("Failed to load item:", error);
         Alert.alert("Error", "Could not load item details.");
@@ -62,7 +93,7 @@ export default function EditItem() {
     };
 
     loadItem();
-  }, [id]);
+  }, [id, userId, router]);
 
   const handleSave = async () => {
     if (!id) {
@@ -78,11 +109,10 @@ export default function EditItem() {
     setSaving(true);
 
     try {
-      await items.update(id, {
+      await updateItem(id, {
         name: title.trim(),
         description: description.trim(),
         category: category.trim() || undefined,
-        request_status: status, // Save the status
       });
 
       Alert.alert("Success", "Item updated successfully!", [
@@ -96,48 +126,59 @@ export default function EditItem() {
     }
   };
 
-const handleDelete = async () => {
-  if (!id) {
-    Alert.alert("Error", "Invalid item ID.");
-    return;
-  }
-
-  const confirmed = Platform.OS === "web"
-    ? window.confirm("Delete item?\n\nThis will permanently remove the item from your listings.")
-    : await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          "Delete item?",
-          "This will permanently remove the item from your listings.",
-          [
-            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-            { text: "Delete", style: "destructive", onPress: () => resolve(true) },
-          ]
-        );
-      });
-
-  if (!confirmed) return;
-
-  setSaving(true);
-  try {
-    await items.delete(id);
-    if (Platform.OS === "web") {
-      window.alert("Item removed successfully.");
-      router.back();
-    } else {
-      Alert.alert("Deleted", "Item removed successfully.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+  const handleDelete = async () => {
+    if (!id) {
+      Alert.alert("Error", "Invalid item ID.");
+      return;
     }
-  } catch (error) {
-    console.error("Failed to delete item:", error);
-    if (Platform.OS === "web") {
-      window.alert("Could not delete the item.");
-    } else {
-      Alert.alert("Error", "Could not delete the item.");
+
+    const confirmed =
+      Platform.OS === "web"
+        ? window.confirm(
+            "Delete item?\n\nThis will permanently remove the item from your listings.",
+          )
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              "Delete item?",
+              "This will permanently remove the item from your listings.",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => resolve(true),
+                },
+              ],
+            );
+          });
+
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      await deleteItem(id);
+      if (Platform.OS === "web") {
+        window.alert("Item removed successfully.");
+        router.back();
+      } else {
+        Alert.alert("Deleted", "Item removed successfully.", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to delete item:", error);
+      if (Platform.OS === "web") {
+        window.alert("Could not delete the item.");
+      } else {
+        Alert.alert("Error", "Could not delete the item.");
+      }
+      setSaving(false);
     }
-    setSaving(false);
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -160,6 +201,11 @@ const handleDelete = async () => {
     );
   }
 
+  // Leaving the screen; don't show another user's item in the form meanwhile
+  if (notOwner) {
+    return <SafeAreaView style={styles.safeArea} edges={["top"]} />;
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Back button header */}
@@ -173,12 +219,25 @@ const handleDelete = async () => {
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Image preview */}
-        {imageUrl && imageUrl.startsWith('http') && (
+        {imageUrl && imageUrl.startsWith("http") && (
           <Image
             source={{ uri: imageUrl }}
             style={styles.image}
             resizeMode="cover"
           />
+        )}
+
+        {status && (
+          <View style={styles.statusSection}>
+            <Text style={styles.label}>Item Status</Text>
+            <Text style={styles.statusText}>{STATUS_LABELS[status]}</Text>
+            {status === "pending" && (
+              <Text style={styles.statusHint}>
+                A borrow request is waiting on this item. Approve or decline it
+                from your Profile.
+              </Text>
+            )}
+          </View>
         )}
 
         <Text style={styles.label}>Title *</Text>
@@ -198,59 +257,6 @@ const handleDelete = async () => {
           style={styles.input}
           editable={!saving}
         />
-
-        {/* STATUS TOGGLE */}
-        <View style={styles.statusSection}>
-          <Text style={styles.label}>Item Status</Text>
-          <View style={styles.statusToggle}>
-            <TouchableOpacity
-              style={[
-                styles.statusButton, 
-                status === 'available' && styles.statusActive
-              ]}
-              onPress={() => setStatus('available')}
-              disabled={saving}
-            >
-              <Ionicons 
-                name="checkmark-circle" 
-                size={20} 
-                color={status === 'available' ? '#16a34a' : '#9ca3af'} 
-              />
-              <Text style={[
-                styles.statusText,
-                status === 'available' && styles.statusTextActive
-              ]}>
-                Available
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.statusButton, 
-                status === 'borrowed' && styles.statusActive
-              ]}
-              onPress={() => setStatus('borrowed')}
-              disabled={saving}
-            >
-              <Ionicons 
-                name="time" 
-                size={20} 
-                color={status === 'borrowed' ? '#f97316' : '#9ca3af'} 
-              />
-              <Text style={[
-                styles.statusText,
-                status === 'borrowed' && styles.statusTextActive
-              ]}>
-                Borrowed
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.statusHint}>
-            {status === 'available' 
-              ? 'Item is ready to lend out' 
-              : 'Item is currently borrowed by someone'}
-          </Text>
-        </View>
 
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -354,41 +360,16 @@ const styles = StyleSheet.create({
   buttonRow: {
     marginTop: 12,
   },
-  
-  // Status toggle styles
+
+  // Status styles
   statusSection: {
     marginTop: 8,
     marginBottom: 4,
-  },
-  statusToggle: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-  statusButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f9fafb",
-  },
-  statusActive: {
-    borderColor: "#f97316",
-    backgroundColor: "#fff7ed",
   },
   statusText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#6b7280",
-  },
-  statusTextActive: {
-    color: "#f97316",
   },
   statusHint: {
     marginTop: 6,

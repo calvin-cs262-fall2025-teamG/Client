@@ -1,19 +1,19 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 const logo = require("../../assets/images/logo.png");
 
@@ -33,11 +33,6 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     setError(null);
 
-    if (!email.toLowerCase().endsWith("@calvin.edu")) {
-      setError("Please use your @calvin.edu email.");
-      return;
-    }
-
     if (!password) {
       setError("Please enter a password");
       return;
@@ -52,7 +47,8 @@ export default function LoginScreen() {
       setLoading(true);
 
       if (mode === "signup") {
-        await signup(email, password, name);
+        // Signup
+        await signup({email, password, displayName: name});
 
         router.push({
           pathname: "/(auth)/verify-email",
@@ -60,7 +56,7 @@ export default function LoginScreen() {
         });
       } else {
         try {
-          await login(email, password);
+          await login({email, password});
           router.replace("/(tabs)");
         } catch (err: any) {
           console.error("Login error:", err);
@@ -120,7 +116,10 @@ export default function LoginScreen() {
         <View style={styles.authCard}>
           <View style={styles.toggleContainer}>
             <TouchableOpacity
-              style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
+              style={[
+                styles.toggleButton,
+                isLogin && styles.toggleButtonActive,
+              ]}
               onPress={() => {
                 router.setParams({ tab: "login" });
                 setError(null);
@@ -138,7 +137,9 @@ export default function LoginScreen() {
                 setError(null);
               }}
             >
-              <Text style={[styles.toggleText, !isLogin && styles.toggleTextActive]}>
+              <Text
+                style={[styles.toggleText, !isLogin && styles.toggleTextActive]}
+              >
                 Sign up
               </Text>
             </TouchableOpacity>
@@ -169,13 +170,15 @@ export default function LoginScreen() {
               </>
             )}
 
-            <Text style={[styles.label, !isLogin && styles.labelSpacing]}>Calvin email</Text>
+            <Text style={[styles.label, !isLogin && { marginTop: 14 }]}>
+              Email address
+            </Text>
             <View style={styles.inputRow}>
               <Ionicons name="mail-outline" size={18} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="you@calvin.edu"
-                placeholderTextColor="#a38f82"
+                placeholder="you@example.com"
+                placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 keyboardType="email-address"
                 value={email}
@@ -219,13 +222,9 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <Text style={styles.footerText}>
-            {isLogin ? "Need an account?" : "Already have an account?"}{" "}
-            <Text
-              style={styles.footerLink}
-              onPress={() => router.setParams({ tab: isLogin ? "signup" : "login" })}
-            >
-              {isLogin ? "Sign up" : "Log in"}
-            </Text>
+            {isLogin
+              ? "Sign in with your email address"
+              : "Create an account with your email address"}
           </Text>
         </View>
       </ScrollView>

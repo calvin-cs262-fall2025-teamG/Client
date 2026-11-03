@@ -1,21 +1,34 @@
-import Constants from "expo-constants";
-import type { User } from "./authServices";
+export {
+  getImageUrl,
+  getSignedUrl,
+  type ImageBucket,
+} from "./supabase_api";
 
-function getHost() {
-  const hostUri =
-    (Constants.expoConfig as any)?.hostUri ??
-    (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
-  const host = hostUri?.split(":")?.[0];
-  return host || "localhost";
-}
+// import Constants from "expo-constants";
+// import {
+//   CreateItemRequest,
+//   CreateMessageRequest,
+//   UpdateItemRequest,
+//   UpdateUserRequest,
+// } from "./apiTypes";
+// import type { User } from "./authServices";
 
-const USE_DEPLOYED_BACKEND = true; //  true = the Azure-deployed backend instead of local
+// function getHost() {
+//   const hostUri =
+//     (Constants.expoConfig as any)?.hostUri ??
+//     (Constants.manifest2 as any)?.extra?.expoClient?.hostUri;
+//   const host = hostUri?.split(":")?.[0];
+//   return host || "localhost";
+// }
 
-export const BASE_URL = USE_DEPLOYED_BACKEND
-  ? "https://bryn-monopoly-service-bpcuabdzg8bkdycb.westus3-01.azurewebsites.net"
-  : `http://${getHost()}:3001`;
-console.log("BASE_URL:", BASE_URL);
+// const USE_DEPLOYED_BACKEND = true; //  true = the Azure-deployed backend instead of local
 
+// export const BASE_URL = USE_DEPLOYED_BACKEND
+//   ? "https://bryn-monopoly-service-bpcuabdzg8bkdycb.westus3-01.azurewebsites.net"
+//   : `http://${getHost()}:3001`;
+// // console.log("BASE_URL:", BASE_URL);
+
+/*
 export type ImageBucket =
   | "profile-pictures"
   | "community-images"
@@ -186,56 +199,63 @@ export async function apiRequest<T>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
+*/
+// export async function apiRequest<T>(
+//   endpoint: string,
+//   options?: RequestInit,
+// ): Promise<T> {
+//   const url = `${BASE_URL}${endpoint}`;
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
-    });
+//   try {
+//     const response = await fetch(url, {
+//       ...options,
+//       headers: {
+//         "Content-Type": "application/json",
+//         ...options?.headers,
+//       },
+//     });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(
-        error.error || `HTTP ${response.status}: ${response.statusText}`
-      );
-    }
+//     if (!response.ok) {
+//       const error = await response.json().catch(() => ({}));
+//       throw new Error(
+//         error.error || `HTTP ${response.status}: ${response.statusText}`,
+//       );
+//     }
 
-    return (await response.json()) as T;
-  } catch (error) {
-    console.error(`API Error (${endpoint}):`, error);
-    throw error;
-  }
-}
+//     return (await response.json()) as T;
+//   } catch (error) {
+//     console.error(`API Error (${endpoint}):`, error);
+//     throw error;
+//   }
+// }
 
-export const auth = {
-  signup: (email: string, password: string, name: string) =>
-    apiRequest("/auth/signup", {
-      method: "POST",
-      body: JSON.stringify({ email, password, name }),
-    }),
+// export const auth = {
+//   signup: (email: string, password: string, name: string) =>
+//     apiRequest("/auth/signup", {
+//       method: "POST",
+//       body: JSON.stringify({ email, password, name }),
+//     }),
 
-  login: (email: string, password: string) =>
-    apiRequest("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+//   login: (email: string, password: string) =>
+//     apiRequest("/auth/login", {
+//       method: "POST",
+//       body: JSON.stringify({ email, password }),
+//     }),
 
-  verifyCode: (email: string, code: string) =>
-    apiRequest("/auth/verify-code", {
-      method: "POST",
-      body: JSON.stringify({ email, code }),
-    }),
+//   verifyCode: (email: string, code: string) =>
+//     apiRequest("/auth/verify-code", {
+//       method: "POST",
+//       body: JSON.stringify({ email, code }),
+//     }),
 
-  resendVerification: (email: string) =>
-    apiRequest("/auth/resend-verification", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
-};
+//   resendVerification: (email: string) =>
+//     apiRequest("/auth/resend-verification", {
+//       method: "POST",
+//       body: JSON.stringify({ email }),
+//     }),
+// };
 
+/*
 export const items = {
   getAll: async () => {
     const data = await apiRequest<
@@ -250,66 +270,47 @@ export const items = {
         `/items/${id}`
       )
     ),
+*/
+// export const items = {
+//   getAll: () => apiRequest("/items"),
 
-  create: (data: {
-    name: string;
-    description?: string;
-    image_url?: string;
-    category?: string;
-    owner_id: number;
-    request_status?: string;
-    start_date?: string;
-    end_date?: string;
-  }) =>
-    apiRequest("/items", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+//   getById: (id: number) => apiRequest(`/items/${id}`),
 
-  update: (
-    id: number,
-    data: {
-      name?: string;
-      description?: string;
-      image_url?: string;
-      category?: string;
-      request_status?: string;
-      start_date?: string;
-      end_date?: string;
-    }
-  ) =>
-    apiRequest(`/items/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
+//   create: (data: CreateItemRequest) =>
+//     apiRequest("/items", {
+//       method: "POST",
+//       body: JSON.stringify(data),
+//     }),
 
-  delete: (id: number) =>
-    apiRequest(`/items/${id}`, {
-      method: "DELETE",
-    }),
-};
+//   update: (id: number, data: UpdateItemRequest) =>
+//     apiRequest(`/items/${id}`, {
+//       method: "PUT",
+//       body: JSON.stringify(data),
+//     }),
 
-export const messages = {
-  getAll: () => apiRequest("/messages"),
+//   delete: (id: number) =>
+//     apiRequest(`/items/${id}`, {
+//       method: "DELETE",
+//     }),
+// };
 
-  getUserMessages: (userId: number) => apiRequest(`/messages/user/${userId}`),
+// export const messages = {
+//   getAll: () => apiRequest("/messages"),
 
-  create: (data: {
-    sender_id: number;
-    receiver_id: number;
-    item_id?: number;
-    content: string;
-  }) =>
-    apiRequest("/messages", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-};
+//   getUserMessages: (userId: number) => apiRequest(`/messages/user/${userId}`),
 
+//   create: (data: CreateMessageRequest) =>
+//     apiRequest("/messages", {
+//       method: "POST",
+//       body: JSON.stringify(data),
+//     }),
+// };
+
+/*
 export const users = {
   getById: async (id: number) =>
     signUserImage(await apiRequest<User>(`/users/${id}`)),
-  
+
   update: async (id: number, data: {
     name?: string;
     profile_picture?: string;
@@ -321,3 +322,13 @@ export const users = {
     return signUserImage(user);
   },
 };
+*/
+// export const users = {
+//   getById: (id: number) => apiRequest<User>(`/users/${id}`),
+
+//   update: (id: number, data: UpdateUserRequest) =>
+//     apiRequest<User>(`/users/${id}`, {
+//       method: "PUT",
+//       body: JSON.stringify(data),
+//     }),
+// };

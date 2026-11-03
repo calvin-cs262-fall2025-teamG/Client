@@ -1,50 +1,36 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router/react-navigation";
+import { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  RefreshControl,
   Image,
+  RefreshControl,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
-import { items as itemsApi, users as usersApi } from "../../services/api";
-import type { User } from "../../services/authServices";
-import { useFocusEffect } from "expo-router/react-navigation";
+import { useDatabase } from "../../context/DatabaseContext";
 import BookmarkButton from "../components/BookmarkButton";
-import { getBookmarkCount } from "../../services/bookmarkCount";
-
-type ApiItem = {
-  item_id: number;
-  name: string;
-  description?: string;
-  image_url?: string | null;
-  category?: string | null;
-  owner_id: number;
-  request_status?: string;
-};
 
 type ItemCard = {
-  id: number;
+  id: string;
   name: string;
-  count: number;
   image: string | null;
   category: string;
   status: string;
 };
 
 export default function Profile() {
-  const [listings, setListings] = useState<ItemCard[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const { logout, user } = useAuth();
+  const { profile, myItems, incomingRequests, refresh } = useDatabase();
   const router = useRouter();
-  const [fullUser, setFullUser] = useState<User | null>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -55,75 +41,50 @@ export default function Profile() {
     await AsyncStorage.removeItem("userItems");
   }, []);
 
-  const loadProfileUser = useCallback(async () => {
-    if (!user) return;
-    console.log("Loading profile for user:", user.user_id);
-    const u = await usersApi.getById(user.user_id);
-    console.log("Loaded user:", u);
-    setFullUser(u as User);
-  }, [user]);
-
-  const loadMyItems = useCallback(async () => {
-    if (!user) {
-      setListings([]);
-      return;
-    }
-
-    console.log("Loading items for user:", user.user_id);
-    const all = (await itemsApi.getAll()) as ApiItem[];
-    const mine = all.filter((it) => it.owner_id === user.user_id);
-
-    // Load bookmark counts for each item
-    const itemsWithCounts = await Promise.all(
-      mine.map(async (it) => {
-        const bookmarkCount = await getBookmarkCount(it.item_id);
-        return {
-          id: it.item_id,
-          name: it.name,
-          count: bookmarkCount,
-          image: it.image_url ?? null,
-          category: it.category ?? "",
-          status: it.request_status ?? "available",
-        };
-      })
-    );
-
-    setListings(itemsWithCounts);
-  }, [user]);
-
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadProfileUser(), loadMyItems()]);
+    await refresh();
     setRefreshing(false);
   };
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void clearOldHardcodedItems();
-      void loadProfileUser();
-      void loadMyItems();
-    }, 0);
+    clearOldHardcodedItems().catch(console.error);
+  }, [clearOldHardcodedItems]);
 
-    return () => clearTimeout(timeoutId);
-  }, [clearOldHardcodedItems, loadProfileUser, loadMyItems]);
-
-  // Reload items every time the screen comes into focus
+  // Refresh on focus: new requests and cancellations come from other people's
+  // devices, and deleting an item doesn't drop its requests from the context
   useFocusEffect(
     useCallback(() => {
-      void loadProfileUser();
-      void loadMyItems();
-    }, [loadProfileUser, loadMyItems])
+      void refresh();
+    }, [refresh])
   );
 
-  const displayName = fullUser?.name ?? user?.name ?? "New User";
-  const avatarUrl = fullUser?.profile_picture ?? user?.profile_picture ?? null;
+  const listings: ItemCard[] = user
+    ? myItems.map((it) => ({
+        id: it.id,
+        name: it.name,
+        image: it.image_path ?? null,
+        category: it.category ?? "",
+        status: it.status,
+      }))
+    : [];
+  const pendingRequestCount = incomingRequests.filter(
+    (r) => r.status === "pending",
+  ).length;
+  const displayName = profile?.display_name ?? user?.display_name ?? "New User";
+  const avatarPath = profile?.avatar_path ?? null;
+  const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
 
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.headerWrap}>
         {/* top-right logout icon */}
-        <TouchableOpacity style={styles.logoutIcon} onPress={handleLogout} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.logoutIcon}
+          onPress={handleLogout}
+          activeOpacity={0.85}
+        >
           <Ionicons name="log-out-outline" size={34} color="#2b2725ff" />
         </TouchableOpacity>
 
@@ -163,14 +124,36 @@ export default function Profile() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => router.push("/requests")}
+            activeOpacity={0.9}
+            accessibilityLabel={
+              pendingRequestCount > 0
+                ? `Requests, ${pendingRequestCount} pending`
+                : "Requests"
+            }
+          >
+            <View style={styles.requestsInner}>
+              <Text style={styles.editProfileText} numberOfLines={1}>
+                Requests
+              </Text>
+              {pendingRequestCount > 0 && (
+                <View style={styles.requestsBadge}>
+                  <Text style={styles.requestsBadgeText}>
+                    {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.smallHelpButton}
             onPress={() => router.push("/HelpList")}
             activeOpacity={0.9}
           >
             <Ionicons name="help-circle-outline" size={22} color="#111827" />
           </TouchableOpacity>
-
-
         </View>
       </View>
 
@@ -205,25 +188,30 @@ export default function Profile() {
             </View>
           ) : (
             listings.map((item) => {
-              const isBorrowed = item.status !== "available";
+              const isBorrowed = item.status === "borrowed";
+              const imageUrl = item.image?.startsWith("http")
+                ? item.image
+                : null;
 
               return (
                 <View key={item.id} style={styles.recommendedItem}>
                   <View style={styles.recommendedImageContainer}>
-                    {item.image ? (
+                    {imageUrl ? (
                       <Image
-                        source={{ uri: item.image }}
+                        source={{ uri: imageUrl }}
                         style={[
                           styles.recommendedImage,
-                          isBorrowed && { opacity: 0.55 }
+                          isBorrowed && { opacity: 0.55 },
                         ]}
                         resizeMode="cover"
                       />
                     ) : (
-                      <View style={[
-                        styles.noImageBox,
-                        isBorrowed && { opacity: 0.55 }
-                      ]}>
+                      <View
+                        style={[
+                          styles.noImageBox,
+                          isBorrowed && { opacity: 0.55 },
+                        ]}
+                      >
                         <Ionicons
                           name="image-outline"
                           size={28}
@@ -245,7 +233,7 @@ export default function Profile() {
                       onPress={() =>
                         router.push({
                           pathname: "/edit-item",
-                          params: { id: item.id.toString() },
+                          params: { id: item.id },
                         })
                       }
                       activeOpacity={0.9}
@@ -258,7 +246,7 @@ export default function Profile() {
                     <Text
                       style={[
                         styles.recommendedName,
-                        isBorrowed && { opacity: 0.7 }
+                        isBorrowed && { opacity: 0.7 },
                       ]}
                       numberOfLines={1}
                     >
@@ -267,12 +255,11 @@ export default function Profile() {
 
                     <View style={styles.countRow}>
                       <BookmarkButton
-                        item={{ id: String(item.id), title: item.name }}
+                        item={{ id: item.id, title: item.name }}
                         size={16}
                         showCount={true}
                       />
                     </View>
-
                   </View>
                 </View>
               );
@@ -364,6 +351,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#111827",
+  },
+
+  requestsInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  requestsBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  requestsBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   smallHelpButton: {
@@ -515,5 +524,4 @@ const styles = StyleSheet.create({
     color: "#111827",
     textAlign: "center",
   },
-
 });

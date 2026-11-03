@@ -1,65 +1,118 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { auth } from "../services/api";  // Import from api.ts
-import type { User } from "../services/authServices";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import {AppState, Platform } from "react-native";
+import { supabase } from "../app/utils/supabase";
+import { Session } from "@supabase/supabase-js";
+import { 
+  SignInInput, 
+  SignUpInput,
+  signUp,
+  signIn,
+  signOut,
+  AppUser,
+ } from"../services/supabaseAuth";
 
 type AuthContextType = {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
-  setUser: (u: User | null) => void;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<any>;  // Return type
+  setUser: (u: AppUser | null) => void;
+  login: (signInInput: SignInInput) => Promise<void>;
+  signup: (signUpInput: SignUpInput) => Promise<void>;
   logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_KEY = "@heyneighbor:user";
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadUser = useCallback(async () => {
-    try {
-      const stored = await AsyncStorage.getItem(USER_KEY);
-      if (stored) setUser(JSON.parse(stored));
-    } catch (error) {
-      console.error("Load user error:", error);
-    } finally {
-      setLoading(false);
+  async function loadAppUser(session: Session | null): Promise<AppUser | null> {
+    if (!session?.user) return null;
+
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id, display_name, avatar_path, created_at")
+      .eq("id", session.user.id)
+      .single();
+
+    if (error || !profile) {
+      console.error("Profile load error:", error);
+      return null;
     }
+
+    return {
+      id: profile.id,
+      email: session.user.email ?? null,
+      display_name: profile.display_name,
+      avatar_path: profile.avatar_path,
+      created_at: profile.created_at,
+    };
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(async ({ data: { session }, error}) => {
+      if (error) console.error("Session restore error:", error);
+      if (mounted) setUser(await loadAppUser(session));
+      if (mounted) setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setTimeout(async () => {
+          if (mounted) setUser(await loadAppUser(session));
+        }, 0);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    // This bootstrap is intentionally async and keeps the saved user session initialized on app start.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadUser();
-  }, [loadUser]);
+    if (Platform.OS === "web") return;
 
-  const login = async (email: string, password: string) => {
-    const response: any = await auth.login(email, password);
-    if (response.user) {
-      const u = response.user;
-      setUser(u);
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(u));
-    }
-  };
+    const syncRefreshWithAppState = (state: string) => {
+      if (state === "active") {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    };
 
-  const signup = async (email: string, password: string, name: string) => {
-    const response = await auth.signup(email, password, name);
-    // Don't set user yet - they need to verify email first
-    return response;
+    syncRefreshWithAppState(AppState.currentState ?? "background");
+
+    const subscription = AppState.addEventListener(
+      "change",
+      syncRefreshWithAppState,
+    );
+
+    return () => {
+      subscription.remove();
+      supabase.auth.stopAutoRefresh();
+    };
+  }, []);
+
+  const login = async (signInInput: SignInInput) => {
+    const { error } = await signIn(signInInput);
+
+    if (error) throw error;
+  }
+
+  const signup = async (signUpInput: SignUpInput) => {
+    const { error } = await signUp(signUpInput);
+    
+    if (error) throw error;
   };
 
   const logout = async () => {
-    try {
-      await AsyncStorage.removeItem(USER_KEY);
-      setUser(null);
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
+    const { error } = await signOut();
+
+    if (error) throw error;
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, setUser, login, signup, logout }}>

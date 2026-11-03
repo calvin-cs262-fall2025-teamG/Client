@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useBookmarks } from "../../context/BookmarksContext";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { getBookmarkCount, updateBookmarkCount } from "../../services/bookmarkCount";
+import { useBookmarks } from "../../context/BookmarksContext";
+import {
+  getBookmarkCount,
+  updateBookmarkCount,
+} from "../../services/bookmarkCount";
 
 type Props = {
   item: { id: string; title: string };
@@ -25,7 +28,7 @@ export default function BookmarkButton({
   const [loading, setLoading] = useState(true);
 
   const loadBookmarkCount = useCallback(async () => {
-    const itemId = Number(item.id);
+    const itemId = item.id;
     const count = await getBookmarkCount(itemId);
     setBookmarkCount(count);
     setLoading(false);
@@ -42,12 +45,16 @@ export default function BookmarkButton({
   const handleToggle = async () => {
     if (!ctx || !user) return;
 
-    const itemId = Number(item.id);
+    const itemId = item.id;
     const wasBookmarked = ctx.isSaved(itemId);
 
     ctx.toggle(item);
 
-    const newCount = await updateBookmarkCount(itemId, wasBookmarked, bookmarkCount);
+    const newCount = await updateBookmarkCount(
+      itemId,
+      wasBookmarked,
+      bookmarkCount,
+    );
     setBookmarkCount(newCount);
   };
 
@@ -62,7 +69,7 @@ export default function BookmarkButton({
     );
   }
 
-  const itemId = Number(item.id);
+  const itemId = item.id;
   const saved = ctx.isSaved(itemId);
 
   return (

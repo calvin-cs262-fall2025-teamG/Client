@@ -1,22 +1,32 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import type { ImageSourcePropType } from "react-native";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
+  ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  Image,
-  ActivityIndicator,
-  SafeAreaView,
+  ScrollView,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
-import { messages as messagesApi, users as usersApi } from "../services/api";
-import type { ImageSourcePropType } from "react-native";
+import { useDatabase } from "../context/DatabaseContext";
+import {
+  direct_messages,
+  type DirectMessage,
+  type Profile,
+} from "../services/supabase_api";
+import {
+  loadLastRead,
+  parseTimestamp,
+  saveLastRead,
+} from "../services/readState";
 
 const avatarMap: Record<string, any> = {
   "helen.png": require("../assets/images/helen.png"),
@@ -30,7 +40,7 @@ const avatarMap: Record<string, any> = {
 
 function resolveImageSource(
   key: string | null | undefined,
-  imageMap: Record<string, any>
+  imageMap: Record<string, any>,
 ): ImageSourcePropType | undefined {
   if (!key) return undefined;
   const trimmed = key.trim();
@@ -44,68 +54,68 @@ function resolveImageSource(
   return imageMap[lower];
 }
 
-interface Message {
-  message_id: number;
-  sender_id: number;
-  receiver_id: number;
-  item_id?: number;
-  content: string;
-  sent_at: string;
-}
-
 export default function ChatThread() {
-  const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
+  const [otherProfile, setOtherProfile] = useState<Profile | null>(null);
 
-  const { id, name, avatar } = useLocalSearchParams<{
+  const { id, name, avatar, draft, itemId } = useLocalSearchParams<{
     id?: string;
     name?: string;
     avatar?: string;
+    draft?: string;
+    itemId?: string;
   }>();
 
   const router = useRouter();
   const { user } = useAuth();
+  const { getProfile } = useDatabase();
   const scrollViewRef = useRef<ScrollView>(null);
+  // Attach the item to the first message sent from this screen only
+  const pendingItemIdRef = useRef(itemId || undefined);
 
-  const otherUserId = id ? Number(id) : null;
+  const otherUserId = id || null;
+  // Use name and avatar from params first, otherwise the loaded profile's
+  const otherName = name?.trim() ? name : otherProfile?.display_name;
+  const otherAvatar = avatar?.trim() ? avatar : otherProfile?.avatar_path;
   const otherAvatarSource = resolveImageSource(otherAvatar, avatarMap);
-  const headerInitial = String(name || "Chat").trim().charAt(0).toUpperCase() || "?";
+  const headerInitial =
+    String(otherName || "Chat")
+      .trim()
+      .charAt(0)
+      .toUpperCase() || "?";
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState("");
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  // A draft from the route only prefills the input; nothing is sent automatically
+  const [inputText, setInputText] = useState(draft ?? "");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
   // Load messages between current user and other user
+  const userId = user?.id;
+
   const loadMessages = useCallback(async () => {
-    if (!user?.user_id || !otherUserId) {
-      setLoading(false);
-      return;
-    }
+    if (!userId || !otherUserId) return;
 
     try {
-      const allMessages: any = await messagesApi.getAll();
+      const { data, error } = await direct_messages.getConversation(otherUserId);
+      if (error) throw error;
 
-      // Filter messages between these two users
-      const filtered = allMessages.filter(
-        (msg: Message) =>
-          (msg.sender_id === user.user_id && msg.receiver_id === otherUserId) ||
-          (msg.sender_id === otherUserId && msg.receiver_id === user.user_id)
+      // Oldest first
+      const sorted = [...(data ?? [])].sort(
+        (a, b) => parseTimestamp(a.created_at) - parseTimestamp(b.created_at),
       );
 
-      setMessages(filtered);
+      setMessages(sorted);
     } catch (error) {
       console.error("Failed to load messages:", error);
     } finally {
       setLoading(false);
     }
-  }, [user, otherUserId]);
+  }, [userId, otherUserId]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void loadMessages();
-    }, 0);
-
-    return () => clearTimeout(timeoutId);
+    // Loader only sets state after awaiting the API, so this doesn't cascade renders
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadMessages();
   }, [loadMessages]);
 
   // Auto-scroll to bottom when messages change
@@ -116,46 +126,50 @@ export default function ChatThread() {
   }, [messages]);
 
   useEffect(() => {
-    const loadOtherUser = async () => {
-      if (!otherUserId) return;
+    if (!otherUserId) return;
 
+    const loadOtherUser = async () => {
       try {
-        const u: any = await usersApi.getById(otherUserId);
-        console.log("OTHER USER profile_picture:", u?.profile_picture);
-        setOtherAvatar(u?.profile_picture ?? null);
+        setOtherProfile(await getProfile(otherUserId));
       } catch (e) {
         console.error("Failed to load other user:", e);
       }
     };
 
-    // Use avatar from params first, otherwise load from API
-    const timeoutId = setTimeout(() => {
-      if (avatar && avatar.trim()) {
-        setOtherAvatar(avatar);
-      } else {
-        void loadOtherUser();
-      }
-    }, 0);
+    loadOtherUser();
+  }, [otherUserId, getProfile]);
 
-    return () => clearTimeout(timeoutId);
-  }, [otherUserId, avatar]);
-
-
+  // Record the newest message on screen as seen, on load and after sending.
+  const newest = messages[messages.length - 1]?.created_at;
+  useEffect(() => {
+    if (!userId || !otherUserId || !newest) return;
+    const key = `dm:${otherUserId}`;
+    loadLastRead(userId)
+      .then((map) => saveLastRead(userId, { ...map, [key]: newest }))
+      .catch((e) => console.error("Failed to save read state:", e));
+  }, [userId, otherUserId, newest]);
 
   const handleSend = async () => {
-    if (!inputText.trim() || !user?.user_id || !otherUserId || sending) return;
+    const content = inputText.trim();
+    if (!content || !userId || !otherUserId || sending) return;
 
     setSending(true);
 
     try {
-      await messagesApi.create({
-        sender_id: user.user_id,
+      const pendingItemId = pendingItemIdRef.current;
+      const { data, error } = await direct_messages.create({
         receiver_id: otherUserId,
-        content: inputText.trim(),
+        content,
+        ...(pendingItemId ? { item_id: pendingItemId } : {}),
       });
+      if (error) throw error;
+      pendingItemIdRef.current = undefined;
 
-      // Reload messages to get the new one
-      await loadMessages();
+      if (data) {
+        setMessages((prev) =>
+          prev.some((m) => m.id === data.id) ? prev : [...prev, data],
+        );
+      }
 
       setInputText("");
     } catch (error) {
@@ -166,16 +180,27 @@ export default function ChatThread() {
   };
 
   // Format timestamp
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatTime = (createdAt: string) => {
+    const date = new Date(parseTimestamp(createdAt));
     const now = new Date();
 
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfMessageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfMessageDay = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+    );
     const diffMs = startOfToday.getTime() - startOfMessageDay.getTime();
     const diffDays = Math.floor(diffMs / 86400000);
 
-    const timeStr = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const timeStr = date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
 
     if (diffDays === 0) return `Today • ${timeStr}`;
     if (diffDays === 1) return `Yesterday • ${timeStr}`;
@@ -184,7 +209,7 @@ export default function ChatThread() {
     return `${Math.floor(diffDays / 7)} weeks ago • ${timeStr}`;
   };
 
-  if (loading) {
+  if (loading && userId && otherUserId) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
@@ -197,13 +222,15 @@ export default function ChatThread() {
             {otherAvatarSource ? (
               <Image source={otherAvatarSource} style={styles.headerAvatar} />
             ) : (
-              <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+              <View
+                style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}
+              >
                 <Text style={styles.headerAvatarText}>{headerInitial}</Text>
               </View>
             )}
 
             <View>
-              <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+              <Text style={styles.headerTitle}>{otherName || "Chat"}</Text>
               <Text style={styles.headerSubtitle}>Active now</Text>
             </View>
           </View>
@@ -218,7 +245,6 @@ export default function ChatThread() {
       </SafeAreaView>
     );
   }
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -238,11 +264,10 @@ export default function ChatThread() {
           )}
 
           <View>
-            <Text style={styles.headerTitle}>{name || "Chat"}</Text>
+            <Text style={styles.headerTitle}>{otherName || "Chat"}</Text>
             <Text style={styles.headerSubtitle}>Active now</Text>
           </View>
         </View>
-
 
         <View style={{ width: 24 }} />
       </View>
@@ -262,14 +287,16 @@ export default function ChatThread() {
           {messages.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No messages yet</Text>
-              <Text style={styles.emptySub}>Send a message to start the conversation</Text>
+              <Text style={styles.emptySub}>
+                Send a message to start the conversation
+              </Text>
             </View>
           ) : (
             messages.map((msg) => {
-              const isUser = msg.sender_id === user?.user_id;
+              const isUser = msg.sender_id === user?.id;
 
               return (
-                <View key={msg.message_id}>
+                <View key={msg.id}>
                   <View
                     style={[
                       styles.messageBubble,
@@ -292,7 +319,7 @@ export default function ChatThread() {
                       isUser ? styles.timestampRight : styles.timestampLeft,
                     ]}
                   >
-                    {formatTime(msg.sent_at)}
+                    {formatTime(msg.created_at)}
                   </Text>
                 </View>
               );
