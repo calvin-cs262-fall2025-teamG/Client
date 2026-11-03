@@ -36,23 +36,25 @@ const imageMap: Record<string, any> = {
   "electrickettle.jpg": require("../../assets/images/electrickettle.jpg"),
   "hose.jpg": require("../../assets/images/hose.jpg"),
   "keurig.png": require("../../assets/images/keurig.png"),
-              )
-            }
-          >
+  "laptopstand.jpg": require("../../assets/images/laptopstand.jpg"),
+  "pressurewasher.jpg": require("../../assets/images/pressurewasher.jpg"),
+  "smartwatch.jpg": require("../../assets/images/smartwatch.jpg"),
+  "speaker.jpg": require("../../assets/images/speaker.jpg"),
+  "standingdesk.jpg": require("../../assets/images/standingdesk.jpg"),
+  "tools.jpg": require("../../assets/images/tools.jpg"),
   "tractor.jpg": require("../../assets/images/tractor.jpg"),
-              {sending
-                ? "Sending..."
-                : hasPendingRequest
-                  ? "Request sent"
-                  : "Request to Borrow"}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={styles.description}>
-            {getItemRole(item.owner_id, user?.id) === "owner"
-              ? "This is your listing."
-              : "Log in to request this item."}
-          </Text>
+  "vacuum.jpg": require("../../assets/images/vacuum.jpg"),
+  "vacuum2.jpg": require("../../assets/images/vacuum2.jpg"),
+  "vacuum3.jpg": require("../../assets/images/vacuum3.jpg"),
+  "vacuum4.jpg": require("../../assets/images/vacuum4.jpg"),
+  "vacuum5.jpg": require("../../assets/images/vacuum5.jpg"),
+  "vacuum6.jpg": require("../../assets/images/vacuum6.jpg"),
+  "wirelessbuds.jpg": require("../../assets/images/wirelessbuds.jpg"),
+  "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
+
+  // avatar images
+  "greg.png": require("../../assets/images/greg.png"),
+  "jacob.png": require("../../assets/images/jacob.png"),
   "helen.png": require("../../assets/images/helen.png"),
   "rose.png": require("../../assets/images/rose.png"),
   "bryn.png": require("../../assets/images/bryn.png"),
@@ -293,7 +295,6 @@ export default function ItemDetail() {
               ? "This is your listing."
               : "Log in to request this item."}
           </Text>
-        )}
         )}
       </ScrollView>
     </SafeAreaView>

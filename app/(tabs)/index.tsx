@@ -316,7 +316,7 @@ export default function Index() {
                           color="#3b1b0d"
                         />
                       </TouchableOpacity>
-                    )}
+                    ) : null}
                     {/* Navigate via image */}
                     <TouchableOpacity
                       onPress={() => {
