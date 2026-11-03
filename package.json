@@ -9,11 +9,19 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "jest": {
     "preset": "jest-expo",
-    "setupFiles": ["<rootDir>/jest.setup.js"]
+    "setupFiles": ["<rootDir>/jest.setup.js"],
+    "collectCoverageFrom": [
+      "app/**/*.{ts,tsx}",
+      "context/**/*.{ts,tsx}",
+      "services/**/*.{ts,tsx}",
+      "!**/*.d.ts",
+      "!services/supabase_database.types.ts"
+    ]
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
