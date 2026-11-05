@@ -4,7 +4,7 @@ import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.typ
 
 export type Profile = Tables<"profiles">;
 export type Community = Tables<"communities">;
-export type CommunityMember = Omit<TablesInsert<"community_members">, "last_read_at">;
+export type CommunityMember = Tables<"community_members">;
 export type CommunityMessage = Tables<"community_messages">;
 export type DirectMessage = Tables<"direct_messages">;
 export type Item = Tables<"items">;
@@ -21,7 +21,7 @@ export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_message
 
 export type CommunityMemberRole = "owner" | "admin" | "member";
 
-type ImageInput = { data: ArrayBuffer; ext?: string };
+export type ImageInput = { data: ArrayBuffer; ext?: string };
 export type ImageBucket = "profile-pictures" | "item-images" | "community-images";
 
 async function uploadImage(bucket: string, path: string, img: ImageInput) {
@@ -181,8 +181,8 @@ export const community_messages = {
 
   delete: (id: string) => supabase.rpc("delete_community_message", { p_message_id: id }),
 
-  getUnreadCount: (communityId: string) =>
-    supabase.rpc("get_community_unread_count", { p_community_id: communityId }),
+  // getUnreadCount: (communityId: string) =>
+  //   supabase.rpc("get_community_unread_count", { p_community_id: communityId }),
 };
 
 export const direct_messages = {
