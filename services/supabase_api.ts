@@ -21,7 +21,7 @@ export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_message
 
 export type CommunityMemberRole = "owner" | "admin" | "member";
 
-type ImageInput = { data: ArrayBuffer; ext?: string };
+export type ImageInput = { data: ArrayBuffer; ext?: string };
 export type ImageBucket = "profile-pictures" | "item-images" | "community-images";
 
 async function uploadImage(bucket: string, path: string, img: ImageInput) {
@@ -157,7 +157,7 @@ export const community_members = {
 
   leave: (communityId: string) => supabase.rpc("leave_community", { p_community_id: communityId }),
 
-  markRead: (communityId: string) => supabase.rpc("mark_community_read", { p_community_id: communityId }),
+  // markRead: (communityId: string) => supabase.rpc("mark_community_read", { p_community_id: communityId }),
 
   isMember: (communityId: string) => supabase.rpc("is_community_member", { target_community_id: communityId }),
 
@@ -181,8 +181,8 @@ export const community_messages = {
 
   delete: (id: string) => supabase.rpc("delete_community_message", { p_message_id: id }),
 
-  getUnreadCount: (communityId: string) =>
-    supabase.rpc("get_community_unread_count", { p_community_id: communityId }),
+  // getUnreadCount: (communityId: string) =>
+  //   supabase.rpc("get_community_unread_count", { p_community_id: communityId }),
 };
 
 export const direct_messages = {
