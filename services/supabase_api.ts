@@ -1,6 +1,6 @@
 import { randomUUID } from "expo-crypto";
 import { supabase } from "../app/utils/supabase";
-import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types";
+import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types.ts";
 
 export type Profile = Tables<"profiles">;
 export type Community = Tables<"communities">;
