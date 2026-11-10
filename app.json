@@ -18,7 +18,7 @@
       "package": "com.anonymous.heynbr"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
