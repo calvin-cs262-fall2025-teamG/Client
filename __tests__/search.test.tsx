@@ -135,28 +135,35 @@ describe("Search tabs", () => {
   });
 });
 
+async function openFilters() {
+  await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
+}
+
+async function showResults() {
+  await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
+}
+
 describe("Items filters", () => {
-  it("shows every item by default", async () => {
+  it("shows every item by default with no Filters badge", async () => {
     await renderSearch();
 
     for (const name of ["Drill", "Tent", "Hammer", "Kettle"]) {
       expect(screen.getByText(name)).toBeTruthy();
     }
+    expect(screen.queryByTestId("filters-badge")).toBeNull();
   });
 
   it("hides borrowed items when Available only is on", async () => {
     await renderSearch();
 
+    await openFilters();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
+    await showResults();
 
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.getByText("Kettle")).toBeTruthy();
     expect(screen.queryByText("Tent")).toBeNull();
     expect(screen.queryByText("Hammer")).toBeNull();
-
-    await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
-
-    expect(screen.getByText("Tent")).toBeTruthy();
   });
 
   it("filters by category", async () => {
@@ -173,23 +180,23 @@ describe("Items filters", () => {
   it("filters by community", async () => {
     await renderSearch();
 
+    await openFilters();
     await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
+    await showResults();
 
     expect(screen.getByText("Tent")).toBeTruthy();
     expect(screen.getByText("Kettle")).toBeTruthy();
     expect(screen.queryByText("Drill")).toBeNull();
-
-    await fireEvent.press(screen.getByRole("button", { name: "All communities" }));
-
-    expect(screen.getByText("Drill")).toBeTruthy();
   });
 
   it("combines search, category, community, and availability", async () => {
     await renderSearch();
 
+    await openFilters();
     await fireEvent.press(screen.getByRole("button", { name: "Maple Street" }));
-    await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
     await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
+    await showResults();
+    await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
 
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.queryByText("Hammer")).toBeNull();
@@ -197,6 +204,91 @@ describe("Items filters", () => {
     await fireEvent.changeText(screen.getByPlaceholderText("Search for anything"), "ham");
 
     expect(screen.getByText("No items found")).toBeTruthy();
+  });
+
+  it("counts the filters that are on in the badge", async () => {
+    await renderSearch();
+
+    await openFilters();
+    await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
+    await showResults();
+    expect(screen.getByTestId("filters-badge")).toHaveTextContent("1");
+
+    await openFilters();
+    await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
+    await showResults();
+    expect(screen.getByTestId("filters-badge")).toHaveTextContent("2");
+  });
+
+  it("does not count the category as a filter", async () => {
+    await renderSearch();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
+
+    expect(screen.queryByTestId("filters-badge")).toBeNull();
+  });
+
+  it("clears every filter with Clear all", async () => {
+    await renderSearch();
+    await openFilters();
+    await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
+    await showResults();
+    expect(screen.queryByText("Drill")).toBeNull();
+
+    await openFilters();
+    await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
+
+    expect(screen.getByRole("checkbox", { name: "Available only" }).props.accessibilityState).toEqual({
+      checked: false,
+    });
+    expect(
+      screen.getByRole("button", { name: "All communities" }).props.accessibilityState
+    ).toEqual({ selected: true });
+
+    await showResults();
+
+    expect(screen.queryByTestId("filters-badge")).toBeNull();
+    for (const name of ["Drill", "Tent", "Hammer", "Kettle"]) {
+      expect(screen.getByText(name)).toBeTruthy();
+    }
+  });
+
+  it("does not apply changes when the sheet is closed without Show results", async () => {
+    await renderSearch();
+
+    await openFilters();
+    await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
+    await fireEvent.press(screen.getByLabelText("Close filters"));
+
+    expect(screen.getByText("Tent")).toBeTruthy();
+    expect(screen.queryByTestId("filters-badge")).toBeNull();
+  });
+
+  it("hides the community filter for a user in one community", async () => {
+    mockMyCommunities = [{ id: "c1", name: "Maple Street" }];
+    await renderSearch();
+
+    await openFilters();
+
+    expect(screen.getByRole("checkbox", { name: "Available only" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "All communities" })).toBeNull();
+  });
+});
+
+describe("Search community label rule", () => {
+  it("labels cards for a user in 2 or more communities", async () => {
+    await renderSearch();
+
+    expect(screen.getAllByText("Maple Street")).toHaveLength(2);
+    expect(screen.getAllByText("Oak Hall")).toHaveLength(2);
+  });
+
+  it("hides labels for a user in one community", async () => {
+    mockMyCommunities = [{ id: "c1", name: "Maple Street" }];
+    await renderSearch();
+
+    expect(screen.queryByText("Maple Street")).toBeNull();
   });
 });
 

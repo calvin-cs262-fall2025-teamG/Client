@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -31,8 +33,6 @@ import {
   matchesCategory,
 } from "../../constants/categories";
 
-const banner = require("../../assets/images/banner.png");
-
 // avatar_path is only shown when it is already a full URL.
 const avatarUri = (path: string | null) =>
   path && /^https?:\/\//i.test(path) ? path : null;
@@ -48,6 +48,11 @@ export default function DiscoverScreen() {
   const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES);
   const [availableOnly, setAvailableOnly] = useState(false);
   const [activeCommunity, setActiveCommunity] = useState(ALL_COMMUNITIES);
+
+  // The Filters sheet edits a draft that is applied by Show results.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [draftAvailableOnly, setDraftAvailableOnly] = useState(false);
+  const [draftCommunity, setDraftCommunity] = useState(ALL_COMMUNITIES);
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,6 +151,34 @@ export default function DiscoverScreen() {
     );
   }, [allCommunities, myCommunities, communityQuery]);
 
+  const communityNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    myCommunities.forEach((c) => {
+      names[c.id] = c.name;
+    });
+    return names;
+  }, [myCommunities]);
+
+  const activeFilterCount =
+    (availableOnly ? 1 : 0) + (activeCommunity !== ALL_COMMUNITIES ? 1 : 0);
+
+  const openFilters = () => {
+    setDraftAvailableOnly(availableOnly);
+    setDraftCommunity(activeCommunity);
+    setFiltersOpen(true);
+  };
+
+  const clearFilters = () => {
+    setDraftAvailableOnly(false);
+    setDraftCommunity(ALL_COMMUNITIES);
+  };
+
+  const applyFilters = () => {
+    setAvailableOnly(draftAvailableOnly);
+    setActiveCommunity(draftCommunity);
+    setFiltersOpen(false);
+  };
+
   const communityChips = [
     { id: ALL_COMMUNITIES, name: "All communities" },
     ...myCommunities,
@@ -188,21 +221,40 @@ export default function DiscoverScreen() {
       >
         {activeTab === "Items" ? (
           <>
-            {/* SEARCH BAR */}
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color="#6b7280" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search for anything"
-                placeholderTextColor="#9ca3af"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
+            {/* SEARCH + FILTERS */}
+            <View style={styles.searchRow}>
+              <View style={[styles.searchBar, styles.searchBarInRow]}>
+                <Ionicons name="search" size={20} color="#6b7280" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search for anything"
+                  placeholderTextColor="#9ca3af"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
 
-            {/* BANNER */}
-            <View style={styles.bannerContainer}>
-              <Image source={banner} style={styles.bannerImage} />
+              <TouchableOpacity
+                style={styles.filtersButton}
+                onPress={openFilters}
+                accessibilityRole="button"
+                accessibilityLabel="Filters"
+                accessibilityValue={
+                  activeFilterCount > 0
+                    ? { text: `${activeFilterCount} on` }
+                    : undefined
+                }
+                activeOpacity={0.8}
+              >
+                <Ionicons name="options-outline" size={22} color="#3b1b0d" />
+                {activeFilterCount > 0 && (
+                  <View style={styles.filtersBadge} testID="filters-badge">
+                    <Text style={styles.filtersBadgeText}>
+                      {activeFilterCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
             {/* CATEGORY TABS */}
@@ -235,69 +287,6 @@ export default function DiscoverScreen() {
               ))}
             </ScrollView>
 
-            {/* COMMUNITY + AVAILABILITY FILTERS */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  availableOnly && styles.filterChipActive,
-                ]}
-                onPress={() => setAvailableOnly((v) => !v)}
-                accessibilityRole="checkbox"
-                accessibilityLabel="Available only"
-                accessibilityState={{ checked: availableOnly }}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={availableOnly ? "checkmark-circle" : "ellipse-outline"}
-                  size={16}
-                  color={availableOnly ? "#f97316" : "#3b1b0d"}
-                />
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    availableOnly && styles.filterChipTextActive,
-                  ]}
-                >
-                  Available only
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.filterDivider} />
-
-              {communityChips.map((c) => {
-                const selected = activeCommunity === c.id;
-                return (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[
-                      styles.filterChip,
-                      selected && styles.filterChipActive,
-                    ]}
-                    onPress={() => setActiveCommunity(c.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={c.name}
-                    accessibilityState={{ selected }}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        selected && styles.filterChipTextActive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {c.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
             {/* ITEMS GRID */}
             {loading ? (
               <View style={{ paddingTop: 30 }}>
@@ -311,7 +300,12 @@ export default function DiscoverScreen() {
             ) : (
               <View style={styles.grid}>
                 {filteredItems.map((it) => (
-                  <ItemCard key={it.id} item={it} />
+                  <ItemCard
+                    key={it.id}
+                    item={it}
+                    showCommunity={myCommunities.length >= 2}
+                    communityName={communityNames[it.community_id]}
+                  />
                 ))}
               </View>
             )}
@@ -422,6 +416,96 @@ export default function DiscoverScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* FILTERS SHEET */}
+      <Modal
+        visible={filtersOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFiltersOpen(false)}
+      >
+        <View style={styles.sheetContainer}>
+          <Pressable
+            style={styles.sheetBackdrop}
+            onPress={() => setFiltersOpen(false)}
+            accessibilityLabel="Close filters"
+          />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Filters</Text>
+
+            <TouchableOpacity
+              style={styles.sheetToggle}
+              onPress={() => setDraftAvailableOnly((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityLabel="Available only"
+              accessibilityState={{ checked: draftAvailableOnly }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.sheetToggleText}>Available only</Text>
+              <Ionicons
+                name={draftAvailableOnly ? "checkbox" : "square-outline"}
+                size={22}
+                color={draftAvailableOnly ? "#f97316" : "#3b1b0d"}
+              />
+            </TouchableOpacity>
+
+            {myCommunities.length >= 2 && (
+              <>
+                <Text style={styles.sheetSection}>Community</Text>
+                <View style={styles.sheetChips}>
+                  {communityChips.map((c) => {
+                    const selected = draftCommunity === c.id;
+                    return (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={[
+                          styles.filterChip,
+                          selected && styles.filterChipActive,
+                        ]}
+                        onPress={() => setDraftCommunity(c.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={c.name}
+                        accessibilityState={{ selected }}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            selected && styles.filterChipTextActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {c.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <View style={styles.sheetActions}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={clearFilters}
+                accessibilityRole="button"
+                activeOpacity={0.8}
+              >
+                <Text style={styles.clearButtonText}>Clear all</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.showButton}
+                onPress={applyFilters}
+                accessibilityRole="button"
+                activeOpacity={0.8}
+              >
+                <Text style={styles.showButtonText}>Show results</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -447,21 +531,11 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
-  bannerContainer: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  bannerImage: {
-    width: "100%",
-    height: 180,
-  },
 
   tabs: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    marginTop: 20,
+    marginTop: 14,
     gap: 12,
   },
 
@@ -493,6 +567,129 @@ const styles = StyleSheet.create({
   },
 
 
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  searchBarInRow: {
+    flex: 1,
+    marginHorizontal: 0,
+    marginTop: 0,
+  },
+  filtersButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f3f4f6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filtersBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#f97316",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  filtersBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  sheetContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 32,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#e5e7eb",
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 12,
+  },
+  sheetToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+  },
+  sheetToggleText: {
+    fontSize: 16,
+    color: "#111827",
+  },
+  sheetSection: {
+    marginTop: 12,
+    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  sheetChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  sheetActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 24,
+  },
+  clearButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    alignItems: "center",
+  },
+  clearButtonText: {
+    color: "#3b1b0d",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  showButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 30,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+  },
+  showButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
   segment: {
     flexDirection: "row",
     backgroundColor: "#f3f4f6",
@@ -519,13 +716,6 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
 
-  filterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginTop: 12,
-    gap: 8,
-  },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -548,11 +738,6 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: "#c2410c",
-  },
-  filterDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: "#e5e7eb",
   },
 
   emptyContainer: {
