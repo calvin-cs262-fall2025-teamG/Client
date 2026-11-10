@@ -53,6 +53,11 @@ const CATEGORY_ICONS: Record<ItemCategory, IoniconName> = {
 };
 
 const NEW_ITEMS_LIMIT = 5;
+// How many of each group the All results tab shows before "See all".
+const ALL_TAB_ITEMS = 5;
+const ALL_TAB_COMMUNITIES = 3;
+
+type ResultTab = "All" | "Items" | "Communities";
 
 // avatar_path is only shown when it is already a full URL.
 const avatarUri = (path: string | null) =>
@@ -121,6 +126,7 @@ export default function DiscoverScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState<ItemCategory | null>(null);
   const [showAllCommunities, setShowAllCommunities] = useState(false);
+  const [resultTab, setResultTab] = useState<ResultTab>("All");
 
   const [availableOnly, setAvailableOnly] = useState(false);
   const [activeCommunity, setActiveCommunity] = useState(ALL_COMMUNITIES);
@@ -235,6 +241,30 @@ export default function DiscoverScreen() {
     [items, activeCommunity, category, query, availableOnly],
   );
 
+  // Communities only match typed text; a category tile alone finds none.
+  const matchingCommunities = useMemo(
+    () =>
+      query
+        ? joinableCommunities.filter(
+            (c) =>
+              c.name.toLowerCase().includes(query) ||
+              (c.description ?? "").toLowerCase().includes(query),
+          )
+        : [],
+    [joinableCommunities, query],
+  );
+
+  // Leaving the results view starts the next search on the All tab.
+  const changeSearch = (text: string) => {
+    setSearchQuery(text);
+    if (!text.trim() && !category) setResultTab("All");
+  };
+
+  const clearCategory = () => {
+    setCategory(null);
+    if (!query) setResultTab("All");
+  };
+
   const activeFilterCount =
     (availableOnly ? 1 : 0) + (activeCommunity !== ALL_COMMUNITIES ? 1 : 0);
 
@@ -262,6 +292,28 @@ export default function DiscoverScreen() {
 
   const showLabels = myCommunities.length >= 2;
 
+  const renderCommunityRow = (c: Community) => (
+    <View key={c.id} style={styles.communityRow}>
+      <CommunityAvatar community={c} size={52} />
+      <View style={styles.communityInfo}>
+        <Text style={styles.communityName} numberOfLines={1}>
+          {c.name}
+        </Text>
+        {!!c.description && (
+          <Text style={styles.communityDescription} numberOfLines={2}>
+            {c.description}
+          </Text>
+        )}
+      </View>
+      <JoinButton
+        community={c}
+        requested={requested.has(c.id)}
+        joining={joining === c.id}
+        onPress={handleRequestToJoin}
+      />
+    </View>
+  );
+
   const renderAllCommunities = () => (
     <>
       <View style={styles.subHeader}>
@@ -283,27 +335,7 @@ export default function DiscoverScreen() {
         </View>
       ) : (
         <View style={styles.communityList}>
-          {joinableCommunities.map((c) => (
-            <View key={c.id} style={styles.communityRow}>
-              <CommunityAvatar community={c} size={52} />
-              <View style={styles.communityInfo}>
-                <Text style={styles.communityName} numberOfLines={1}>
-                  {c.name}
-                </Text>
-                {!!c.description && (
-                  <Text style={styles.communityDescription} numberOfLines={2}>
-                    {c.description}
-                  </Text>
-                )}
-              </View>
-              <JoinButton
-                community={c}
-                requested={requested.has(c.id)}
-                joining={joining === c.id}
-                onPress={handleRequestToJoin}
-              />
-            </View>
-          ))}
+          {joinableCommunities.map(renderCommunityRow)}
         </View>
       )}
     </>
@@ -393,22 +425,115 @@ export default function DiscoverScreen() {
     </>
   );
 
+  const renderItemsEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="cube-outline" size={48} color="#9ca3af" />
+      <Text style={styles.emptyText}>No items found</Text>
+    </View>
+  );
+
+  const renderCommunitiesEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="people-outline" size={48} color="#9ca3af" />
+      <Text style={styles.emptyText}>
+        {query
+          ? "No communities match your search."
+          : "Type to search communities."}
+      </Text>
+    </View>
+  );
+
+  const renderGroupHeader = (title: string, count: number, limit: number, tab: ResultTab) => (
+    <View style={styles.groupHeader}>
+      <Text style={styles.groupTitle}>{title}</Text>
+      {count > limit && (
+        <TouchableOpacity
+          onPress={() => setResultTab(tab)}
+          accessibilityRole="button"
+          accessibilityLabel={`See all ${title.toLowerCase()}`}
+        >
+          <Text style={styles.seeAll}>See all</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  const renderAllTab = () => {
+    if (matchingItems.length === 0 && matchingCommunities.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={48} color="#9ca3af" />
+          <Text style={styles.emptyText}>
+            {query ? `No results for "${searchQuery.trim()}"` : "No items found"}
+          </Text>
+        </View>
+      );
+    }
+    return (
+      <>
+        {matchingItems.length > 0 && (
+          <View style={styles.group}>
+            {renderGroupHeader("Items", matchingItems.length, ALL_TAB_ITEMS, "Items")}
+            {matchingItems.slice(0, ALL_TAB_ITEMS).map((it) => (
+              <ItemRow
+                key={it.id}
+                item={it}
+                communityName={communityNames[it.community_id]}
+                showStatus
+              />
+            ))}
+          </View>
+        )}
+        {matchingCommunities.length > 0 && (
+          <View style={styles.group}>
+            {renderGroupHeader(
+              "Communities",
+              matchingCommunities.length,
+              ALL_TAB_COMMUNITIES,
+              "Communities",
+            )}
+            <View style={styles.groupCommunities}>
+              {matchingCommunities
+                .slice(0, ALL_TAB_COMMUNITIES)
+                .map(renderCommunityRow)}
+            </View>
+          </View>
+        )}
+      </>
+    );
+  };
+
+  const resultTabs: { tab: ResultTab; label: string }[] = [
+    { tab: "All", label: "All" },
+    { tab: "Items", label: `Items (${matchingItems.length})` },
+    { tab: "Communities", label: `Communities (${matchingCommunities.length})` },
+  ];
+
   const renderResults = () => (
     <>
       <View style={styles.resultsBar}>
-        <View style={styles.resultsBarLeft}>
-          {category && (
-            <TouchableOpacity
-              style={styles.categoryChip}
-              onPress={() => setCategory(null)}
-              accessibilityRole="button"
-              accessibilityLabel={`Clear ${category} filter`}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.categoryChipText}>{category}</Text>
-              <Ionicons name="close" size={14} color="#c2410c" />
-            </TouchableOpacity>
-          )}
+        <View style={styles.resultTabs} accessibilityRole="tablist">
+          {resultTabs.map(({ tab, label }) => {
+            const selected = resultTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.resultTab, selected && styles.resultTabActive]}
+                onPress={() => setResultTab(tab)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+              >
+                <Text
+                  style={[
+                    styles.resultTabText,
+                    selected && styles.resultTabTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
         <TouchableOpacity
           style={styles.filtersButton}
@@ -432,25 +557,47 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
+      {category && (
+        <View style={styles.categoryRow}>
+          <TouchableOpacity
+            style={styles.categoryChip}
+            onPress={clearCategory}
+            accessibilityRole="button"
+            accessibilityLabel={`Clear ${category} filter`}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.categoryChipText}>{category}</Text>
+            <Ionicons name="close" size={14} color="#c2410c" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loading ? (
         <View style={{ paddingTop: 30 }}>
           <ActivityIndicator />
         </View>
-      ) : matchingItems.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="cube-outline" size={48} color="#9ca3af" />
-          <Text style={styles.emptyText}>No items found</Text>
-        </View>
+      ) : resultTab === "All" ? (
+        renderAllTab()
+      ) : resultTab === "Items" ? (
+        matchingItems.length === 0 ? (
+          renderItemsEmpty()
+        ) : (
+          <View style={styles.grid}>
+            {matchingItems.map((it) => (
+              <ItemCard
+                key={it.id}
+                item={it}
+                showCommunity={showLabels}
+                communityName={communityNames[it.community_id]}
+              />
+            ))}
+          </View>
+        )
+      ) : matchingCommunities.length === 0 ? (
+        renderCommunitiesEmpty()
       ) : (
-        <View style={styles.grid}>
-          {matchingItems.map((it) => (
-            <ItemCard
-              key={it.id}
-              item={it}
-              showCommunity={showLabels}
-              communityName={communityNames[it.community_id]}
-            />
-          ))}
+        <View style={styles.communityList}>
+          {matchingCommunities.map(renderCommunityRow)}
         </View>
       )}
     </>
@@ -478,11 +625,11 @@ export default function DiscoverScreen() {
                 placeholder="Search items or communities"
                 placeholderTextColor="#9ca3af"
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={changeSearch}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity
-                  onPress={() => setSearchQuery("")}
+                  onPress={() => changeSearch("")}
                   accessibilityRole="button"
                   accessibilityLabel="Clear search"
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -698,13 +845,56 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 14,
+    marginTop: 12,
     gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
   },
-  resultsBarLeft: {
+  resultTabs: {
     flex: 1,
     flexDirection: "row",
+    gap: 18,
+  },
+  resultTab: {
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  resultTabActive: {
+    borderBottomColor: "#f97316",
+  },
+  resultTabText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#9ca3af",
+  },
+  resultTabTextActive: {
+    color: "#3b1b0d",
+    fontWeight: "700",
+  },
+  categoryRow: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  group: {
+    marginTop: 18,
+    paddingHorizontal: 16,
+  },
+  groupHeader: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  groupTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3b1b0d",
+  },
+  groupCommunities: {
+    marginTop: 6,
+    gap: 10,
   },
   categoryChip: {
     flexDirection: "row",

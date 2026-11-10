@@ -415,3 +415,126 @@ describe("Filters", () => {
     expect(screen.queryByRole("button", { name: "All communities" })).toBeNull();
   });
 });
+
+describe("Grouped results", () => {
+  const tab = (name: string | RegExp) => screen.getByRole("tab", { name });
+
+  it("shows All, Items (n) and Communities (n) tabs with All selected", async () => {
+    await renderDiscover();
+
+    await search("r");
+
+    // Items: Drill, Hammer. Communities: Pine Ridge, Cedar Court (not Maple Street, a member).
+    expect(tab("All").props.accessibilityState).toEqual({ selected: true });
+    expect(tab("Items (2)")).toBeTruthy();
+    expect(tab("Communities (2)")).toBeTruthy();
+  });
+
+  it("updates the counts as the search changes", async () => {
+    await renderDiscover();
+
+    await search("pine");
+
+    expect(tab("Items (0)")).toBeTruthy();
+    expect(tab("Communities (1)")).toBeTruthy();
+  });
+
+  it("groups items with status tags and communities with Request buttons on All", async () => {
+    await renderDiscover();
+
+    await search("r");
+
+    expect(screen.getByText("Items")).toBeTruthy();
+    expect(screen.getByText("Communities")).toBeTruthy();
+    expect(screen.getByText("Drill")).toBeTruthy();
+    expect(screen.getByText("Available")).toBeTruthy();
+    expect(screen.getByText("Borrowed")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Request to join Pine Ridge" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Request to join Cedar Court" })).toBeTruthy();
+  });
+
+  it("shows only items on the Items tab", async () => {
+    await renderDiscover();
+    await search("r");
+
+    await fireEvent.press(tab("Items (2)"));
+
+    expect(tab("Items (2)").props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByText("Hammer")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Request to join Pine Ridge" })).toBeNull();
+  });
+
+  it("shows only communities on the Communities tab", async () => {
+    await renderDiscover();
+    await search("r");
+
+    await fireEvent.press(tab("Communities (2)"));
+
+    expect(screen.getByRole("button", { name: "Request to join Pine Ridge" })).toBeTruthy();
+    expect(screen.queryByText("Drill")).toBeNull();
+  });
+
+  it("sends a join request from the results", async () => {
+    await renderDiscover();
+    await search("pine");
+
+    await fireEvent.press(screen.getByRole("button", { name: "Request to join Pine Ridge" }));
+
+    expect(mockRequestToJoin).toHaveBeenCalledWith("c3");
+    const button = await screen.findByRole("button", { name: "Requested to join Pine Ridge" });
+    expect(button.props.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it("keeps Requested from the default screen in the results", async () => {
+    await renderDiscover();
+    await fireEvent.press(await screen.findByRole("button", { name: "Request to join Pine Ridge" }));
+    await screen.findByRole("button", { name: "Requested to join Pine Ridge" });
+
+    await search("pine");
+
+    expect(screen.getByRole("button", { name: "Requested to join Pine Ridge" })).toBeTruthy();
+  });
+
+  it("shows a no-results message", async () => {
+    await renderDiscover();
+
+    await search("zzz");
+
+    expect(screen.getByText('No results for "zzz"')).toBeTruthy();
+  });
+
+  it("uses the same results view for a category tile, with a way to clear it", async () => {
+    await renderDiscover();
+    await screen.findByText("New in your communities");
+
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
+
+    expect(tab("Items (2)")).toBeTruthy();
+    expect(tab("Communities (0)")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Filters" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Clear Tools filter" })).toBeTruthy();
+  });
+
+  it("filters typed results by the picked category", async () => {
+    await renderDiscover();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
+
+    await search("ham");
+
+    expect(tab("Items (1)")).toBeTruthy();
+    expect(screen.getByText("Hammer")).toBeTruthy();
+    expect(screen.queryByText("Drill")).toBeNull();
+  });
+
+  it("starts on All again after the search is cleared", async () => {
+    await renderDiscover();
+    await search("r");
+    await fireEvent.press(tab("Communities (2)"));
+
+    await fireEvent.press(screen.getByLabelText("Clear search"));
+    expect(screen.getByText("Browse by category")).toBeTruthy();
+
+    await search("r");
+    expect(tab("All").props.accessibilityState).toEqual({ selected: true });
+  });
+});
