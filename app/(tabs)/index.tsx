@@ -19,10 +19,12 @@ import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import { items as itemsApi, type Item } from "../../services/supabase_api";
+import ItemCard from "../components/ItemCard";
 import {
-  getBookmarkCount,
-  updateBookmarkCount,
-} from "../../services/bookmarkCount";
+  ALL_CATEGORIES,
+  CATEGORY_FILTERS,
+  matchesCategory,
+} from "../../constants/categories";
 import {
   ALL_COMMUNITIES,
   filterItemsByCommunity,
@@ -31,53 +33,19 @@ import {
   saveCommunityFilter,
 } from "../../services/communityFilter";
 
-const imageMap: Record<string, any> = {
-  "banner.png": require("../../assets/images/banner.png"),
-  "bike.jpg": require("../../assets/images/bike.jpg"),
-  "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
-  "chair.jpg": require("../../assets/images/chair.jpg"),
-  "charger.jpg": require("../../assets/images/charger.jpg"),
-  "cookbook.jpg": require("../../assets/images/cookbook.jpg"),
-  "cookset.jpg": require("../../assets/images/cookset.jpg"),
-  "corebook.jpg": require("../../assets/images/corebook.jpg"),
-  "desklamp.jpeg": require("../../assets/images/desklamp.jpeg"),
-  "drill.jpg": require("../../assets/images/drill.jpg"),
-  "electrickettle.jpg": require("../../assets/images/electrickettle.jpg"),
-  "hose.jpg": require("../../assets/images/hose.jpg"),
-  "keurig.png": require("../../assets/images/keurig.png"),
-  "laptopstand.jpg": require("../../assets/images/laptopstand.jpg"),
-  "pressurewasher.jpg": require("../../assets/images/pressurewasher.jpg"),
-  "smartwatch.jpg": require("../../assets/images/smartwatch.jpg"),
-  "speaker.jpg": require("../../assets/images/speaker.jpg"),
-  "standingdesk.jpg": require("../../assets/images/standingdesk.jpg"),
-  "tools.jpg": require("../../assets/images/tools.jpg"),
-  "tractor.jpg": require("../../assets/images/tractor.jpg"),
-  "vacuum.jpg": require("../../assets/images/vacuum.jpg"),
-  "vacuum2.jpg": require("../../assets/images/vacuum2.jpg"),
-  "vacuum3.jpg": require("../../assets/images/vacuum3.jpg"),
-  "vacuum4.jpg": require("../../assets/images/vacuum4.jpg"),
-  "vacuum5.jpg": require("../../assets/images/vacuum5.jpg"),
-  "vacuum6.jpg": require("../../assets/images/vacuum6.jpg"),
-  "wirelessbuds.jpg": require("../../assets/images/wirelessbuds.jpg"),
-  "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
-};
-
 export default function Index() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id;
   const { myCommunities } = useDatabase();
 
-  const [activeTab, setActiveTab] = useState("Popular");
+  const [activeTab, setActiveTab] = useState<string>(ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bookmarkCounts, setBookmarkCounts] = useState<Record<string, number>>(
-    {},
-  );
 
-  const { byId, isSaved, toggle } = useBookmarks();
+  const { byId } = useBookmarks();
   const bookmarkCount = Object.keys(byId).length;
 
   const searchInputRef = useRef<TextInput | null>(null);
@@ -117,33 +85,18 @@ export default function Index() {
     if (userId) void saveCommunityFilter(userId, communityId);
   };
 
-  // Load bookmark counts for all items
-  const loadBookmarkCounts = useCallback(async (itemsList: Item[]) => {
-    const counts: Record<string, number> = {};
-
-    await Promise.all(
-      itemsList.map(async (item) => {
-        counts[item.id] = await getBookmarkCount(item.id);
-      }),
-    );
-
-    setBookmarkCounts(counts);
-  }, []);
-
   // Load items from API
   const loadItems = useCallback(async () => {
     try {
       const { data, error } = await itemsApi.getAll();
       if (error) throw error;
-      const list = data ?? [];
-      setItems(list);
-      await loadBookmarkCounts(list);
+      setItems(data ?? []);
     } catch (error) {
       console.error("Failed to load items:", error);
     } finally {
       setLoading(false);
     }
-  }, [loadBookmarkCounts]);
+  }, []);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -159,56 +112,15 @@ export default function Index() {
     setRefreshing(false);
   };
 
-  const handleBookmarkToggle = async (item: Item) => {
-    const wasBookmarked = isSaved(item.id);
-
-    toggle({
-      id: item.id,
-      title: item.name,
-      image_path: item.image_path ?? null,
-      count: 0,
-      status: item.status === "borrowed" ? "borrowed" : "none",
-      category: item.category || "Other",
-    });
-
-    const currentCount = bookmarkCounts[item.id] || 0;
-    const newCount = await updateBookmarkCount(
-      item.id,
-      wasBookmarked,
-      currentCount,
-    );
-
-    setBookmarkCounts((prev) => ({
-      ...prev,
-      [item.id]: newCount,
-    }));
-  };
-
   const filteredItems = filterItemsByCommunity(items, selectedCommunity).filter((item) => {
-    const matchesCategory =
-      activeTab === "Popular" ||
-      (item.category &&
-        item.category.toLowerCase().startsWith(activeTab.toLowerCase()));
-
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
       q === "" ||
       item.name.toLowerCase().includes(q) ||
       (item.description ?? "").toLowerCase().includes(q);
 
-    return matchesCategory && matchesSearch;
+    return matchesCategory(item, activeTab) && matchesSearch;
   });
-
-  const categories = [
-    "Popular",
-    "Home",
-    "Books",
-    "Tools",
-    "Outdoor",
-    "School",
-    "Electronics",
-    "Kitchen",
-  ];
 
   if (loading) {
     return (
@@ -355,7 +267,7 @@ export default function Index() {
           contentContainerStyle={styles.tabScrollContent}
           style={styles.tabScrollContainer}
         >
-          {categories.map((tab) => (
+          {CATEGORY_FILTERS.map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => {
@@ -370,7 +282,7 @@ export default function Index() {
                   activeTab === tab && styles.activeTabText,
                 ]}
               >
-                {tab}
+                {tab === ALL_CATEGORIES ? "Popular" : tab}
               </Text>
             </TouchableOpacity>
           ))}
@@ -389,142 +301,14 @@ export default function Index() {
           </View>
         ) : (
           <View style={styles.recommendedGrid}>
-            {filteredItems.map((item) => {
-              const isBookmarked = isSaved(item.id);
-              const isBorrowed = item.status === "borrowed";
-
-              return (
-                <View key={item.id} style={styles.recommendedItem}>
-                  {/* IMAGE + BOOKMARK */}
-                  <View style={styles.recommendedImageContainer}>
-                    {/* Edit icon for own items, bookmark for others */}
-                    {item.owner_id === user?.id ? (
-                      <TouchableOpacity
-                        style={styles.editIconContainer}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/edit-item",
-                            params: { id: item.id },
-                          })
-                        }
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="pencil" size={16} color="#fff" />
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.bookmarkIconContainer}
-                        onPress={() => handleBookmarkToggle(item)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons
-                          name={isBookmarked ? "bookmark" : "bookmark-outline"}
-                          size={22}
-                          color="#3b1b0d"
-                        />
-                      </TouchableOpacity>
-                    )}
-                    {/* Navigate via image */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (item.owner_id === user?.id) {
-                          router.push({
-                            pathname: "/edit-item",
-                            params: { id: item.id },
-                          });
-                        } else {
-                          router.push(`/item/${item.id}`);
-                        }
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      {item.image_path ? (
-                        imageMap[item.image_path] ? (
-                          <Image
-                            source={imageMap[item.image_path]}
-                            style={[
-                              styles.recommendedImage,
-                              isBorrowed && { opacity: 0.55 },
-                            ]}
-                          />
-                        ) : item.image_path.startsWith("http") ? (
-                          <Image
-                            source={{ uri: item.image_path }}
-                            style={[
-                              styles.recommendedImage,
-                              isBorrowed && { opacity: 0.55 },
-                            ]}
-                          />
-                        ) : (
-                          <View
-                            style={[
-                              styles.recommendedImage,
-                              styles.placeholderImage,
-                            ]}
-                          >
-                            <Ionicons
-                              name="image-outline"
-                              size={40}
-                              color="#9ca3af"
-                            />
-                          </View>
-                        )
-                      ) : (
-                        <View
-                          style={[
-                            styles.recommendedImage,
-                            styles.placeholderImage,
-                          ]}
-                        >
-                          <Ionicons
-                            name="image-outline"
-                            size={40}
-                            color="#9ca3af"
-                          />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* Borrowed badge */}
-                    {isBorrowed && (
-                      <View style={[styles.statusBadge, styles.statusBorrowed]}>
-                        <Text style={styles.statusText}>Borrowed</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Navigate via info section */}
-                  <TouchableOpacity
-                    onPress={() => router.push(`/item/${item.id}`)}
-                    activeOpacity={0.8}
-                    style={styles.recommendedInfo}
-                  >
-                    <Text
-                      style={[
-                        styles.recommendedName,
-                        isBorrowed && { opacity: 0.7 },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                    {selectedCommunity === ALL_COMMUNITIES &&
-                      communityNames[item.community_id] && (
-                        <View style={styles.communityLabel}>
-                          <Text
-                            style={styles.communityLabelText}
-                            numberOfLines={1}
-                          >
-                            {communityNames[item.community_id]}
-                          </Text>
-                        </View>
-                      )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
+            {filteredItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                showCommunity={selectedCommunity === ALL_COMMUNITIES}
+                communityName={communityNames[item.community_id]}
+              />
+            ))}
           </View>
         )}
       </ScrollView>
@@ -653,68 +437,9 @@ const styles = StyleSheet.create({
   recommendedGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
     padding: 12,
-    gap: 12,
-  },
-  recommendedItem: {
-    width: "47.5%",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  recommendedImageContainer: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#f3f4f6",
-  },
-  recommendedImage: {
-    width: "100%",
-    height: "100%",
-  },
-  placeholderImage: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#e5e7eb",
-  },
-  recommendedInfo: {
-    padding: 12,
-  },
-  recommendedName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 6,
-  },
-  statusBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    zIndex: 10,
-  },
-  statusText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  statusBorrowed: {
-    backgroundColor: "#f73e3eaf",
-  },
-  bookmarkIconContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    zIndex: 10,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    padding: 6,
-    borderRadius: 20,
+    rowGap: 12,
   },
   communityBar: {
     backgroundColor: "#fff",
@@ -771,26 +496,5 @@ const styles = StyleSheet.create({
   pickerOptionTextSelected: {
     color: "#f97316",
     fontWeight: "600",
-  },
-  communityLabel: {
-    alignSelf: "flex-start",
-    backgroundColor: "#fff7ed",
-    borderRadius: 20,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  communityLabelText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#c2410c",
-  },
-  editIconContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    zIndex: 20,
-    backgroundColor: "#f97316",
-    padding: 8,
-    borderRadius: 20,
   },
 });

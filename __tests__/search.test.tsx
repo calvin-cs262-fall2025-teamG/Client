@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import DiscoverScreen from "../app/(tabs)/search";
 import * as api from "../services/supabase_api";
+import { ITEM_CATEGORIES } from "../constants/categories";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
   jest.requireActual("@react-native-async-storage/async-storage/jest/async-storage-mock")
@@ -17,6 +18,14 @@ jest.mock("expo-router", () => ({
 jest.mock("../services/supabase_api", () => ({
   items: { getAll: jest.fn() },
   communities: { getAll: jest.fn() },
+}));
+
+jest.mock("../context/AuthContext", () => ({
+  useAuth: () => ({ user: { id: "me" } }),
+}));
+
+jest.mock("../context/BookmarksContext", () => ({
+  useBookmarks: () => ({ byId: {}, isSaved: () => false, toggle: jest.fn() }),
 }));
 
 let mockMyCommunities: { id: string; name: string }[] = [];
@@ -280,5 +289,28 @@ describe("Communities tab", () => {
     await openCommunitiesTab();
 
     expect(screen.getByText("No communities to join yet.")).toBeTruthy();
+  });
+});
+
+describe("Search categories", () => {
+  it("uses the shared category list for the chips", async () => {
+    await renderSearch();
+
+    expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
+    for (const c of ITEM_CATEGORIES) {
+      expect(screen.getByRole("button", { name: c })).toBeTruthy();
+    }
+  });
+
+  it("shows items with an unknown category under Other", async () => {
+    mocked(api.items.getAll).mockImplementation(() =>
+      ok([...ITEMS, item("i9", "Mystery box", "c1", "Test", "available")])
+    );
+    await renderSearch();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Other" }));
+
+    expect(screen.getByText("Mystery box")).toBeTruthy();
+    expect(screen.queryByText("Drill")).toBeNull();
   });
 });

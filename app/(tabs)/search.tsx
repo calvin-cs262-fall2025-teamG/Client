@@ -18,30 +18,18 @@ import {
   type Community,
   type Item,
 } from "../../services/supabase_api";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useDatabase } from "../../context/DatabaseContext";
 import {
   ALL_COMMUNITIES,
   filterItemsByCommunity,
 } from "../../services/communityFilter";
-
-const imageMap: Record<string, any> = {
-  "drill.jpg": require("../../assets/images/drill.jpg"),
-  "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
-};
-
-const getImageSource = (raw?: string | null) => {
-  if (!raw) return null;
-
-  if (raw.startsWith("http")) return { uri: raw };
-
-  const filename = raw.split("/").pop()?.toLowerCase() ?? raw.toLowerCase();
-
-  if (imageMap[filename]) return imageMap[filename];
-
-  return null;
-};
+import ItemCard from "../components/ItemCard";
+import {
+  ALL_CATEGORIES,
+  CATEGORY_FILTERS,
+  matchesCategory,
+} from "../../constants/categories";
 
 const banner = require("../../assets/images/banner.png");
 
@@ -52,13 +40,12 @@ const avatarUri = (path: string | null) =>
 type SearchTab = "Items" | "Communities";
 
 export default function DiscoverScreen() {
-  const router = useRouter();
   const { myCommunities, requestToJoin } = useDatabase();
 
   const [activeTab, setActiveTab] = useState<SearchTab>("Items");
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES);
   const [availableOnly, setAvailableOnly] = useState(false);
   const [activeCommunity, setActiveCommunity] = useState(ALL_COMMUNITIES);
 
@@ -130,29 +117,19 @@ export default function DiscoverScreen() {
     }
   };
 
-  // Build categories from DB
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    items.forEach((it) => {
-      const c = (it.category ?? "").trim();
-      if (c) set.add(c);
-    });
-    return ["All", ...Array.from(set).sort()];
-  }, [items]);
-
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
     return filterItemsByCommunity(items, activeCommunity).filter((it) => {
-      const matchesCategory =
-        activeCategory === "All" ||
-        (it.category ?? "").toLowerCase() === activeCategory.toLowerCase();
-
       const matchesSearch = !q || it.name.toLowerCase().includes(q);
 
       const matchesAvailability = !availableOnly || it.status === "available";
 
-      return matchesCategory && matchesSearch && matchesAvailability;
+      return (
+        matchesCategory(it, activeCategory) &&
+        matchesSearch &&
+        matchesAvailability
+      );
     });
   }, [items, searchQuery, activeCategory, activeCommunity, availableOnly]);
 
@@ -234,7 +211,7 @@ export default function DiscoverScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tabs}
             >
-              {categories.map((cat) => (
+              {CATEGORY_FILTERS.map((cat) => (
                 <TouchableOpacity
                   key={cat}
                   style={[styles.tab, activeCategory === cat && styles.activeTab]}
@@ -333,53 +310,9 @@ export default function DiscoverScreen() {
               </View>
             ) : (
               <View style={styles.grid}>
-                {filteredItems.map((it) => {
-                  const isBorrowed = it.status === "borrowed";
-                  const src = getImageSource(it.image_path);
-
-                  return (
-                    <TouchableOpacity
-                      key={it.id}
-                      style={styles.card}
-                      onPress={() => router.push(`/item/${it.id}`)}
-                      activeOpacity={0.9}
-                    >
-                      {src ? (
-                        <Image
-                          source={src}
-                          style={[
-                            styles.cardImage,
-                            isBorrowed && { opacity: 0.55 },
-                          ]}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View
-                          style={[
-                            styles.noImageBox,
-                            isBorrowed && { opacity: 0.55 },
-                          ]}
-                        >
-                          <Ionicons
-                            name="image-outline"
-                            size={28}
-                            color="#9ca3af"
-                          />
-                        </View>
-                      )}
-
-                      <Text style={styles.cardName} numberOfLines={1}>
-                        {it.name}
-                      </Text>
-
-                      {isBorrowed && (
-                        <View style={styles.borrowedBadge}>
-                          <Text style={styles.borrowedText}>Borrowed</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
+                {filteredItems.map((it) => (
+                  <ItemCard key={it.id} item={it} />
+                ))}
               </View>
             )}
           </>
@@ -553,50 +486,12 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    justifyContent: "space-between",
+    rowGap: 12,
     paddingHorizontal: 16,
     paddingTop: 20,
   },
-  card: {
-    width: "47%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    overflow: "hidden",
-    elevation: 2,
-  },
-  cardImage: {
-    width: "100%",
-    height: 130,
-    backgroundColor: "#e5e7eb",
-  },
-  noImageBox: {
-    width: "100%",
-    height: 130,
-    backgroundColor: "#e5e7eb",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardName: {
-    fontSize: 15,
-    fontWeight: "600",
-    padding: 10,
-    color: "#111827",
-  },
 
-  borrowedBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: "#f87171",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  borrowedText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-  },
 
   segment: {
     flexDirection: "row",

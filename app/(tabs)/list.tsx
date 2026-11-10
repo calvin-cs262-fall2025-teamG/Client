@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import PageContainer from "../components/PageContainer";
+import { ITEM_CATEGORIES, type ItemCategory } from "../../constants/categories";
 
 export default function ListItem() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function ListItem() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState<ItemCategory | null>(null);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
     null,
   );
@@ -67,7 +68,7 @@ export default function ListItem() {
         community_id: communityId,
         name: title.trim(),
         description: description.trim() || undefined,
-        category: category.trim() || "Other",
+        category: category ?? "Other",
       });
 
       Alert.alert("Success", "Your item has been listed!", [
@@ -77,7 +78,7 @@ export default function ListItem() {
       // Clear form
       setTitle("");
       setDescription("");
-      setCategory("");
+      setCategory(null);
       setSelectedCommunityId(null);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -111,14 +112,31 @@ export default function ListItem() {
         editable={!uploading}
       />
 
-      <TextInput
-        placeholder="Category (e.g., 'Tools', 'Home', 'Books')"
-        placeholderTextColor="#6b7280"
-        value={category}
-        onChangeText={setCategory}
-        style={styles.input}
-        editable={!uploading}
-      />
+      <Text style={styles.communityLabel}>Category</Text>
+      <View style={styles.categoryChips}>
+        {ITEM_CATEGORIES.map((c) => {
+          const selected = c === category;
+          return (
+            <TouchableOpacity
+              key={c}
+              style={[styles.categoryChip, selected && styles.categoryChipSelected]}
+              onPress={() => setCategory(selected ? null : c)}
+              disabled={uploading}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  selected && styles.communityTextSelected,
+                ]}
+              >
+                {c}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <TextInput
         placeholder="Description (optional)"
@@ -213,6 +231,28 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+  },
+  categoryChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  categoryChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+  },
+  categoryChipSelected: {
+    borderColor: "#f97316",
+    backgroundColor: "#fff7ed",
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: "#111827",
   },
   communityList: {
     marginBottom: 4,

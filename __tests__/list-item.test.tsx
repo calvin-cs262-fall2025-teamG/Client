@@ -2,6 +2,7 @@ import React from "react";
 import { Alert } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import ListItem from "../app/(tabs)/list";
+import { ITEM_CATEGORIES } from "../constants/categories";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -52,10 +53,7 @@ afterEach(() => {
 
 async function fillAndPost(name = "Drill") {
   await fireEvent.changeText(screen.getByPlaceholderText("Item name (e.g., 'Mini fridge')"), name);
-  await fireEvent.changeText(
-    screen.getByPlaceholderText("Category (e.g., 'Tools', 'Home', 'Books')"),
-    " Tools "
-  );
+  await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
   await fireEvent.changeText(screen.getByPlaceholderText("Description (optional)"), "Cordless");
   await fireEvent.press(screen.getByText("Post Item"));
 }
@@ -145,5 +143,24 @@ it("makes a user with several communities pick one", async () => {
 
   await waitFor(() =>
     expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ community_id: "c2" }))
+  );
+});
+
+it("offers the shared category list", async () => {
+  await render(<ListItem />);
+
+  for (const c of ITEM_CATEGORIES) {
+    expect(screen.getByRole("button", { name: c })).toBeTruthy();
+  }
+});
+
+it("saves Other when no category is picked", async () => {
+  await render(<ListItem />);
+
+  await fireEvent.changeText(screen.getByPlaceholderText("Item name (e.g., 'Mini fridge')"), "Lamp");
+  await fireEvent.press(screen.getByText("Post Item"));
+
+  await waitFor(() =>
+    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ category: "Other" }))
   );
 });

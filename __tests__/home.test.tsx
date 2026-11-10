@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import Index from "../app/(tabs)/index";
 import * as api from "../services/supabase_api";
+import { ITEM_CATEGORIES } from "../constants/categories";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
   jest.requireActual("@react-native-async-storage/async-storage/jest/async-storage-mock")
@@ -210,5 +211,31 @@ describe("Home community filter", () => {
 
     expect(screen.getByText("All communities")).toBeTruthy();
     expect(screen.getByText("Tent")).toBeTruthy();
+  });
+});
+
+describe("Home categories", () => {
+  it("uses the shared category list for the tabs", async () => {
+    await renderHome();
+
+    expect(screen.getByText("Popular")).toBeTruthy();
+    for (const c of ITEM_CATEGORIES) {
+      expect(screen.getByText(c)).toBeTruthy();
+    }
+    expect(screen.queryByText("School")).toBeNull();
+    expect(screen.queryByText("Electronics")).toBeNull();
+  });
+
+  it("shows items with an unknown category under Other", async () => {
+    mocked(api.items.getAll).mockResolvedValue({
+      data: [...ITEMS, item("i9", "Mystery box", "c1", "Test")],
+      error: null,
+    });
+    await renderHome();
+
+    await fireEvent.press(screen.getByText("Other"));
+
+    expect(screen.getByText("Mystery box")).toBeTruthy();
+    expect(screen.queryByText("Drill")).toBeNull();
   });
 });
