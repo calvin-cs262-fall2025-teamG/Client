@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Image,
+  Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,11 +17,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
+import { useDatabase } from "../../context/DatabaseContext";
 import { items as itemsApi, type Item } from "../../services/supabase_api";
 import {
   getBookmarkCount,
   updateBookmarkCount,
 } from "../../services/bookmarkCount";
+import {
+  ALL_COMMUNITIES,
+  filterItemsByCommunity,
+  loadCommunityFilter,
+  resolveCommunityFilter,
+  saveCommunityFilter,
+} from "../../services/communityFilter";
 
 const imageMap: Record<string, any> = {
   "banner.png": require("../../assets/images/banner.png"),
@@ -55,6 +65,8 @@ const imageMap: Record<string, any> = {
 export default function Index() {
   const router = useRouter();
   const { user } = useAuth();
+  const userId = user?.id;
+  const { myCommunities } = useDatabase();
 
   const [activeTab, setActiveTab] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,6 +81,41 @@ export default function Index() {
   const bookmarkCount = Object.keys(byId).length;
 
   const searchInputRef = useRef<TextInput | null>(null);
+
+  // The saved or picked community. It is checked against myCommunities on
+  // every render, so a community the user has left shows as "All".
+  const [communityChoice, setCommunityChoice] = useState<string>(ALL_COMMUNITIES);
+  const [communityPickerOpen, setCommunityPickerOpen] = useState(false);
+  const pickedCommunity = useRef(false);
+  const selectedCommunity = resolveCommunityFilter(communityChoice, myCommunities);
+
+  const communityNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    myCommunities.forEach((c) => {
+      names[c.id] = c.name;
+    });
+    return names;
+  }, [myCommunities]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void loadCommunityFilter(userId).then((saved) => {
+      // Don't overwrite a pick the user made while this was loading.
+      if (cancelled || pickedCommunity.current || !saved) return;
+      setCommunityChoice(saved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const pickCommunity = (communityId: string) => {
+    pickedCommunity.current = true;
+    setCommunityChoice(communityId);
+    setCommunityPickerOpen(false);
+    if (userId) void saveCommunityFilter(userId, communityId);
+  };
 
   // Load bookmark counts for all items
   const loadBookmarkCounts = useCallback(async (itemsList: Item[]) => {
@@ -137,7 +184,7 @@ export default function Index() {
     }));
   };
 
-  const filteredItems = items.filter((item) => {
+  const filteredItems = filterItemsByCommunity(items, selectedCommunity).filter((item) => {
     const matchesCategory =
       activeTab === "Popular" ||
       (item.category &&
@@ -230,6 +277,69 @@ export default function Index() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* COMMUNITY FILTER */}
+      <View style={styles.communityBar}>
+        <TouchableOpacity
+          style={styles.communityDropdown}
+          onPress={() => setCommunityPickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Choose community"
+          activeOpacity={0.8}
+        >
+          <Ionicons name="people" size={16} color="#3b1b0d" />
+          <Text style={styles.communityDropdownText} numberOfLines={1}>
+            {selectedCommunity === ALL_COMMUNITIES
+              ? "All communities"
+              : communityNames[selectedCommunity]}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color="#3b1b0d" />
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={communityPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCommunityPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={() => setCommunityPickerOpen(false)}
+        >
+          <View style={styles.pickerCard}>
+            {[
+              { id: ALL_COMMUNITIES, name: "All communities" },
+              ...myCommunities,
+            ].map((c) => {
+              const selected = c.id === selectedCommunity;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={styles.pickerOption}
+                  onPress={() => pickCommunity(c.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.name}
+                  accessibilityState={{ selected }}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionText,
+                      selected && styles.pickerOptionTextSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {c.name}
+                  </Text>
+                  {selected && (
+                    <Ionicons name="checkmark" size={18} color="#f97316" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* MAIN CONTENT */}
       <ScrollView
@@ -400,6 +510,17 @@ export default function Index() {
                     >
                       {item.name}
                     </Text>
+                    {selectedCommunity === ALL_COMMUNITIES &&
+                      communityNames[item.community_id] && (
+                        <View style={styles.communityLabel}>
+                          <Text
+                            style={styles.communityLabelText}
+                            numberOfLines={1}
+                          >
+                            {communityNames[item.community_id]}
+                          </Text>
+                        </View>
+                      )}
                   </TouchableOpacity>
                 </View>
               );
@@ -594,6 +715,74 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.85)",
     padding: 6,
     borderRadius: 20,
+  },
+  communityBar: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+  },
+  communityDropdown: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    maxWidth: "100%",
+    backgroundColor: "#fff7ed",
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  communityDropdownText: {
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#3b1b0d",
+  },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  pickerCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  pickerOptionText: {
+    flexShrink: 1,
+    fontSize: 15,
+    color: "#111827",
+  },
+  pickerOptionTextSelected: {
+    color: "#f97316",
+    fontWeight: "600",
+  },
+  communityLabel: {
+    alignSelf: "flex-start",
+    backgroundColor: "#fff7ed",
+    borderRadius: 20,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  communityLabelText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#c2410c",
   },
   editIconContainer: {
     position: "absolute",
