@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -32,6 +31,7 @@ import {
   saveLastRead,
   type LastReadMap,
 } from "../../services/readState";
+import StorageImage from "../components/StorageImage";
 
 /* ---------------- AVATAR MAP ---------------- */
 
@@ -273,9 +273,18 @@ export default function Chat() {
                     })
                   }
                 >
-                  <View style={[styles.avatarImage, styles.communityIcon]}>
-                    <Ionicons name="people" size={26} color="#fff" />
-                  </View>
+                  {c.avatar_path ? (
+                    <StorageImage
+                      bucket="community-images"
+                      path={c.avatar_path}
+                      style={styles.avatarImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={[styles.avatarImage, styles.communityIcon]}>
+                      <Ionicons name="people" size={26} color="#fff" />
+                    </View>
+                  )}
                   <View style={styles.chatContent}>
                     <View style={styles.chatHeader}>
                       <Text style={styles.chatName}>{c.name}</Text>
@@ -331,8 +340,14 @@ export default function Chat() {
                   });
                 }}
               >
-                {avatarSource ? (
-                  <Image source={avatarSource} style={styles.avatarImage} />
+                {avatarKey ? (
+                  <StorageImage
+                    bucket="profile-pictures"
+                    path={avatarKey}
+                    localSource={avatarSource}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                  />
                 ) : (
                   <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
                     <Text style={styles.avatarInitial}>{initial}</Text>

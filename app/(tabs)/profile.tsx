@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import BookmarkButton from "../components/BookmarkButton";
+import StorageImage from "../components/StorageImage";
 
 type ItemCard = {
   id: string;
@@ -73,7 +74,6 @@ export default function Profile() {
   ).length;
   const displayName = profile?.display_name ?? user?.display_name ?? "New User";
   const avatarPath = profile?.avatar_path ?? null;
-  const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -94,8 +94,13 @@ export default function Profile() {
             activeOpacity={0.85}
             onPress={() => router.push("/edit-profile")}
           >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.profileImage} />
+            {avatarPath ? (
+              <StorageImage
+                bucket="profile-pictures"
+                path={avatarPath}
+                style={styles.profileImage}
+                contentFit="cover"
+              />
             ) : (
               <View style={[styles.profileImage, styles.profilePlaceholder]}>
                 <Ionicons name="person" size={34} color="#9ca3af" />
@@ -189,21 +194,19 @@ export default function Profile() {
           ) : (
             listings.map((item) => {
               const isBorrowed = item.status === "borrowed";
-              const imageUrl = item.image?.startsWith("http")
-                ? item.image
-                : null;
 
               return (
                 <View key={item.id} style={styles.recommendedItem}>
                   <View style={styles.recommendedImageContainer}>
-                    {imageUrl ? (
-                      <Image
-                        source={{ uri: imageUrl }}
+                    {item.image ? (
+                      <StorageImage
+                        bucket="item-images"
+                        path={item.image}
                         style={[
                           styles.recommendedImage,
                           isBorrowed && { opacity: 0.55 },
                         ]}
-                        resizeMode="cover"
+                        contentFit="cover"
                       />
                     ) : (
                       <View

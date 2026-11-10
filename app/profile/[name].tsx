@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useDatabase } from "../../context/DatabaseContext";
 import type { Profile } from "../../services/supabase_api";
+import StorageImage from "../components/StorageImage";
 
 export default function ListerProfile() {
   const { name, id } = useLocalSearchParams<{ name: string; id?: string }>();
@@ -38,7 +39,6 @@ export default function ListerProfile() {
 
   const displayName = profile?.display_name || name;
   const avatarPath = profile?.avatar_path ?? null;
-  const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
 
   return (
     <View style={styles.container}>
@@ -46,8 +46,13 @@ export default function ListerProfile() {
 
       {loading ? (
         <ActivityIndicator size="large" color="#f97316" style={styles.avatar} />
-      ) : avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+      ) : avatarPath ? (
+        <StorageImage
+          bucket="profile-pictures"
+          path={avatarPath}
+          style={styles.avatar}
+          contentFit="cover"
+        />
       ) : (
         <View style={[styles.avatar, styles.placeholder]}>
           <Ionicons name="person" size={42} color="#9ca3af" />
