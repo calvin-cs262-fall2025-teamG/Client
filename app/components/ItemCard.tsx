@@ -49,11 +49,32 @@ const imageMap: Record<string, ImageSourcePropType> = {
   "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
 };
 
-function imageSource(path: string | null): ImageSourcePropType | null {
+export function itemImageSource(path: string | null): ImageSourcePropType | null {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return { uri: path };
   const filename = path.split("/").pop()?.toLowerCase() ?? "";
   return imageMap[filename] ?? null;
+}
+
+// Bookmark state and toggle for one item, shared by ItemCard and ItemRow.
+export function useItemBookmark(item: Item) {
+  const { isSaved, toggle } = useBookmarks();
+  const saved = isSaved(item.id);
+
+  const toggleBookmark = async () => {
+    toggle({
+      id: item.id,
+      title: item.name,
+      image_path: item.image_path ?? null,
+      count: 0,
+      status: item.status === "borrowed" ? "borrowed" : "none",
+      category: item.category || "Other",
+    });
+    const current = await getBookmarkCount(item.id);
+    await updateBookmarkCount(item.id, saved, current);
+  };
+
+  return { saved, toggleBookmark };
 }
 
 type Props = {
@@ -66,25 +87,11 @@ type Props = {
 export default function ItemCard({ item, showCommunity, communityName }: Props) {
   const router = useRouter();
   const { user } = useAuth();
-  const { isSaved, toggle } = useBookmarks();
+  const { saved, toggleBookmark } = useItemBookmark(item);
 
   const isOwner = item.owner_id === user?.id;
   const isBorrowed = item.status === "borrowed";
-  const saved = isSaved(item.id);
-  const src = imageSource(item.image_path);
-
-  const handleBookmark = async () => {
-    toggle({
-      id: item.id,
-      title: item.name,
-      image_path: item.image_path ?? null,
-      count: 0,
-      status: isBorrowed ? "borrowed" : "none",
-      category: item.category || "Other",
-    });
-    const current = await getBookmarkCount(item.id);
-    await updateBookmarkCount(item.id, saved, current);
-  };
+  const src = itemImageSource(item.image_path);
 
   return (
     <View style={styles.card}>
@@ -142,7 +149,7 @@ export default function ItemCard({ item, showCommunity, communityName }: Props) 
       ) : (
         <TouchableOpacity
           style={styles.bookmarkButton}
-          onPress={handleBookmark}
+          onPress={toggleBookmark}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel={

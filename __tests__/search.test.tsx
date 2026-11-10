@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert } from "react-native";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react-native";
 import DiscoverScreen from "../app/(tabs)/search";
 import * as api from "../services/supabase_api";
 import { ITEM_CATEGORIES } from "../constants/categories";
@@ -40,9 +40,17 @@ jest.mock("../context/DatabaseContext", () => ({
 const ok = (data: unknown) => Promise.resolve({ data, error: null });
 const mocked = (fn: unknown) => fn as jest.Mock;
 
-const T1 = "2026-10-19T12:00:00.123456+00:00";
+// Day n of October 2026, in the format PostgREST returns.
+const day = (n: number) => `2026-10-${String(n).padStart(2, "0")}T12:00:00.123456+00:00`;
 
-const item = (id: string, name: string, community_id: string, category: string, status: string) => ({
+const item = (
+  id: string,
+  name: string,
+  community_id: string,
+  category: string,
+  status: string,
+  created = 1
+) => ({
   id,
   name,
   community_id,
@@ -52,8 +60,8 @@ const item = (id: string, name: string, community_id: string, category: string, 
   description: null,
   image_path: null,
   return_date: null,
-  created_at: T1,
-  updated_at: T1,
+  created_at: day(created),
+  updated_at: day(created),
 });
 
 const community = (id: string, name: string, description: string | null) => ({
@@ -62,15 +70,15 @@ const community = (id: string, name: string, description: string | null) => ({
   description,
   avatar_path: null,
   owner_id: "someone",
-  created_at: T1,
-  updated_at: T1,
+  created_at: day(1),
+  updated_at: day(1),
 });
 
 const ITEMS = [
-  item("i1", "Drill", "c1", "Tools", "available"),
-  item("i2", "Tent", "c2", "Outdoor", "borrowed"),
-  item("i3", "Hammer", "c1", "Tools", "borrowed"),
-  item("i4", "Kettle", "c2", "Kitchen", "available"),
+  item("i1", "Drill", "c1", "Tools", "available", 1),
+  item("i2", "Tent", "c2", "Outdoor", "borrowed", 2),
+  item("i3", "Hammer", "c1", "Tools", "borrowed", 3),
+  item("i4", "Kettle", "c2", "Kitchen", "available", 4),
 ];
 
 const COMMUNITIES = [
@@ -80,13 +88,23 @@ const COMMUNITIES = [
   community("c4", "Cedar Court", null),
 ];
 
-async function renderSearch() {
+async function renderDiscover() {
   await render(<DiscoverScreen />);
-  await screen.findByText("Drill");
+  await screen.findByText("Browse by category");
+  await waitFor(() => expect(api.communities.getAll).toHaveBeenCalled());
+  await waitFor(() => expect(api.items.getAll).toHaveBeenCalled());
 }
 
-async function openCommunitiesTab() {
-  await fireEvent.press(screen.getByRole("tab", { name: "Communities" }));
+async function search(text: string) {
+  await fireEvent.changeText(screen.getByPlaceholderText("Search items or communities"), text);
+}
+
+async function openFilters() {
+  await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
+}
+
+async function showResults() {
+  await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
 }
 
 let alertSpy: jest.SpyInstance;
@@ -108,301 +126,292 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("Search tabs", () => {
-  it("starts on the Items tab", async () => {
-    await renderSearch();
+describe("Discover default screen", () => {
+  it("shows the title, search bar and every section", async () => {
+    await renderDiscover();
 
-    expect(screen.getByRole("tab", { name: "Items" }).props.accessibilityState).toEqual({
-      selected: true,
-    });
-    expect(screen.getByPlaceholderText("Search for anything")).toBeTruthy();
-    expect(screen.queryByPlaceholderText("Search communities")).toBeNull();
+    expect(screen.getByText("Discover")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search items or communities")).toBeTruthy();
+    expect(await screen.findByText("Communities to join")).toBeTruthy();
+    expect(screen.getByText("Browse by category")).toBeTruthy();
+    expect(await screen.findByText("New in your communities")).toBeTruthy();
   });
 
-  it("switches between Items and Communities", async () => {
-    await renderSearch();
+  it("has no Items | Communities toggle or Filters button", async () => {
+    await renderDiscover();
 
-    await openCommunitiesTab();
-
-    expect(screen.getByPlaceholderText("Search communities")).toBeTruthy();
-    expect(screen.getByText("Pine Ridge")).toBeTruthy();
-    expect(screen.queryByText("Drill")).toBeNull();
-
-    await fireEvent.press(screen.getByRole("tab", { name: "Items" }));
-
-    expect(screen.getByText("Drill")).toBeTruthy();
-    expect(screen.queryByText("Pine Ridge")).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Items" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Communities" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Filters" })).toBeNull();
   });
 });
 
-async function openFilters() {
-  await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
-}
+describe("Communities to join", () => {
+  it("lists only communities the user is not in", async () => {
+    await renderDiscover();
 
-async function showResults() {
-  await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
-}
+    expect(await screen.findByText("Pine Ridge")).toBeTruthy();
+    expect(screen.getByText("Neighbors on the ridge")).toBeTruthy();
+    expect(screen.getByText("Cedar Court")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Request to join Maple Street" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Request to join Oak Hall" })).toBeNull();
+  });
 
-describe("Items filters", () => {
-  it("shows every item by default with no Filters badge", async () => {
-    await renderSearch();
+  it("is hidden when the user is already in every community", async () => {
+    mocked(api.communities.getAll).mockImplementation(() => ok(COMMUNITIES.slice(0, 2)));
+    await renderDiscover();
 
-    for (const name of ["Drill", "Tent", "Hammer", "Kettle"]) {
-      expect(screen.getByText(name)).toBeTruthy();
+    expect(screen.queryByText("Communities to join")).toBeNull();
+    expect(screen.queryByText("See all")).toBeNull();
+  });
+
+  it("is hidden when there are no communities", async () => {
+    mocked(api.communities.getAll).mockImplementation(() => ok([]));
+    await renderDiscover();
+
+    expect(screen.queryByText("Communities to join")).toBeNull();
+  });
+
+  it("is hidden when communities fail to load", async () => {
+    mocked(api.communities.getAll).mockImplementation(() =>
+      Promise.resolve({ data: null, error: { message: "boom" } })
+    );
+    await renderDiscover();
+
+    expect(screen.queryByText("Communities to join")).toBeNull();
+  });
+
+  it("sends a join request from a card and shows Requested", async () => {
+    await renderDiscover();
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Request to join Pine Ridge" }));
+
+    expect(mockRequestToJoin).toHaveBeenCalledWith("c3");
+    const button = await screen.findByRole("button", { name: "Requested to join Pine Ridge" });
+    expect(button.props.accessibilityState).toEqual({ disabled: true });
+    expect(within(button).getByText("Requested")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Request to join Cedar Court" })).toBeTruthy();
+
+    await fireEvent.press(button);
+    expect(mockRequestToJoin).toHaveBeenCalledTimes(1);
+  });
+
+  it("alerts and keeps the button when the request fails", async () => {
+    mockRequestToJoin.mockRejectedValueOnce(new Error("Not authenticated"));
+    await renderDiscover();
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Request to join Pine Ridge" }));
+
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith("Couldn't send request", "Not authenticated")
+    );
+    expect(
+      screen.getByRole("button", { name: "Request to join Pine Ridge" }).props.accessibilityState
+    ).toEqual({ disabled: false });
+  });
+
+  it("opens the full list from See all and goes back", async () => {
+    await renderDiscover();
+
+    await fireEvent.press(await screen.findByText("See all"));
+
+    expect(screen.queryByText("Browse by category")).toBeNull();
+    expect(screen.getByRole("button", { name: "Request to join Pine Ridge" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Request to join Cedar Court" })).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText("Back to Discover"));
+
+    expect(screen.getByText("Browse by category")).toBeTruthy();
+  });
+
+  it("keeps Requested between the cards and the full list", async () => {
+    await renderDiscover();
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Request to join Pine Ridge" }));
+    await screen.findByRole("button", { name: "Requested to join Pine Ridge" });
+    await fireEvent.press(screen.getByText("See all"));
+
+    expect(screen.getByRole("button", { name: "Requested to join Pine Ridge" })).toBeTruthy();
+  });
+});
+
+describe("Browse by category", () => {
+  it("shows a tile for every shared category", async () => {
+    await renderDiscover();
+
+    for (const c of ITEM_CATEGORIES) {
+      expect(screen.getByRole("button", { name: `Browse ${c}` })).toBeTruthy();
     }
-    expect(screen.queryByTestId("filters-badge")).toBeNull();
   });
 
-  it("hides borrowed items when Available only is on", async () => {
-    await renderSearch();
+  it("shows that category's items when a tile is tapped", async () => {
+    await renderDiscover();
+    await screen.findByText("New in your communities");
 
-    await openFilters();
-    await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
-    await showResults();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
 
-    expect(screen.getByText("Drill")).toBeTruthy();
-    expect(screen.getByText("Kettle")).toBeTruthy();
-    expect(screen.queryByText("Tent")).toBeNull();
-    expect(screen.queryByText("Hammer")).toBeNull();
-  });
-
-  it("filters by category", async () => {
-    await renderSearch();
-
-    await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
-
+    expect(screen.queryByText("Browse by category")).toBeNull();
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.getByText("Hammer")).toBeTruthy();
     expect(screen.queryByText("Tent")).toBeNull();
     expect(screen.queryByText("Kettle")).toBeNull();
   });
 
-  it("filters by community", async () => {
-    await renderSearch();
+  it("groups unknown categories under Other", async () => {
+    mocked(api.items.getAll).mockImplementation(() =>
+      ok([...ITEMS, item("i9", "Mystery box", "c1", "Test", "available", 5)])
+    );
+    await renderDiscover();
+    await screen.findByText("New in your communities");
 
-    await openFilters();
-    await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
-    await showResults();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Other" }));
 
-    expect(screen.getByText("Tent")).toBeTruthy();
-    expect(screen.getByText("Kettle")).toBeTruthy();
+    expect(screen.getByText("Mystery box")).toBeTruthy();
     expect(screen.queryByText("Drill")).toBeNull();
   });
 
-  it("combines search, category, community, and availability", async () => {
-    await renderSearch();
+  it("goes back to the default screen when the category is cleared", async () => {
+    await renderDiscover();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
+
+    await fireEvent.press(screen.getByRole("button", { name: "Clear Tools filter" }));
+
+    expect(screen.getByText("Browse by category")).toBeTruthy();
+  });
+});
+
+describe("New in your communities", () => {
+  it("shows the 5 newest items from the user's communities, newest first", async () => {
+    mocked(api.items.getAll).mockImplementation(() =>
+      ok([
+        ...ITEMS,
+        item("i5", "Ladder", "c1", "Tools", "available", 5),
+        item("i6", "Wok", "c2", "Kitchen", "available", 6),
+        item("i7", "Elsewhere", "c9", "Other", "available", 9),
+      ])
+    );
+    await renderDiscover();
+    await screen.findByText("New in your communities");
+
+    const rendered = screen
+      .getAllByText(/^(Wok|Ladder|Kettle|Hammer|Tent|Drill|Elsewhere)$/)
+      .map((n) => n.props.children);
+    expect(rendered).toEqual(["Wok", "Ladder", "Kettle", "Hammer", "Tent"]);
+  });
+
+  it("shows the community name on each row and opens the item when tapped", async () => {
+    await renderDiscover();
+    await screen.findByText("New in your communities");
+
+    expect(screen.getAllByText("Oak Hall").length).toBe(2);
+    await fireEvent.press(screen.getByText("Kettle"));
+
+    expect(mockRouter.push).toHaveBeenCalledWith("/item/i4");
+  });
+
+  it("has a bookmark on each row", async () => {
+    await renderDiscover();
+    await screen.findByText("New in your communities");
+
+    expect(screen.getByLabelText("Bookmark Kettle")).toBeTruthy();
+  });
+});
+
+describe("Searching", () => {
+  it("replaces the sections with results while typing", async () => {
+    await renderDiscover();
+
+    await search("dri");
+
+    expect(screen.queryByText("Browse by category")).toBeNull();
+    expect(screen.getByText("Drill")).toBeTruthy();
+    expect(screen.queryByText("Kettle")).toBeNull();
+  });
+
+  it("returns to the default screen when the search is cleared", async () => {
+    await renderDiscover();
+    await search("dri");
+
+    await fireEvent.press(screen.getByLabelText("Clear search"));
+
+    expect(screen.getByText("Browse by category")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search items or communities").props.value).toBe("");
+  });
+
+  it("returns to the default screen when the text is deleted", async () => {
+    await renderDiscover();
+    await search("dri");
+
+    await search("  ");
+
+    expect(screen.getByText("Browse by category")).toBeTruthy();
+  });
+});
+
+describe("Filters", () => {
+  it("hides borrowed items with Available only and counts it in the badge", async () => {
+    await renderDiscover();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
+    expect(screen.queryByTestId("filters-badge")).toBeNull();
 
     await openFilters();
-    await fireEvent.press(screen.getByRole("button", { name: "Maple Street" }));
     await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
     await showResults();
-    await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
 
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.queryByText("Hammer")).toBeNull();
-
-    await fireEvent.changeText(screen.getByPlaceholderText("Search for anything"), "ham");
-
-    expect(screen.getByText("No items found")).toBeTruthy();
+    expect(screen.getByTestId("filters-badge")).toHaveTextContent("1");
   });
 
-  it("counts the filters that are on in the badge", async () => {
-    await renderSearch();
+  it("filters by community and counts both filters", async () => {
+    await renderDiscover();
+    await search("e");
 
     await openFilters();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
-    await showResults();
-    expect(screen.getByTestId("filters-badge")).toHaveTextContent("1");
-
-    await openFilters();
     await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
     await showResults();
+
+    expect(screen.getByText("Kettle")).toBeTruthy();
+    expect(screen.queryByText("Tent")).toBeNull();
     expect(screen.getByTestId("filters-badge")).toHaveTextContent("2");
   });
 
-  it("does not count the category as a filter", async () => {
-    await renderSearch();
-
-    await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
-
-    expect(screen.queryByTestId("filters-badge")).toBeNull();
-  });
-
   it("clears every filter with Clear all", async () => {
-    await renderSearch();
+    await renderDiscover();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
     await openFilters();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
-    await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
     await showResults();
-    expect(screen.queryByText("Drill")).toBeNull();
 
     await openFilters();
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
-
-    expect(screen.getByRole("checkbox", { name: "Available only" }).props.accessibilityState).toEqual({
-      checked: false,
-    });
-    expect(
-      screen.getByRole("button", { name: "All communities" }).props.accessibilityState
-    ).toEqual({ selected: true });
-
     await showResults();
 
     expect(screen.queryByTestId("filters-badge")).toBeNull();
-    for (const name of ["Drill", "Tent", "Hammer", "Kettle"]) {
-      expect(screen.getByText(name)).toBeTruthy();
-    }
+    expect(screen.getByText("Hammer")).toBeTruthy();
   });
 
   it("does not apply changes when the sheet is closed without Show results", async () => {
-    await renderSearch();
+    await renderDiscover();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
 
     await openFilters();
     await fireEvent.press(screen.getByRole("checkbox", { name: "Available only" }));
     await fireEvent.press(screen.getByLabelText("Close filters"));
 
-    expect(screen.getByText("Tent")).toBeTruthy();
+    expect(screen.getByText("Hammer")).toBeTruthy();
     expect(screen.queryByTestId("filters-badge")).toBeNull();
   });
 
   it("hides the community filter for a user in one community", async () => {
     mockMyCommunities = [{ id: "c1", name: "Maple Street" }];
-    await renderSearch();
+    await renderDiscover();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Tools" }));
 
     await openFilters();
 
     expect(screen.getByRole("checkbox", { name: "Available only" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "All communities" })).toBeNull();
-  });
-});
-
-describe("Search community label rule", () => {
-  it("labels cards for a user in 2 or more communities", async () => {
-    await renderSearch();
-
-    expect(screen.getAllByText("Maple Street")).toHaveLength(2);
-    expect(screen.getAllByText("Oak Hall")).toHaveLength(2);
-  });
-
-  it("hides labels for a user in one community", async () => {
-    mockMyCommunities = [{ id: "c1", name: "Maple Street" }];
-    await renderSearch();
-
-    expect(screen.queryByText("Maple Street")).toBeNull();
-  });
-});
-
-describe("Communities tab", () => {
-  it("lists only communities the user is not in, with name and description", async () => {
-    await renderSearch();
-    await openCommunitiesTab();
-
-    expect(screen.getByText("Pine Ridge")).toBeTruthy();
-    expect(screen.getByText("Neighbors on the ridge")).toBeTruthy();
-    expect(screen.getByText("Cedar Court")).toBeTruthy();
-    expect(screen.queryByText("Our block")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Request to join Maple Street" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Request to join Oak Hall" })).toBeNull();
-  });
-
-  it("filters communities with the search box", async () => {
-    await renderSearch();
-    await openCommunitiesTab();
-
-    await fireEvent.changeText(screen.getByPlaceholderText("Search communities"), "ridge");
-
-    expect(screen.getByText("Pine Ridge")).toBeTruthy();
-    expect(screen.queryByText("Cedar Court")).toBeNull();
-  });
-
-  it("sends a join request and shows Requested", async () => {
-    await renderSearch();
-    await openCommunitiesTab();
-
-    await fireEvent.press(screen.getByRole("button", { name: "Request to join Pine Ridge" }));
-
-    expect(mockRequestToJoin).toHaveBeenCalledWith("c3");
-    const button = await screen.findByRole("button", { name: "Requested to join Pine Ridge" });
-    expect(screen.getByText("Requested")).toBeTruthy();
-    expect(button.props.accessibilityState).toEqual({ disabled: true });
-    expect(alertSpy).not.toHaveBeenCalled();
-
-    // Other communities keep their own button.
-    expect(screen.getByRole("button", { name: "Request to join Cedar Court" })).toBeTruthy();
-  });
-
-  it("does not send a second request once Requested", async () => {
-    await renderSearch();
-    await openCommunitiesTab();
-
-    await fireEvent.press(screen.getByRole("button", { name: "Request to join Pine Ridge" }));
-    const button = await screen.findByRole("button", { name: "Requested to join Pine Ridge" });
-    await fireEvent.press(button);
-
-    expect(mockRequestToJoin).toHaveBeenCalledTimes(1);
-  });
-
-  it("alerts and keeps the button when the request fails", async () => {
-    mockRequestToJoin.mockRejectedValueOnce(new Error("Not authenticated"));
-    await renderSearch();
-    await openCommunitiesTab();
-
-    await fireEvent.press(screen.getByRole("button", { name: "Request to join Pine Ridge" }));
-
-    await waitFor(() =>
-      expect(alertSpy).toHaveBeenCalledWith("Couldn't send request", "Not authenticated")
-    );
-    const button = screen.getByRole("button", { name: "Request to join Pine Ridge" });
-    expect(button.props.accessibilityState).toEqual({ disabled: false });
-    expect(screen.queryByText("Requested")).toBeNull();
-  });
-
-  it("shows the empty state when the user is already in every community", async () => {
-    mocked(api.communities.getAll).mockImplementation(() => ok(COMMUNITIES.slice(0, 2)));
-    await renderSearch();
-    await openCommunitiesTab();
-
-    expect(screen.getByText("No communities to join yet.")).toBeTruthy();
-  });
-
-  it("shows the empty state when there are no communities", async () => {
-    mocked(api.communities.getAll).mockImplementation(() => ok([]));
-    await renderSearch();
-    await openCommunitiesTab();
-
-    expect(screen.getByText("No communities to join yet.")).toBeTruthy();
-  });
-
-  it("shows the empty state when communities fail to load", async () => {
-    mocked(api.communities.getAll).mockImplementation(() =>
-      Promise.resolve({ data: null, error: { message: "boom" } })
-    );
-    await renderSearch();
-    await openCommunitiesTab();
-
-    expect(screen.getByText("No communities to join yet.")).toBeTruthy();
-  });
-});
-
-describe("Search categories", () => {
-  it("uses the shared category list for the chips", async () => {
-    await renderSearch();
-
-    expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
-    for (const c of ITEM_CATEGORIES) {
-      expect(screen.getByRole("button", { name: c })).toBeTruthy();
-    }
-  });
-
-  it("shows items with an unknown category under Other", async () => {
-    mocked(api.items.getAll).mockImplementation(() =>
-      ok([...ITEMS, item("i9", "Mystery box", "c1", "Test", "available")])
-    );
-    await renderSearch();
-
-    await fireEvent.press(screen.getByRole("button", { name: "Other" }));
-
-    expect(screen.getByText("Mystery box")).toBeTruthy();
-    expect(screen.queryByText("Drill")).toBeNull();
   });
 });
