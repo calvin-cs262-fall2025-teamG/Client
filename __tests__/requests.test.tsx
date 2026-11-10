@@ -134,7 +134,7 @@ describe("requests for your items", () => {
     await waitFor(() =>
       expect(alertSpy).toHaveBeenCalledWith(
         "Something went wrong",
-        "Could not approve the request. Please try again."
+        "Could not approve the request. Please try again.", expect.any(Array)
       )
     );
 

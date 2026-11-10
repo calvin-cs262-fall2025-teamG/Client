@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -35,6 +34,7 @@ import {
 import { parseTimestamp } from "../../services/readState";
 import ItemCard from "../components/ItemCard";
 import ItemRow from "../components/ItemRow";
+import { notify } from "../../utils/confirm";
 import {
   ITEM_CATEGORIES,
   matchesCategory,
@@ -191,7 +191,7 @@ export default function DiscoverScreen() {
       await requestToJoin(community.id);
       setRequested((prev) => new Set(prev).add(community.id));
     } catch (e) {
-      Alert.alert(
+      void notify(
         "Couldn't send request",
         e instanceof Error ? e.message : "Please try again.",
       );

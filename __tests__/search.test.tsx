@@ -203,7 +203,7 @@ describe("Communities to join", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Request to join Pine Ridge" }));
 
     await waitFor(() =>
-      expect(alertSpy).toHaveBeenCalledWith("Couldn't send request", "Not authenticated")
+      expect(alertSpy).toHaveBeenCalledWith("Couldn't send request", "Not authenticated", expect.any(Array))
     );
     expect(
       screen.getByRole("button", { name: "Request to join Pine Ridge" }).props.accessibilityState
