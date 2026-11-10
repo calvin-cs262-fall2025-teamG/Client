@@ -78,6 +78,16 @@ export default function Index() {
     };
   }, [userId]);
 
+  const canSwitchCommunity = myCommunities.length >= 2;
+  const showingAll = selectedCommunity === ALL_COMMUNITIES;
+  const switcherLabel =
+    canSwitchCommunity && showingAll ? "YOUR COMMUNITIES" : "YOUR COMMUNITY";
+  const switcherName = !canSwitchCommunity
+    ? (myCommunities[0]?.name ?? "None yet")
+    : showingAll
+      ? `All (${myCommunities.length})`
+      : communityNames[selectedCommunity];
+
   const pickCommunity = (communityId: string) => {
     pickedCommunity.current = true;
     setCommunityChoice(communityId);
@@ -137,12 +147,63 @@ export default function Index() {
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={styles.logoImage}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+            <Image
+              source={require("../../assets/images/logo.png")}
+              style={styles.logoImage}
+            />
+          </TouchableOpacity>
+
+          {canSwitchCommunity ? (
+            <TouchableOpacity
+              style={styles.switcher}
+              onPress={() => setCommunityPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose community"
+              accessibilityValue={{ text: switcherName }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.switcherText}>
+                <Text style={styles.switcherLabel}>{switcherLabel}</Text>
+                <Text style={styles.switcherName} numberOfLines={1}>
+                  {switcherName}
+                </Text>
+              </View>
+              <Ionicons
+                testID="community-switcher-caret"
+                name="caret-down"
+                size={14}
+                color="#f97316"
+              />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.switcher} testID="community-switcher">
+              <View style={styles.switcherText}>
+                <Text style={styles.switcherLabel}>{switcherLabel}</Text>
+                <Text style={styles.switcherName} numberOfLines={1}>
+                  {switcherName}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={() => router.push("/bookmark")}
+            style={styles.bookmarkHeaderContainer}
+            accessibilityRole="button"
+            accessibilityLabel="Open bookmarks"
+          >
+            <Ionicons name="bookmark" size={24} color="#3b1b0d" />
+            {bookmarkCount > 0 && (
+              <View style={styles.bookmarkBadge}>
+                <Text style={styles.bookmarkBadgeText}>
+                  {bookmarkCount > 99 ? "99+" : bookmarkCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.searchBar}>
           <Ionicons
@@ -173,40 +234,33 @@ export default function Index() {
           )}
         </View>
 
-        <View style={styles.iconGroup}>
-          <TouchableOpacity
-            onPress={() => router.push("/bookmark")}
-            style={styles.bookmarkHeaderContainer}
-          >
-            <Ionicons name="bookmark" size={24} color="#3b1b0d" />
-            {bookmarkCount > 0 && (
-              <View style={styles.bookmarkBadge}>
-                <Text style={styles.bookmarkBadgeText}>
-                  {bookmarkCount > 99 ? "99+" : bookmarkCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* COMMUNITY FILTER */}
-      <View style={styles.communityBar}>
-        <TouchableOpacity
-          style={styles.communityDropdown}
-          onPress={() => setCommunityPickerOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Choose community"
-          activeOpacity={0.8}
+        {/* TABS */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabScrollContent}
+          style={styles.tabScrollContainer}
         >
-          <Ionicons name="people" size={16} color="#3b1b0d" />
-          <Text style={styles.communityDropdownText} numberOfLines={1}>
-            {selectedCommunity === ALL_COMMUNITIES
-              ? "All communities"
-              : communityNames[selectedCommunity]}
-          </Text>
-          <Ionicons name="chevron-down" size={16} color="#3b1b0d" />
-        </TouchableOpacity>
+          {CATEGORY_FILTERS.map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => {
+                setActiveTab(tab);
+                setSearchQuery("");
+              }}
+              style={[styles.tab, activeTab === tab && styles.activeTab]}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
+                {tab === ALL_CATEGORIES ? "Popular" : tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <Modal
@@ -260,33 +314,6 @@ export default function Index() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* TABS */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabScrollContent}
-          style={styles.tabScrollContainer}
-        >
-          {CATEGORY_FILTERS.map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => {
-                setActiveTab(tab);
-                setSearchQuery("");
-              }}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
-                {tab === ALL_CATEGORIES ? "Popular" : tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         {/* ITEMS GRID */}
         {filteredItems.length === 0 ? (
@@ -305,7 +332,7 @@ export default function Index() {
               <ItemCard
                 key={item.id}
                 item={item}
-                showCommunity={selectedCommunity === ALL_COMMUNITIES}
+                showCommunity={showingAll && myCommunities.length >= 2}
                 communityName={communityNames[item.community_id]}
               />
             ))}
@@ -347,16 +374,52 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
     backgroundColor: "#fff",
+    paddingTop: 12,
+    paddingHorizontal: 12,
     gap: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    zIndex: 1,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  switcher: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  switcherText: {
+    flex: 1,
+  },
+  switcherLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "#9ca3af",
+  },
+  switcherName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3b1b0d",
   },
   logoImage: {
     width: 55,
@@ -364,7 +427,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   searchBar: {
-    flex: 1,
     flexDirection: "row",
     backgroundColor: "#f3f4f6",
     borderRadius: 12,
@@ -377,10 +439,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
     letterSpacing: 0,
-  },
-  iconGroup: {
-    flexDirection: "row",
-    gap: 14,
   },
   bookmarkHeaderContainer: {
     position: "relative",
@@ -405,9 +463,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   tabScrollContainer: {
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    flexGrow: 0,
+    marginHorizontal: -12,
   },
   tabScrollContent: {
     paddingHorizontal: 8,
@@ -440,30 +497,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 12,
     rowGap: 12,
-  },
-  communityBar: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-  },
-  communityDropdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    maxWidth: "100%",
-    backgroundColor: "#fff7ed",
-    borderWidth: 1,
-    borderColor: "#fed7aa",
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  communityDropdownText: {
-    flexShrink: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#3b1b0d",
   },
   pickerBackdrop: {
     flex: 1,

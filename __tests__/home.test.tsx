@@ -88,7 +88,7 @@ describe("Home community filter", () => {
   it("defaults to All communities and shows every item", async () => {
     await renderHome();
 
-    expect(screen.getByText("All communities")).toBeTruthy();
+    expect(screen.getByText("All (2)")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.getByText("Tent")).toBeTruthy();
     expect(screen.getByText("Hammer")).toBeTruthy();
@@ -177,7 +177,7 @@ describe("Home community filter", () => {
     await renderHome();
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith("homeCommunityFilter:me"));
-    expect(screen.getByText("All communities")).toBeTruthy();
+    expect(screen.getByText("All (2)")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
   });
 
@@ -187,7 +187,7 @@ describe("Home community filter", () => {
     await renderHome();
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith("homeCommunityFilter:me"));
-    expect(screen.getByText("All communities")).toBeTruthy();
+    expect(screen.getByText("All (2)")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.getByText("Tent")).toBeTruthy();
   });
@@ -197,10 +197,13 @@ describe("Home community filter", () => {
     await renderHome("Tent");
     await waitFor(() => expect(screen.queryByText("Drill")).toBeNull());
 
-    mockCommunities = [{ id: "c1", name: "Maple Street" }];
+    mockCommunities = [
+      { id: "c1", name: "Maple Street" },
+      { id: "c3", name: "Pine Ridge" },
+    ];
     await screen.rerender(<Index />);
 
-    expect(screen.getByText("All communities")).toBeTruthy();
+    expect(screen.getByText("All (2)")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
   });
 
@@ -209,7 +212,7 @@ describe("Home community filter", () => {
 
     await renderHome();
 
-    expect(screen.getByText("All communities")).toBeTruthy();
+    expect(screen.getByText("All (2)")).toBeTruthy();
     expect(screen.getByText("Tent")).toBeTruthy();
   });
 });
@@ -237,5 +240,87 @@ describe("Home categories", () => {
 
     expect(screen.getByText("Mystery box")).toBeTruthy();
     expect(screen.queryByText("Drill")).toBeNull();
+  });
+});
+
+describe("Home header", () => {
+  it("shows a single community without a caret, and it can't be tapped", async () => {
+    mockCommunities = [{ id: "c1", name: "Maple Street" }];
+    await renderHome();
+
+    expect(screen.getByText("YOUR COMMUNITY")).toBeTruthy();
+    expect(screen.getByTestId("community-switcher")).toBeTruthy();
+    expect(screen.getByText("Maple Street")).toBeTruthy();
+    expect(screen.queryByTestId("community-switcher-caret")).toBeNull();
+    expect(screen.queryByLabelText("Choose community")).toBeNull();
+  });
+
+  it("shows All (N) with a caret when several communities and All is selected", async () => {
+    await renderHome();
+
+    expect(screen.getByText("YOUR COMMUNITIES")).toBeTruthy();
+    expect(screen.getByText("All (2)")).toBeTruthy();
+    expect(screen.getByTestId("community-switcher-caret")).toBeTruthy();
+  });
+
+  it("shows the picked community with a caret when several communities", async () => {
+    await renderHome();
+
+    await pickCommunity("Oak Hall");
+
+    expect(screen.getByText("YOUR COMMUNITY")).toBeTruthy();
+    expect(screen.queryByText("YOUR COMMUNITIES")).toBeNull();
+    expect(screen.getByText("Oak Hall")).toBeTruthy();
+    expect(screen.getByTestId("community-switcher-caret")).toBeTruthy();
+  });
+
+  it("opens the community picker from the box", async () => {
+    await renderHome();
+
+    await fireEvent.press(screen.getByLabelText("Choose community"));
+
+    expect(screen.getByRole("button", { name: "All communities" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Oak Hall" })).toBeTruthy();
+  });
+
+  it("no longer shows the separate All communities pill", async () => {
+    await renderHome();
+
+    expect(screen.queryByText("All communities")).toBeNull();
+  });
+
+  it("opens Bookmarks from the bookmark icon", async () => {
+    await renderHome();
+
+    await fireEvent.press(screen.getByLabelText("Open bookmarks"));
+
+    expect(mockRouter.push).toHaveBeenCalledWith("/bookmark");
+  });
+});
+
+describe("Home community label rule", () => {
+  it("labels cards when All is selected and the user is in 2+ communities", async () => {
+    await renderHome();
+
+    expect(screen.getAllByText("Maple Street")).toHaveLength(2);
+    expect(screen.getByText("Oak Hall")).toBeTruthy();
+  });
+
+  it("hides labels when a single community is picked", async () => {
+    await renderHome();
+
+    await pickCommunity("Oak Hall");
+
+    // Only the header shows the name.
+    expect(screen.getAllByText("Oak Hall")).toHaveLength(1);
+    expect(screen.queryByText("Maple Street")).toBeNull();
+  });
+
+  it("hides labels for a user in only one community", async () => {
+    mockCommunities = [{ id: "c1", name: "Maple Street" }];
+    await renderHome();
+
+    // Only the header shows the name.
+    expect(screen.getAllByText("Maple Street")).toHaveLength(1);
   });
 });
