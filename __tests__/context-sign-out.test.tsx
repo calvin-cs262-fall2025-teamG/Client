@@ -135,14 +135,11 @@ it("forgets cached profiles after signing out and back in as someone else", asyn
   expect(api.profiles.getById).toHaveBeenCalledTimes(2);
 });
 
-// BUG: approveRequest (and markReturned) call refresh() and the items refresh
-// after their RPC resolves, without checking that a user is still signed in.
-// If the user signs out while the approve call is in flight, the refresh starts a
-// fresh load with no session, and its results (or errors) are applied to the
-// signed-out state. The stale-request check doesn't help, because the refresh is a
-// brand-new request that started after sign-out. Here the mocked server returns
-// the old lists, so they come back after sign-out.
-it.skip("does not bring back the old user's lists when approveRequest resolves after sign-out", async () => {
+// approveRequest and markReturned refresh borrowing data and items after their
+// RPC resolves. If the user signed out while the call was in flight, that refresh
+// would be a brand-new load (so the stale-request check can't drop it), and the
+// old user's lists would come back. The mocked server here still returns them.
+it("does not bring back the old user's lists when approveRequest resolves after sign-out", async () => {
   const approve = deferred();
   mocked(api.borrowing_requests.approve).mockImplementation(() => approve.promise);
   const hook = await renderHook(useAll, { wrapper });
@@ -163,4 +160,28 @@ it.skip("does not bring back the old user's lists when approveRequest resolves a
   expect(borrowing.myRequests).toEqual([]);
   expect(borrowing.incomingRequests).toEqual([]);
   expect(borrowing.borrowingHistory).toEqual([]);
+});
+
+it("does not bring back the old user's lists when markReturned resolves after sign-out", async () => {
+  const returned = deferred();
+  mocked(api.borrowing_history.markReturned).mockImplementation(() => returned.promise);
+  const hook = await renderHook(useAll, { wrapper });
+  await waitFor(() => expect(hook.result.current.borrowing.myRequests).toHaveLength(1));
+  const loadsBefore = mocked(api.borrowing_requests.getMine).mock.calls.length;
+
+  let returning!: Promise<void>;
+  await act(async () => {
+    returning = hook.result.current.borrowing.markReturned("r2");
+  });
+  await signInAs(hook, null);
+  await act(async () => {
+    returned.resolve({ data: { id: "h2" }, error: null });
+    await returning;
+  });
+
+  const { items, borrowing } = hook.result.current;
+  expect(items.myItems).toEqual([]);
+  expect(borrowing.myRequests).toEqual([]);
+  expect(borrowing.borrowingHistory).toEqual([]);
+  expect(api.borrowing_requests.getMine).toHaveBeenCalledTimes(loadsBefore);
 });
