@@ -1,3 +1,4 @@
+import { File } from "expo-file-system";
 import { supabase } from "../app/utils/supabase";
 import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types";
 
@@ -31,6 +32,20 @@ export async function getSignedUrl(
 
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn);
   return { signedUrl: data?.signedUrl ?? null, error };
+}
+
+export async function uploadImage(
+  bucket: ImageBucket,
+  path: string,
+  uri: string,
+  contentType: string,
+) {
+  const file = new File(uri);
+  const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+    contentType,
+    upsert: false,
+  });
+  return { path: data?.path ?? null, error };
 }
 
 export const profiles = {

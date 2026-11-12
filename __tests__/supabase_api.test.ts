@@ -5,8 +5,17 @@ jest.mock("../app/utils/supabase", () => ({
   },
 }));
 
+jest.mock("expo-file-system", () => ({
+  File: class {
+    uri: string;
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+  },
+}));
+
 import { supabase } from "../app/utils/supabase";
-import { getSignedUrl, profiles } from "../services/supabase_api";
+import { getSignedUrl, profiles, uploadImage } from "../services/supabase_api";
 
 const rpc = supabase.rpc as jest.Mock;
 const storageFrom = supabase.storage.from as jest.Mock;
@@ -37,4 +46,27 @@ it("wraps signed URL creation as a storage call", async () => {
   expect(storageFrom).toHaveBeenCalledWith("item-images");
   expect(createSignedUrl).toHaveBeenCalledWith("users/UserA/Item.JPG", 900);
   expect(result).toEqual({ signedUrl: "https://example.test/signed", error: null });
+});
+
+it("uploads images through Supabase Storage", async () => {
+  const upload = jest.fn().mockResolvedValue({
+    data: { path: "users/UserA/image.jpg" },
+    error: null,
+  });
+  storageFrom.mockReturnValue({ upload });
+
+  const result = await uploadImage(
+    "item-images",
+    "users/UserA/image.jpg",
+    "file:///image.jpg",
+    "image/jpeg",
+  );
+
+  expect(storageFrom).toHaveBeenCalledWith("item-images");
+  expect(upload).toHaveBeenCalledWith(
+    "users/UserA/image.jpg",
+    expect.objectContaining({ uri: "file:///image.jpg" }),
+    { contentType: "image/jpeg", upsert: false },
+  );
+  expect(result).toEqual({ path: "users/UserA/image.jpg", error: null });
 });

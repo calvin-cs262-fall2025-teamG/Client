@@ -1,11 +1,22 @@
 import React from "react";
 import { Alert } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import ListItem from "../app/(tabs)/list";
+import { uploadImage } from "../services/supabase_api";
 
 const mockPush = jest.fn();
+jest.mock("expo-crypto", () => ({ randomUUID: () => "image-id" }));
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
+}));
+
+jest.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: jest.fn(),
+}));
+
+jest.mock("../services/supabase_api", () => ({
+  uploadImage: jest.fn(),
 }));
 
 jest.mock("../context/AuthContext", () => ({
@@ -44,6 +55,7 @@ beforeEach(() => {
     return_date: null,
     ...data,
   }));
+  (uploadImage as jest.Mock).mockResolvedValue({ path: "users/me/image-id.jpg", error: null });
 });
 
 afterEach(() => {
@@ -111,15 +123,25 @@ it("shows the failure alert when createItem fails", async () => {
   expect(mockPush).not.toHaveBeenCalled();
 });
 
-it("shows Coming soon when tapping Add a Photo", async () => {
+it("uploads a selected photo and saves its Storage path", async () => {
+  (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: "file:///item.jpg", mimeType: "image/jpeg" }],
+  });
   await render(<ListItem />);
 
   await fireEvent.press(screen.getByText("Add a Photo"));
+  await fillAndPost();
 
-  expect(alertSpy).toHaveBeenCalledWith(
-    "Coming soon",
-    "Photo upload is being moved to the new server."
-  );
+  await waitFor(() => expect(uploadImage).toHaveBeenCalledWith(
+    "item-images",
+    "users/me/image-id.jpg",
+    "file:///item.jpg",
+    "image/jpeg",
+  ));
+  expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({
+    image_path: "users/me/image-id.jpg",
+  }));
 });
 
 it("asks a user with no communities to join one first", async () => {

@@ -1,8 +1,11 @@
+import { randomUUID } from "expo-crypto";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +14,7 @@ import {
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
+import { uploadImage } from "../../services/supabase_api";
 import PageContainer from "../components/PageContainer";
 
 export default function ListItem() {
@@ -24,15 +28,26 @@ export default function ListItem() {
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
     null,
   );
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [uploading, setUploading] = useState(false);
 
   // With one community there is nothing to choose; with several the user picks
   const communityId =
     myCommunities.length === 1 ? myCommunities[0].id : selectedCommunityId;
 
-  // Photo upload returns with the Supabase Storage migration
-  const handleAddPhoto = () => {
-    Alert.alert("Coming soon", "Photo upload is being moved to the new server.");
+  const handleAddPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled) setSelectedImage(result.assets[0]);
+    } catch (error) {
+      console.error("Failed to select item photo:", error);
+      Alert.alert("Error", "Could not open your photo library.");
+    }
   };
 
   const handleSubmit = async () => {
@@ -62,12 +77,31 @@ export default function ListItem() {
     try {
       setUploading(true);
 
+      let imagePath: string | undefined;
+      if (selectedImage) {
+        const extension = selectedImage.mimeType
+          ?.split("/")[1]
+          ?.replace("jpeg", "jpg")
+          ?.replace(/[^a-z0-9]/gi, "") || "jpg";
+        const path = `users/${user.id}/${randomUUID()}.${extension}`;
+        const { path: uploadedPath, error } = await uploadImage(
+          "item-images",
+          path,
+          selectedImage.uri,
+          selectedImage.mimeType ?? "image/jpeg",
+        );
+        if (error) throw error;
+        if (!uploadedPath) throw new Error("Image upload returned no path");
+        imagePath = uploadedPath;
+      }
+
       // The server sets the owner to the signed-in user and status to "available"
       await createItem({
         community_id: communityId,
         name: title.trim(),
         description: description.trim() || undefined,
         category: category.trim() || "Other",
+        ...(imagePath ? { image_path: imagePath } : {}),
       });
 
       Alert.alert("Success", "Your item has been listed!", [
@@ -79,6 +113,7 @@ export default function ListItem() {
       setDescription("");
       setCategory("");
       setSelectedCommunityId(null);
+      setSelectedImage(null);
     } catch (error) {
       console.error("Failed to create item:", error);
       Alert.alert("Error", "Failed to list item. Please try again.");
@@ -96,10 +131,19 @@ export default function ListItem() {
         onPress={handleAddPhoto}
         disabled={uploading}
       >
-        <View style={styles.addPhotoBox}>
-          <Text style={styles.addPhotoText}>Add a Photo</Text>
-          <Text style={styles.subText}>Photos are coming soon</Text>
-        </View>
+        {selectedImage ? (
+          <>
+            <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+            <View style={styles.photoLabel}>
+              <Text style={styles.addPhotoText}>Change Photo</Text>
+            </View>
+          </>
+        ) : (
+          <View style={styles.addPhotoBox}>
+            <Text style={styles.addPhotoText}>Add a Photo</Text>
+            <Text style={styles.subText}>Choose from your library</Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       <TextInput
@@ -190,6 +234,20 @@ const styles = StyleSheet.create({
   },
   addPhotoBox: {
     alignItems: "center",
+  },
+  selectedImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  photoLabel: {
+    position: "absolute",
+    bottom: 12,
+    alignSelf: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
   },
   addPhotoText: {
     fontSize: 16,
