@@ -13,14 +13,8 @@ export type BorrowingHistory = Tables<"borrowing_history">;
 
 export type CreateCommunityRequest = Omit<TablesInsert<"communities">, "owner_id" | "created_at" | "updated_at">;
 export type UpdateCommunityRequest = Omit<TablesUpdate<"communities">, "id" | "owner_id" | "created_at" | "updated_at">;
-export type CreateItemRequest = Omit<
-  TablesInsert<"items">,
-  "owner_id" | "status" | "created_at" | "updated_at" | "image_path"
->;
-export type UpdateItemRequest = Omit<
-  TablesUpdate<"items">,
-  "id" | "owner_id" | "created_at" | "updated_at" | "image_path"
->;
+export type CreateItemRequest = Omit<TablesInsert<"items">, "owner_id" | "status" | "created_at" | "updated_at">;
+export type UpdateItemRequest = Omit<TablesUpdate<"items">, "id" | "owner_id" | "created_at" | "updated_at">;
 export type UpdateProfileRequest = Omit<TablesUpdate<"profiles">, "id" | "created_at" | "updated_at">;
 export type CreateDirectMessageRequest = Pick<TablesInsert<"direct_messages">, "receiver_id" | "content" | "item_id">;
 export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_messages">, "community_id" | "content" | "item_id">;
