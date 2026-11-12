@@ -50,22 +50,21 @@ const nullRow = Object.fromEntries(Object.keys(makeItem()).map((k) => [k, null])
 
 let alertSpy: jest.SpyInstance;
 
+// Press OK on every message, as the user would; notify waits for it
+const pressOk = (buttons?: AlertButton[]) => buttons?.find((b) => b.text === "OK")?.onPress?.();
+
 // Answer the delete confirmation as soon as it opens; handleDelete awaits it
 const answerDeleteConfirm = (buttonText: "Delete" | "Cancel") =>
   alertSpy.mockImplementation((title, _msg, buttons?: AlertButton[]) => {
     if (title === "Delete item?") buttons?.find((b) => b.text === buttonText)?.onPress?.();
+    else pressOk(buttons);
   });
-
-// Press a button in the most recent Alert.alert call with that title
-const pressAlertButton = (title: string, buttonText: string) => {
-  const call = [...alertSpy.mock.calls].reverse().find((c) => c[0] === title);
-  const buttons = (call?.[2] ?? []) as AlertButton[];
-  buttons.find((b) => b.text === buttonText)?.onPress?.();
-};
 
 beforeEach(() => {
   jest.clearAllMocks();
-  alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+  alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons?: AlertButton[]) =>
+    pressOk(buttons)
+  );
   jest.spyOn(console, "error").mockImplementation(() => {});
   mocked(api.items.getById).mockImplementation(() => ok(makeItem()));
   mockUpdateItem.mockImplementation(async (id: string, data: object) => ({ ...makeItem(), ...data, id }));
@@ -94,7 +93,7 @@ it("shows the load error for a row without an id", async () => {
   await render(<EditItem />);
 
   await waitFor(() =>
-    expect(alertSpy).toHaveBeenCalledWith("Error", "Could not load item details.")
+    expect(alertSpy).toHaveBeenCalledWith("Error", "Could not load item details.", expect.any(Array))
   );
   expect(screen.queryByText("Loading item...")).toBeNull();
 });
@@ -113,8 +112,7 @@ it("saves only name, description and category, never status", async () => {
     category: "Tools",
   });
   expect(alertSpy).toHaveBeenCalledWith("Success", "Item updated successfully!", expect.any(Array));
-  pressAlertButton("Success", "OK");
-  expect(mockBack).toHaveBeenCalled();
+  await waitFor(() => expect(mockBack).toHaveBeenCalled());
 });
 
 it.each([
@@ -149,7 +147,7 @@ it("sends someone else's item back with an alert and no form", async () => {
   await render(<EditItem />);
 
   await waitFor(() =>
-    expect(alertSpy).toHaveBeenCalledWith("Error", "You can only edit your own items.")
+    expect(alertSpy).toHaveBeenCalledWith("Error", "You can only edit your own items.", expect.any(Array))
   );
   expect(mockBack).toHaveBeenCalledTimes(1);
   expect(screen.queryByDisplayValue("Drill")).toBeNull();
@@ -164,7 +162,7 @@ it("stays on the screen when saving throws", async () => {
   await fireEvent.press(screen.getByText("Save changes"));
 
   await waitFor(() =>
-    expect(alertSpy).toHaveBeenCalledWith("Error", "Could not save changes. Please try again.")
+    expect(alertSpy).toHaveBeenCalledWith("Error", "Could not save changes. Please try again.", expect.any(Array))
   );
   expect(alertSpy).not.toHaveBeenCalledWith("Success", expect.anything(), expect.anything());
   expect(mockBack).not.toHaveBeenCalled();

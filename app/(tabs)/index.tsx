@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Image,
+  Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,88 +17,96 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
+import { useDatabase } from "../../context/DatabaseContext";
 import { items as itemsApi, type Item } from "../../services/supabase_api";
+import ItemCard from "../components/ItemCard";
 import {
-  getBookmarkCount,
-  updateBookmarkCount,
-} from "../../services/bookmarkCount";
-
-const imageMap: Record<string, any> = {
-  "banner.png": require("../../assets/images/banner.png"),
-  "bike.jpg": require("../../assets/images/bike.jpg"),
-  "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
-  "chair.jpg": require("../../assets/images/chair.jpg"),
-  "charger.jpg": require("../../assets/images/charger.jpg"),
-  "cookbook.jpg": require("../../assets/images/cookbook.jpg"),
-  "cookset.jpg": require("../../assets/images/cookset.jpg"),
-  "corebook.jpg": require("../../assets/images/corebook.jpg"),
-  "desklamp.jpeg": require("../../assets/images/desklamp.jpeg"),
-  "drill.jpg": require("../../assets/images/drill.jpg"),
-  "electrickettle.jpg": require("../../assets/images/electrickettle.jpg"),
-  "hose.jpg": require("../../assets/images/hose.jpg"),
-  "keurig.png": require("../../assets/images/keurig.png"),
-  "laptopstand.jpg": require("../../assets/images/laptopstand.jpg"),
-  "pressurewasher.jpg": require("../../assets/images/pressurewasher.jpg"),
-  "smartwatch.jpg": require("../../assets/images/smartwatch.jpg"),
-  "speaker.jpg": require("../../assets/images/speaker.jpg"),
-  "standingdesk.jpg": require("../../assets/images/standingdesk.jpg"),
-  "tools.jpg": require("../../assets/images/tools.jpg"),
-  "tractor.jpg": require("../../assets/images/tractor.jpg"),
-  "vacuum.jpg": require("../../assets/images/vacuum.jpg"),
-  "vacuum2.jpg": require("../../assets/images/vacuum2.jpg"),
-  "vacuum3.jpg": require("../../assets/images/vacuum3.jpg"),
-  "vacuum4.jpg": require("../../assets/images/vacuum4.jpg"),
-  "vacuum5.jpg": require("../../assets/images/vacuum5.jpg"),
-  "vacuum6.jpg": require("../../assets/images/vacuum6.jpg"),
-  "wirelessbuds.jpg": require("../../assets/images/wirelessbuds.jpg"),
-  "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
-};
+  ALL_CATEGORIES,
+  CATEGORY_FILTERS,
+  matchesCategory,
+} from "../../constants/categories";
+import {
+  ALL_COMMUNITIES,
+  filterItemsByCommunity,
+  loadCommunityFilter,
+  resolveCommunityFilter,
+  saveCommunityFilter,
+} from "../../services/communityFilter";
 
 export default function Index() {
   const router = useRouter();
   const { user } = useAuth();
+  const userId = user?.id;
+  const { myCommunities } = useDatabase();
 
-  const [activeTab, setActiveTab] = useState("Popular");
+  const [activeTab, setActiveTab] = useState<string>(ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bookmarkCounts, setBookmarkCounts] = useState<Record<string, number>>(
-    {},
-  );
 
-  const { byId, isSaved, toggle } = useBookmarks();
+  const { byId } = useBookmarks();
   const bookmarkCount = Object.keys(byId).length;
 
   const searchInputRef = useRef<TextInput | null>(null);
 
-  // Load bookmark counts for all items
-  const loadBookmarkCounts = useCallback(async (itemsList: Item[]) => {
-    const counts: Record<string, number> = {};
+  // The saved or picked community. It is checked against myCommunities on
+  // every render, so a community the user has left shows as "All".
+  const [communityChoice, setCommunityChoice] = useState<string>(ALL_COMMUNITIES);
+  const [communityPickerOpen, setCommunityPickerOpen] = useState(false);
+  const pickedCommunity = useRef(false);
+  const selectedCommunity = resolveCommunityFilter(communityChoice, myCommunities);
 
-    await Promise.all(
-      itemsList.map(async (item) => {
-        counts[item.id] = await getBookmarkCount(item.id);
-      }),
-    );
+  const communityNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    myCommunities.forEach((c) => {
+      names[c.id] = c.name;
+    });
+    return names;
+  }, [myCommunities]);
 
-    setBookmarkCounts(counts);
-  }, []);
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void loadCommunityFilter(userId).then((saved) => {
+      // Don't overwrite a pick the user made while this was loading.
+      if (cancelled || pickedCommunity.current || !saved) return;
+      setCommunityChoice(saved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const canSwitchCommunity = myCommunities.length >= 2;
+  const showingAll = selectedCommunity === ALL_COMMUNITIES;
+  const switcherLabel =
+    canSwitchCommunity && showingAll ? "YOUR COMMUNITIES" : "YOUR COMMUNITY";
+  const switcherName = !canSwitchCommunity
+    ? (myCommunities[0]?.name ?? "None yet")
+    : showingAll
+      ? `All (${myCommunities.length})`
+      : communityNames[selectedCommunity];
+
+  const pickCommunity = (communityId: string) => {
+    pickedCommunity.current = true;
+    setCommunityChoice(communityId);
+    setCommunityPickerOpen(false);
+    if (userId) void saveCommunityFilter(userId, communityId);
+  };
 
   // Load items from API
   const loadItems = useCallback(async () => {
     try {
       const { data, error } = await itemsApi.getAll();
       if (error) throw error;
-      const list = data ?? [];
-      setItems(list);
-      await loadBookmarkCounts(list);
+      setItems(data ?? []);
     } catch (error) {
       console.error("Failed to load items:", error);
     } finally {
       setLoading(false);
     }
-  }, [loadBookmarkCounts]);
+  }, []);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -112,56 +122,15 @@ export default function Index() {
     setRefreshing(false);
   };
 
-  const handleBookmarkToggle = async (item: Item) => {
-    const wasBookmarked = isSaved(item.id);
-
-    toggle({
-      id: item.id,
-      title: item.name,
-      image_path: item.image_path ?? null,
-      count: 0,
-      status: item.status === "borrowed" ? "borrowed" : "none",
-      category: item.category || "Other",
-    });
-
-    const currentCount = bookmarkCounts[item.id] || 0;
-    const newCount = await updateBookmarkCount(
-      item.id,
-      wasBookmarked,
-      currentCount,
-    );
-
-    setBookmarkCounts((prev) => ({
-      ...prev,
-      [item.id]: newCount,
-    }));
-  };
-
-  const filteredItems = items.filter((item) => {
-    const matchesCategory =
-      activeTab === "Popular" ||
-      (item.category &&
-        item.category.toLowerCase().startsWith(activeTab.toLowerCase()));
-
+  const filteredItems = filterItemsByCommunity(items, selectedCommunity).filter((item) => {
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
       q === "" ||
       item.name.toLowerCase().includes(q) ||
       (item.description ?? "").toLowerCase().includes(q);
 
-    return matchesCategory && matchesSearch;
+    return matchesCategory(item, activeTab) && matchesSearch;
   });
-
-  const categories = [
-    "Popular",
-    "Home",
-    "Books",
-    "Tools",
-    "Outdoor",
-    "School",
-    "Electronics",
-    "Kitchen",
-  ];
 
   if (loading) {
     return (
@@ -178,12 +147,63 @@ export default function Index() {
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={styles.logoImage}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+            <Image
+              source={require("../../assets/images/logo.png")}
+              style={styles.logoImage}
+            />
+          </TouchableOpacity>
+
+          {canSwitchCommunity ? (
+            <TouchableOpacity
+              style={styles.switcher}
+              onPress={() => setCommunityPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose community"
+              accessibilityValue={{ text: switcherName }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.switcherText}>
+                <Text style={styles.switcherLabel}>{switcherLabel}</Text>
+                <Text style={styles.switcherName} numberOfLines={1}>
+                  {switcherName}
+                </Text>
+              </View>
+              <Ionicons
+                testID="community-switcher-caret"
+                name="caret-down"
+                size={14}
+                color="#f97316"
+              />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.switcher} testID="community-switcher">
+              <View style={styles.switcherText}>
+                <Text style={styles.switcherLabel}>{switcherLabel}</Text>
+                <Text style={styles.switcherName} numberOfLines={1}>
+                  {switcherName}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={() => router.push("/bookmark")}
+            style={styles.bookmarkHeaderContainer}
+            accessibilityRole="button"
+            accessibilityLabel="Open bookmarks"
+          >
+            <Ionicons name="bookmark" size={24} color="#3b1b0d" />
+            {bookmarkCount > 0 && (
+              <View style={styles.bookmarkBadge}>
+                <Text style={styles.bookmarkBadgeText}>
+                  {bookmarkCount > 99 ? "99+" : bookmarkCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.searchBar}>
           <Ionicons
@@ -214,30 +234,6 @@ export default function Index() {
           )}
         </View>
 
-        <View style={styles.iconGroup}>
-          <TouchableOpacity
-            onPress={() => router.push("/bookmark")}
-            style={styles.bookmarkHeaderContainer}
-          >
-            <Ionicons name="bookmark" size={24} color="#3b1b0d" />
-            {bookmarkCount > 0 && (
-              <View style={styles.bookmarkBadge}>
-                <Text style={styles.bookmarkBadgeText}>
-                  {bookmarkCount > 99 ? "99+" : bookmarkCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* MAIN CONTENT */}
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
         {/* TABS */}
         <ScrollView
           horizontal
@@ -245,7 +241,7 @@ export default function Index() {
           contentContainerStyle={styles.tabScrollContent}
           style={styles.tabScrollContainer}
         >
-          {categories.map((tab) => (
+          {CATEGORY_FILTERS.map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => {
@@ -260,11 +256,64 @@ export default function Index() {
                   activeTab === tab && styles.activeTabText,
                 ]}
               >
-                {tab}
+                {tab === ALL_CATEGORIES ? "Popular" : tab}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
+
+      <Modal
+        visible={communityPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCommunityPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={() => setCommunityPickerOpen(false)}
+        >
+          <View style={styles.pickerCard}>
+            {[
+              { id: ALL_COMMUNITIES, name: "All communities" },
+              ...myCommunities,
+            ].map((c) => {
+              const selected = c.id === selectedCommunity;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={styles.pickerOption}
+                  onPress={() => pickCommunity(c.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.name}
+                  accessibilityState={{ selected }}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionText,
+                      selected && styles.pickerOptionTextSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {c.name}
+                  </Text>
+                  {selected && (
+                    <Ionicons name="checkmark" size={18} color="#f97316" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* MAIN CONTENT */}
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
 
         {/* ITEMS GRID */}
         {filteredItems.length === 0 ? (
@@ -279,131 +328,14 @@ export default function Index() {
           </View>
         ) : (
           <View style={styles.recommendedGrid}>
-            {filteredItems.map((item) => {
-              const isBookmarked = isSaved(item.id);
-              const isBorrowed = item.status === "borrowed";
-
-              return (
-                <View key={item.id} style={styles.recommendedItem}>
-                  {/* IMAGE + BOOKMARK */}
-                  <View style={styles.recommendedImageContainer}>
-                    {/* Edit icon for own items, bookmark for others */}
-                    {item.owner_id === user?.id ? (
-                      <TouchableOpacity
-                        style={styles.editIconContainer}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/edit-item",
-                            params: { id: item.id },
-                          })
-                        }
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="pencil" size={16} color="#fff" />
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.bookmarkIconContainer}
-                        onPress={() => handleBookmarkToggle(item)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons
-                          name={isBookmarked ? "bookmark" : "bookmark-outline"}
-                          size={22}
-                          color="#3b1b0d"
-                        />
-                      </TouchableOpacity>
-                    )}
-                    {/* Navigate via image */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (item.owner_id === user?.id) {
-                          router.push({
-                            pathname: "/edit-item",
-                            params: { id: item.id },
-                          });
-                        } else {
-                          router.push(`/item/${item.id}`);
-                        }
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      {item.image_path ? (
-                        imageMap[item.image_path] ? (
-                          <Image
-                            source={imageMap[item.image_path]}
-                            style={[
-                              styles.recommendedImage,
-                              isBorrowed && { opacity: 0.55 },
-                            ]}
-                          />
-                        ) : item.image_path.startsWith("http") ? (
-                          <Image
-                            source={{ uri: item.image_path }}
-                            style={[
-                              styles.recommendedImage,
-                              isBorrowed && { opacity: 0.55 },
-                            ]}
-                          />
-                        ) : (
-                          <View
-                            style={[
-                              styles.recommendedImage,
-                              styles.placeholderImage,
-                            ]}
-                          >
-                            <Ionicons
-                              name="image-outline"
-                              size={40}
-                              color="#9ca3af"
-                            />
-                          </View>
-                        )
-                      ) : (
-                        <View
-                          style={[
-                            styles.recommendedImage,
-                            styles.placeholderImage,
-                          ]}
-                        >
-                          <Ionicons
-                            name="image-outline"
-                            size={40}
-                            color="#9ca3af"
-                          />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* Borrowed badge */}
-                    {isBorrowed && (
-                      <View style={[styles.statusBadge, styles.statusBorrowed]}>
-                        <Text style={styles.statusText}>Borrowed</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Navigate via info section */}
-                  <TouchableOpacity
-                    onPress={() => router.push(`/item/${item.id}`)}
-                    activeOpacity={0.8}
-                    style={styles.recommendedInfo}
-                  >
-                    <Text
-                      style={[
-                        styles.recommendedName,
-                        isBorrowed && { opacity: 0.7 },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
+            {filteredItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                showCommunity={showingAll && myCommunities.length >= 2}
+                communityName={communityNames[item.community_id]}
+              />
+            ))}
           </View>
         )}
       </ScrollView>
@@ -442,16 +374,52 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
     backgroundColor: "#fff",
+    paddingTop: 12,
+    paddingHorizontal: 12,
     gap: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    zIndex: 1,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  switcher: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  switcherText: {
+    flex: 1,
+  },
+  switcherLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "#9ca3af",
+  },
+  switcherName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3b1b0d",
   },
   logoImage: {
     width: 55,
@@ -459,7 +427,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   searchBar: {
-    flex: 1,
     flexDirection: "row",
     backgroundColor: "#f3f4f6",
     borderRadius: 12,
@@ -472,10 +439,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
     letterSpacing: 0,
-  },
-  iconGroup: {
-    flexDirection: "row",
-    gap: 14,
   },
   bookmarkHeaderContainer: {
     position: "relative",
@@ -500,9 +463,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   tabScrollContainer: {
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    flexGrow: 0,
+    marginHorizontal: -12,
   },
   tabScrollContent: {
     paddingHorizontal: 8,
@@ -532,76 +494,40 @@ const styles = StyleSheet.create({
   recommendedGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
     padding: 12,
-    gap: 12,
+    rowGap: 12,
   },
-  recommendedItem: {
-    width: "47.5%",
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  pickerCard: {
     backgroundColor: "#fff",
     borderRadius: 14,
-    overflow: "hidden",
+    paddingVertical: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  recommendedImageContainer: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#f3f4f6",
-  },
-  recommendedImage: {
-    width: "100%",
-    height: "100%",
-  },
-  placeholderImage: {
-    justifyContent: "center",
+  pickerOption: {
+    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e5e7eb",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
-  recommendedInfo: {
-    padding: 12,
-  },
-  recommendedName: {
+  pickerOptionText: {
+    flexShrink: 1,
     fontSize: 15,
-    fontWeight: "600",
     color: "#111827",
-    marginBottom: 6,
   },
-  statusBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-    zIndex: 10,
-  },
-  statusText: {
-    color: "#fff",
-    fontSize: 12,
+  pickerOptionTextSelected: {
+    color: "#f97316",
     fontWeight: "600",
-  },
-  statusBorrowed: {
-    backgroundColor: "#f73e3eaf",
-  },
-  bookmarkIconContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    zIndex: 10,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    padding: 6,
-    borderRadius: 20,
-  },
-  editIconContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    zIndex: 20,
-    backgroundColor: "#f97316",
-    padding: 8,
-    borderRadius: 20,
   },
 });

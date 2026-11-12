@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   Image,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useDatabase } from "../context/DatabaseContext";
+import { notify } from "../utils/confirm";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -29,17 +29,17 @@ export default function EditProfile() {
 
   // Photo upload returns with the Supabase Storage migration
   const handleChangePhoto = () => {
-    Alert.alert("Coming soon", "Changing your profile photo isn't available yet.");
+    void notify("Coming soon", "Changing your profile photo isn't available yet.");
   };
 
   const handleSave = async () => {
     if (!user?.id) {
-      Alert.alert("Error", "User session expired. Please log in again.");
+      void notify("Error", "User session expired. Please log in again.");
       return;
     }
 
     if (!name.trim()) {
-      Alert.alert("Name required", "Please enter your name.");
+      void notify("Name required", "Please enter your name.");
       return;
     }
 
@@ -48,11 +48,11 @@ export default function EditProfile() {
       const updated = await updateProfile({ display_name: name.trim() });
       setUser({ ...user, display_name: updated.display_name });
 
-      Alert.alert("Success", "Profile updated!");
+      await notify("Success", "Profile updated!");
       router.back();
     } catch (error) {
       console.error("Error updating profile:", error);
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      void notify("Error", "Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
     }

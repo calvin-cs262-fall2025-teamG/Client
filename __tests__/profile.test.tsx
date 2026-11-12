@@ -1,5 +1,6 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react-native";
+import { Alert, Platform, type AlertButton } from "react-native";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import Profile from "../app/(tabs)/profile";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
@@ -7,8 +8,9 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 );
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace, back: jest.fn() }),
 }));
 
 // Run the focus callback like a mount effect, as if the screen just came into focus
@@ -17,8 +19,9 @@ jest.mock("expo-router/react-navigation", () => {
   return { useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
 });
 
+const mockLogout = jest.fn();
 jest.mock("../context/AuthContext", () => ({
-  useAuth: () => ({ user: { id: "me", display_name: "Bryn" }, logout: jest.fn() }),
+  useAuth: () => ({ user: { id: "me", display_name: "Bryn" }, logout: mockLogout }),
 }));
 
 // Mutable so tests can change the listings; refresh keeps one identity across renders
@@ -142,4 +145,68 @@ it("shows no count when nothing is pending", async () => {
 
   expect(screen.getByLabelText("Requests")).toBeTruthy();
   expect(screen.queryByLabelText(/pending/)).toBeNull();
+});
+
+describe("Sign out", () => {
+  // Answer the next Alert with the button that has this text.
+  const answerAlertWith = (buttonText: string) =>
+    jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons?: AlertButton[]) => {
+      buttons?.find((b) => b.text === buttonText)?.onPress?.();
+    });
+
+  beforeEach(() => {
+    mockLogout.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("asks first, then signs out and goes to the login screen", async () => {
+    const alert = answerAlertWith("Sign out");
+    await render(<Profile />);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(alert).toHaveBeenCalledWith("Sign out?", expect.any(String), expect.any(Array));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/(auth)/login"));
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing when the user cancels", async () => {
+    answerAlertWith("Cancel");
+    await render(<Profile />);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("uses the browser's confirm dialog on web", async () => {
+    jest.replaceProperty(Platform, "OS", "web");
+    const alert = jest.spyOn(Alert, "alert");
+    window.confirm = jest.fn(() => true);
+    await render(<Profile />);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("Sign out?"));
+    expect(alert).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/(auth)/login"));
+  });
+
+  it("shows a message and stays put when signing out fails", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    mockLogout.mockRejectedValue(new Error("network down"));
+    const alert = answerAlertWith("Sign out");
+    await render(<Profile />);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith("Couldn't sign out", "Please try again.", expect.any(Array))
+    );
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
 });
