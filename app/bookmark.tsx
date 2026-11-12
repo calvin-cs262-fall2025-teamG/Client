@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBookmarks } from "../context/BookmarksContext";
-import StorageImage from "./components/StorageImage";
 
 export default function BookmarkScreen() {
   const { byId, isSaved, toggle, remove } = useBookmarks();
@@ -78,13 +77,6 @@ export default function BookmarkScreen() {
                   >
                     {item.image ? (
                       <Image source={item.image} style={styles.image} />
-                    ) : item.imageKey ? (
-                      <StorageImage
-                        bucket="item-images"
-                        path={item.imageKey}
-                        style={styles.image}
-                        contentFit="cover"
-                      />
                     ) : (
                       <View style={[styles.image, styles.imagePlaceholder]}>
                         <Ionicons

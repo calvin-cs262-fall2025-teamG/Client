@@ -19,7 +19,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useDatabase } from "../context/DatabaseContext";
 import { items as itemsApi } from "../services/supabase_api";
-import StorageImage from "./components/StorageImage";
 
 type ItemStatus = "available" | "pending" | "borrowed";
 
@@ -245,14 +244,11 @@ export default function EditItem() {
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Image preview */}
-        {selectedImage ? (
-          <Image source={{ uri: selectedImage.uri }} style={styles.image} />
-        ) : imageUrl && (imageUrl.startsWith("http") || imageUrl.includes("/")) ? (
-          <StorageImage
-            bucket="item-images"
-            path={imageUrl}
+        {imageUrl && imageUrl.startsWith("http") && (
+          <Image
+            source={{ uri: imageUrl }}
             style={styles.image}
-            contentFit="cover"
+            resizeMode="cover"
           />
         ) : null}
         <TouchableOpacity

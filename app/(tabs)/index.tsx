@@ -16,7 +16,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
 import { items as itemsApi, type Item } from "../../services/supabase_api";
-import StorageImage from "../components/StorageImage";
 import {
   getBookmarkCount,
   updateBookmarkCount,
@@ -332,16 +331,36 @@ export default function Index() {
                       activeOpacity={0.8}
                     >
                       {item.image_path ? (
-                        <StorageImage
-                          bucket="item-images"
-                          path={item.image_path}
-                          localSource={imageMap[item.image_path]}
-                          style={[
-                            styles.recommendedImage,
-                            isBorrowed && { opacity: 0.55 },
-                          ]}
-                          contentFit="cover"
-                        />
+                        imageMap[item.image_path] ? (
+                          <Image
+                            source={imageMap[item.image_path]}
+                            style={[
+                              styles.recommendedImage,
+                              isBorrowed && { opacity: 0.55 },
+                            ]}
+                          />
+                        ) : item.image_path.startsWith("http") ? (
+                          <Image
+                            source={{ uri: item.image_path }}
+                            style={[
+                              styles.recommendedImage,
+                              isBorrowed && { opacity: 0.55 },
+                            ]}
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.recommendedImage,
+                              styles.placeholderImage,
+                            ]}
+                          >
+                            <Ionicons
+                              name="image-outline"
+                              size={40}
+                              color="#9ca3af"
+                            />
+                          </View>
+                        )
                       ) : (
                         <View
                           style={[

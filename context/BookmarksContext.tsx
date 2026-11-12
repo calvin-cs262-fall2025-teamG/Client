@@ -73,7 +73,7 @@ function normalizeImage(rawImage: any): { image?: ImageSourcePropType; imageKey?
 
     const key = trimmed.toLowerCase();
     const local = imageMap[key];
-    return { image: local ?? undefined, imageKey: local ? key : trimmed };
+    return { image: local ?? undefined, imageKey: key };
   }
 
   if (rawImage && typeof rawImage === "object" && typeof rawImage.uri === "string") {

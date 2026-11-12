@@ -1,5 +1,4 @@
 import { randomUUID } from "expo-crypto";
-import { File } from "expo-file-system";
 import { supabase } from "../app/utils/supabase";
 import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types";
 
@@ -28,10 +27,30 @@ export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_message
 
 export type CommunityMemberRole = "owner" | "admin" | "member";
 
+type ImageInput = { data: ArrayBuffer; ext?: string };
 export type ImageBucket = "profile-pictures" | "item-images" | "community-images";
-export type ImageInput = { uri: string; mimeType?: string | null };
 
-export async function getSignedUrl(
+async function uploadImage(bucket: string, path: string, img: ImageInput) {
+  const ext = (img.ext ?? "jpeg").replace(/^\./, "").toLowerCase();
+  const contentTypes: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+  };
+  const contentType = contentTypes[ext];
+  const fullPath = `${path}.${ext}`;
+  if (!contentType) {
+    return { path: fullPath, error: new Error(`Unsupported image extension: ${ext}`) };
+  }
+
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(fullPath, img.data, { contentType, upsert: false });
+  return { path: fullPath, error };
+}
+
+export async function getImageUrl(
   bucket: ImageBucket,
   path: string | null,
   expiresIn = 3600,
@@ -42,25 +61,10 @@ export async function getSignedUrl(
   return { signedUrl: data?.signedUrl ?? null, error };
 }
 
-async function uploadImage(
-  bucket: ImageBucket,
-  image: ImageInput,
-) {
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error("You must be signed in to upload images.");
-
-  const contentType = image.mimeType ?? "image/jpeg";
-  const extension = contentType.split("/")[1]?.replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
-  const path = `users/${authData.user.id}/${randomUUID()}.${extension}`;
-  const file = new File(image.uri);
-  const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
-    contentType,
-    upsert: false,
-  });
-  if (error) throw error;
-  if (!data?.path) throw new Error("Image upload returned no path.");
-  return data.path;
+async function getCurrentUserId() {
+  const res = await supabase.auth.getUser();
+  if (res.error) return { id: null, error: res.error};
+  return { id: res.data.user?.id ?? null };
 }
 
 export const profiles = {
@@ -68,7 +72,19 @@ export const profiles = {
 
   getCurrent: () => supabase.rpc("get_my_profile"),
 
-  update: (data: UpdateProfileRequest) => supabase.rpc("update_my_profile", { p_data: data }),
+  update: async (data: UpdateProfileRequest, image?: ImageInput) => {
+    if (image) {
+      const userId = await getCurrentUserId();
+      if ( userId.error ) return { data: null, error: userId.error};
+      if (!userId.id) return { data: null, error: new Error("Not signed in") };
+      const up = await uploadImage("profile-pictures", `${userId.id}/avatar-${randomUUID()}`, image);
+      if (up.error) return { data: null, error: up.error };
+      data = { ...data, avatar_path: up.path };
+    }
+    const res = await supabase.rpc("update_my_profile", { p_data: data });
+    if (res.error) return { ...res, error: res.error };
+    return res;
+  },
 };
 
 export const communities = {
@@ -78,12 +94,45 @@ export const communities = {
 
   getById: (id: string) => supabase.rpc("get_community", { p_community_id: id }),
 
-  create: (data: CreateCommunityRequest) => supabase.rpc("create_community", { p_data: data }),
+  create: async (data: CreateCommunityRequest, image?: ImageInput) => {
+    /* 
+      Maybe can be fixed?
+      Note this operation is not atomic. If the upload fails, the community 
+      has already been created without an image. If the follow-up update 
+      fails, the community remains and the uploaded image is unreferenced 
+      until the server’s orphan sweep queues it for cleanup. The failure 
+      response currently returns { data: null, error }, so callers should be 
+      aware that a community may exist even when create reports an error.
+    */
+    if (image) {
+      const create_res = await supabase.rpc("create_community", { p_data: data });
+      if (create_res.error)  return { ...create_res, error: create_res.error };
+      const up = await uploadImage("community-images", `${create_res.data.id}/avatar-${randomUUID()}`, image);
+      if (up.error) return { data: null, error: up.error };
+      const res = await supabase.rpc("update_community", { p_community_id: create_res.data.id, p_data: { avatar_path: up.path } })
+      if (res.error) return { data: null, error: res.error };
+      return res;
+    }
+    
+    const res = await supabase.rpc("create_community", { p_data: data });
+    if (res.error) return { ...res, error: res.error };
+    return res;    
+  },
 
-  update: (id: string, data: UpdateCommunityRequest) =>
-    supabase.rpc("update_community", { p_community_id: id, p_data: data }),
+  update: async (id: string, data: UpdateCommunityRequest, image?: ImageInput) => {
+    if (image) {
+      const up = await uploadImage("community-images", `${id}/avatar-${randomUUID()}`, image);
+      if (up.error) return { data: null, error: up.error };
+      data = { ...data, avatar_path: up.path };
+    }
+    const res = await supabase.rpc("update_community", { p_community_id: id, p_data: data });
+    if (res.error) return { ...res, error: res.error };
+    return res;
+  },
 
-  delete: (id: string) => supabase.rpc("delete_community", { p_community_id: id }),
+  delete: async (id: string) => {
+    return supabase.rpc("delete_community", { p_community_id: id });
+  },
 };
 
 export const community_members = {
@@ -168,23 +217,42 @@ export const items = {
   getById: (id: string) => supabase.rpc("get_item", { p_item_id: id }),
 
   create: async (data: CreateItemRequest, image?: ImageInput) => {
-    const imagePath = image ? await uploadImage("item-images", image) : undefined;
-    return supabase.rpc("create_item", {
-      p_data: { ...data, ...(imagePath ? { image_path: imagePath } : {}) },
-    });
+    if (image) {
+      const userId = await getCurrentUserId();
+      if ( userId.error ) return { data: null, error: userId.error};
+      if (!userId.id) return { data: null, error: new Error("Not signed in") };
+      const id = randomUUID();
+      const up = await uploadImage("item-images", `${userId.id}/${id}/main-${randomUUID()}`, image);
+      if (up.error) return { data: null, error: up.error };
+      data = { ...data, id:id, image_path: up.path};
+      const res = await supabase.rpc("create_item", { p_data: data });
+      if (res.error) return {...res, error: res.error};
+      return res;
+    }
+    
+    const res = await supabase.rpc("create_item", { p_data: data });
+    if (res.error) return {...res, error: res.error};
+    return res;
   },
 
-  update: async (id: string, data: UpdateItemRequest, image?: ImageInput | null) => {
-    const imagePath = image ? await uploadImage("item-images", image) : undefined;
-    const updateData = image === null
-      ? { ...data, image_path: null }
-      : imagePath
-        ? { ...data, image_path: imagePath }
-        : data;
-    return supabase.rpc("update_item", { p_item_id: id, p_data: updateData });
+  update: async (id: string, data: UpdateItemRequest, image?: ImageInput) => {
+    if (image) {
+      const userId = await getCurrentUserId();
+      if ( userId.error ) return { data: null, error: userId.error};
+      if (!userId.id) return { data: null, error: new Error("Not signed in") };
+      const up = await uploadImage("item-images", `${userId.id}/${id}/main-${randomUUID()}`, image);
+      if (up.error) return { data: null, error: up.error };
+      data = { ...data, image_path: up.path };
+    }
+    const res = await supabase.rpc("update_item", { p_item_id: id, p_data: data });
+    if (res.error) return { ...res, error: res.error };
+    return res;
   },
 
-  delete: (id: string) => supabase.rpc("delete_item", { p_item_id: id }),
+  delete: async (id: string) => {
+    const res = await supabase.rpc("delete_item", { p_item_id: id });
+    return res;
+  },
 };
 
 export const borrowing_requests = {
