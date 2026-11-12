@@ -1,3 +1,4 @@
+import { randomUUID } from "expo-crypto";
 import { File } from "expo-file-system";
 import { supabase } from "../app/utils/supabase";
 import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types";
@@ -13,8 +14,14 @@ export type BorrowingHistory = Tables<"borrowing_history">;
 
 export type CreateCommunityRequest = Omit<TablesInsert<"communities">, "owner_id" | "created_at" | "updated_at">;
 export type UpdateCommunityRequest = Omit<TablesUpdate<"communities">, "id" | "owner_id" | "created_at" | "updated_at">;
-export type CreateItemRequest = Omit<TablesInsert<"items">, "owner_id" | "status" | "created_at" | "updated_at">;
-export type UpdateItemRequest = Omit<TablesUpdate<"items">, "id" | "owner_id" | "created_at" | "updated_at">;
+export type CreateItemRequest = Omit<
+  TablesInsert<"items">,
+  "owner_id" | "status" | "created_at" | "updated_at" | "image_path"
+>;
+export type UpdateItemRequest = Omit<
+  TablesUpdate<"items">,
+  "id" | "owner_id" | "created_at" | "updated_at" | "image_path"
+>;
 export type UpdateProfileRequest = Omit<TablesUpdate<"profiles">, "id" | "created_at" | "updated_at">;
 export type CreateDirectMessageRequest = Pick<TablesInsert<"direct_messages">, "receiver_id" | "content" | "item_id">;
 export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_messages">, "community_id" | "content" | "item_id">;
@@ -22,6 +29,7 @@ export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_message
 export type CommunityMemberRole = "owner" | "admin" | "member";
 
 export type ImageBucket = "profile-pictures" | "item-images" | "community-images";
+export type ImageInput = { uri: string; mimeType?: string | null };
 
 export async function getSignedUrl(
   bucket: ImageBucket,
@@ -34,18 +42,25 @@ export async function getSignedUrl(
   return { signedUrl: data?.signedUrl ?? null, error };
 }
 
-export async function uploadImage(
+async function uploadImage(
   bucket: ImageBucket,
-  path: string,
-  uri: string,
-  contentType: string,
+  image: ImageInput,
 ) {
-  const file = new File(uri);
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("You must be signed in to upload images.");
+
+  const contentType = image.mimeType ?? "image/jpeg";
+  const extension = contentType.split("/")[1]?.replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const path = `users/${authData.user.id}/${randomUUID()}.${extension}`;
+  const file = new File(image.uri);
   const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
     contentType,
     upsert: false,
   });
-  return { path: data?.path ?? null, error };
+  if (error) throw error;
+  if (!data?.path) throw new Error("Image upload returned no path.");
+  return data.path;
 }
 
 export const profiles = {
@@ -152,10 +167,22 @@ export const items = {
 
   getById: (id: string) => supabase.rpc("get_item", { p_item_id: id }),
 
-  create: (data: CreateItemRequest) => supabase.rpc("create_item", { p_data: data }),
+  create: async (data: CreateItemRequest, image?: ImageInput) => {
+    const imagePath = image ? await uploadImage("item-images", image) : undefined;
+    return supabase.rpc("create_item", {
+      p_data: { ...data, ...(imagePath ? { image_path: imagePath } : {}) },
+    });
+  },
 
-  update: (id: string, data: UpdateItemRequest) =>
-    supabase.rpc("update_item", { p_item_id: id, p_data: data }),
+  update: async (id: string, data: UpdateItemRequest, image?: ImageInput | null) => {
+    const imagePath = image ? await uploadImage("item-images", image) : undefined;
+    const updateData = image === null
+      ? { ...data, image_path: null }
+      : imagePath
+        ? { ...data, image_path: imagePath }
+        : data;
+    return supabase.rpc("update_item", { p_item_id: id, p_data: updateData });
+  },
 
   delete: (id: string) => supabase.rpc("delete_item", { p_item_id: id }),
 };

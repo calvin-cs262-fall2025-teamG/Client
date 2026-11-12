@@ -3,7 +3,6 @@ import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import ListItem from "../app/(tabs)/list";
-import { uploadImage } from "../services/supabase_api";
 
 const mockPush = jest.fn();
 jest.mock("expo-crypto", () => ({ randomUUID: () => "image-id" }));
@@ -13,10 +12,6 @@ jest.mock("expo-router", () => ({
 
 jest.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: jest.fn(),
-}));
-
-jest.mock("../services/supabase_api", () => ({
-  uploadImage: jest.fn(),
 }));
 
 jest.mock("../context/AuthContext", () => ({
@@ -55,7 +50,6 @@ beforeEach(() => {
     return_date: null,
     ...data,
   }));
-  (uploadImage as jest.Mock).mockResolvedValue({ path: "users/me/image-id.jpg", error: null });
 });
 
 afterEach(() => {
@@ -123,7 +117,7 @@ it("shows the failure alert when createItem fails", async () => {
   expect(mockPush).not.toHaveBeenCalled();
 });
 
-it("uploads a selected photo and saves its Storage path", async () => {
+it("passes the selected photo to item creation", async () => {
   (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValue({
     canceled: false,
     assets: [{ uri: "file:///item.jpg", mimeType: "image/jpeg" }],
@@ -133,15 +127,10 @@ it("uploads a selected photo and saves its Storage path", async () => {
   await fireEvent.press(screen.getByText("Add a Photo"));
   await fillAndPost();
 
-  await waitFor(() => expect(uploadImage).toHaveBeenCalledWith(
-    "item-images",
-    "users/me/image-id.jpg",
-    "file:///item.jpg",
-    "image/jpeg",
+  await waitFor(() => expect(mockCreateItem).toHaveBeenCalledWith(
+    expect.objectContaining({ community_id: "c1", name: "Drill" }),
+    { uri: "file:///item.jpg", mimeType: "image/jpeg" },
   ));
-  expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({
-    image_path: "users/me/image-id.jpg",
-  }));
 });
 
 it("asks a user with no communities to join one first", async () => {

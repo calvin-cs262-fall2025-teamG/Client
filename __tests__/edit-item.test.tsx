@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, type AlertButton } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import EditItem from "../app/edit-item";
 import * as api from "../services/supabase_api";
@@ -10,6 +11,10 @@ const mockRouter = { push: jest.fn(), back: mockBack };
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ id: "item-1" }),
   useRouter: () => mockRouter,
+}));
+
+jest.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: jest.fn(),
 }));
 
 jest.mock("../context/AuthContext", () => ({
@@ -115,6 +120,23 @@ it("saves only name, description and category, never status", async () => {
   expect(alertSpy).toHaveBeenCalledWith("Success", "Item updated successfully!", expect.any(Array));
   pressAlertButton("Success", "OK");
   expect(mockBack).toHaveBeenCalled();
+});
+
+it("passes a selected photo to item update", async () => {
+  (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: "file:///updated.jpg", mimeType: "image/jpeg" }],
+  });
+  await renderLoaded();
+
+  await fireEvent.press(screen.getByText("Add a photo"));
+  await fireEvent.press(screen.getByText("Save changes"));
+
+  await waitFor(() => expect(mockUpdateItem).toHaveBeenCalledWith(
+    "item-1",
+    expect.objectContaining({ name: "Drill" }),
+    { uri: "file:///updated.jpg", mimeType: "image/jpeg" },
+  ));
 });
 
 it.each([

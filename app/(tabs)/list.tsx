@@ -1,4 +1,3 @@
-import { randomUUID } from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -14,7 +13,6 @@ import {
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
-import { uploadImage } from "../../services/supabase_api";
 import PageContainer from "../components/PageContainer";
 
 export default function ListItem() {
@@ -77,32 +75,21 @@ export default function ListItem() {
     try {
       setUploading(true);
 
-      let imagePath: string | undefined;
-      if (selectedImage) {
-        const extension = selectedImage.mimeType
-          ?.split("/")[1]
-          ?.replace("jpeg", "jpg")
-          ?.replace(/[^a-z0-9]/gi, "") || "jpg";
-        const path = `users/${user.id}/${randomUUID()}.${extension}`;
-        const { path: uploadedPath, error } = await uploadImage(
-          "item-images",
-          path,
-          selectedImage.uri,
-          selectedImage.mimeType ?? "image/jpeg",
-        );
-        if (error) throw error;
-        if (!uploadedPath) throw new Error("Image upload returned no path");
-        imagePath = uploadedPath;
-      }
-
       // The server sets the owner to the signed-in user and status to "available"
-      await createItem({
+      const itemData = {
         community_id: communityId,
         name: title.trim(),
         description: description.trim() || undefined,
         category: category.trim() || "Other",
-        ...(imagePath ? { image_path: imagePath } : {}),
-      });
+      };
+      if (selectedImage) {
+        await createItem(itemData, {
+          uri: selectedImage.uri,
+          mimeType: selectedImage.mimeType,
+        });
+      } else {
+        await createItem(itemData);
+      }
 
       Alert.alert("Success", "Your item has been listed!", [
         { text: "OK", onPress: () => router.push("/(tabs)/profile") },

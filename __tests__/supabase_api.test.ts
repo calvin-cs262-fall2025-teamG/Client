@@ -1,9 +1,12 @@
 jest.mock("../app/utils/supabase", () => ({
   supabase: {
     rpc: jest.fn(),
+    auth: { getUser: jest.fn() },
     storage: { from: jest.fn() },
   },
 }));
+
+jest.mock("expo-crypto", () => ({ randomUUID: () => "image-id" }));
 
 jest.mock("expo-file-system", () => ({
   File: class {
@@ -15,13 +18,15 @@ jest.mock("expo-file-system", () => ({
 }));
 
 import { supabase } from "../app/utils/supabase";
-import { getSignedUrl, profiles, uploadImage } from "../services/supabase_api";
+import { getSignedUrl, items, profiles } from "../services/supabase_api";
 
 const rpc = supabase.rpc as jest.Mock;
+const getUser = supabase.auth.getUser as jest.Mock;
 const storageFrom = supabase.storage.from as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  getUser.mockResolvedValue({ data: { user: { id: "UserA" } }, error: null });
 });
 
 it("keeps profile updates as direct RPC calls", async () => {
@@ -48,19 +53,16 @@ it("wraps signed URL creation as a storage call", async () => {
   expect(result).toEqual({ signedUrl: "https://example.test/signed", error: null });
 });
 
-it("uploads images through Supabase Storage", async () => {
+it("uploads a create image in the API and saves the returned path", async () => {
   const upload = jest.fn().mockResolvedValue({
     data: { path: "users/UserA/image.jpg" },
     error: null,
   });
   storageFrom.mockReturnValue({ upload });
+  rpc.mockResolvedValue({ data: null, error: null });
 
-  const result = await uploadImage(
-    "item-images",
-    "users/UserA/image.jpg",
-    "file:///image.jpg",
-    "image/jpeg",
-  );
+  const data = { community_id: "community-1", name: "Drill", category: "Tools" };
+  await items.create(data, { uri: "file:///image.jpg", mimeType: "image/jpeg" });
 
   expect(storageFrom).toHaveBeenCalledWith("item-images");
   expect(upload).toHaveBeenCalledWith(
@@ -68,5 +70,32 @@ it("uploads images through Supabase Storage", async () => {
     expect.objectContaining({ uri: "file:///image.jpg" }),
     { contentType: "image/jpeg", upsert: false },
   );
-  expect(result).toEqual({ path: "users/UserA/image.jpg", error: null });
+  expect(rpc).toHaveBeenCalledWith("create_item", {
+    p_data: { ...data, image_path: "users/UserA/image.jpg" },
+  });
+});
+
+it("uploads an update image in the API and saves the returned path", async () => {
+  const upload = jest.fn().mockResolvedValue({
+    data: { path: "users/UserA/image-id.png" },
+    error: null,
+  });
+  storageFrom.mockReturnValue({ upload });
+  rpc.mockResolvedValue({ data: null, error: null });
+
+  const data = { name: "Updated drill" };
+  await items.update("item-1", data, {
+    uri: "file:///image.png",
+    mimeType: "image/png",
+  });
+
+  expect(upload).toHaveBeenCalledWith(
+    "users/UserA/image-id.png",
+    expect.objectContaining({ uri: "file:///image.png" }),
+    { contentType: "image/png", upsert: false },
+  );
+  expect(rpc).toHaveBeenCalledWith("update_item", {
+    p_item_id: "item-1",
+    p_data: { ...data, image_path: "users/UserA/image-id.png" },
+  });
 });

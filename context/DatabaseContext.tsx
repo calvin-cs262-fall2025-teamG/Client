@@ -19,6 +19,7 @@ import {
   type Community,
   type CreateCommunityRequest,
   type CreateItemRequest,
+  type ImageInput,
   type Item,
   type Profile,
   type UpdateItemRequest,
@@ -55,8 +56,8 @@ type DatabaseValue = {
   requestToJoin: (communityId: string) => Promise<void>;
   leaveCommunity: (communityId: string) => Promise<void>;
 
-  createItem: (data: CreateItemRequest) => Promise<Item>;
-  updateItem: (id: string, data: UpdateItemRequest) => Promise<Item>;
+  createItem: (data: CreateItemRequest, image?: ImageInput) => Promise<Item>;
+  updateItem: (id: string, data: UpdateItemRequest, image?: ImageInput | null) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
 
   requestToBorrow: (itemId: string) => Promise<BorrowingRequest>;
@@ -192,14 +193,14 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
 
   // Items
 
-  const createItem = useCallback(async (data: CreateItemRequest) => {
-    const created = unwrap(await items.create(data));
+  const createItem = useCallback(async (data: CreateItemRequest, image?: ImageInput) => {
+    const created = unwrap(await items.create(data, image));
     setMyItems((prev) => [created, ...prev]);
     return created;
   }, []);
 
-  const updateItem = useCallback(async (id: string, data: UpdateItemRequest) => {
-    const updated = unwrap(await items.update(id, data));
+  const updateItem = useCallback(async (id: string, data: UpdateItemRequest, image?: ImageInput | null) => {
+    const updated = unwrap(await items.update(id, data, image));
     setMyItems((prev) => replaceById(prev, updated));
     return updated;
   }, []);
