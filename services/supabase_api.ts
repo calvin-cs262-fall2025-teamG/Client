@@ -1,6 +1,6 @@
 import { randomUUID } from "expo-crypto";
 import { supabase } from "../app/utils/supabase";
-import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types";
+import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types.ts";
 
 export type Profile = Tables<"profiles">;
 export type Community = Tables<"communities">;
@@ -13,15 +13,20 @@ export type BorrowingHistory = Tables<"borrowing_history">;
 
 export type CreateCommunityRequest = Omit<TablesInsert<"communities">, "owner_id" | "created_at" | "updated_at">;
 export type UpdateCommunityRequest = Omit<TablesUpdate<"communities">, "id" | "owner_id" | "created_at" | "updated_at">;
-export type CreateItemRequest = Omit<TablesInsert<"items">, "owner_id" | "status" | "created_at" | "updated_at">;
-export type UpdateItemRequest = Omit<TablesUpdate<"items">, "id" | "owner_id" | "created_at" | "updated_at">;
+export type CreateItemRequest = Omit<TablesInsert<"items">, "owner_id" | "status" | "created_at" | "updated_at"> & {
+  community_ids?: string[];
+};
+// Omitting community_ids preserves existing listings; an empty array removes them.
+export type UpdateItemRequest = Omit<TablesUpdate<"items">, "id" | "owner_id" | "created_at" | "updated_at"> & {
+  community_ids?: string[];
+};
 export type UpdateProfileRequest = Omit<TablesUpdate<"profiles">, "id" | "created_at" | "updated_at">;
 export type CreateDirectMessageRequest = Pick<TablesInsert<"direct_messages">, "receiver_id" | "content" | "item_id">;
 export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_messages">, "community_id" | "content" | "item_id">;
 
 export type CommunityMemberRole = "owner" | "admin" | "member";
 
-type ImageInput = { data: ArrayBuffer; ext?: string };
+export type ImageInput = { data: ArrayBuffer; ext?: string };
 export type ImageBucket = "profile-pictures" | "item-images" | "community-images";
 
 async function uploadImage(bucket: string, path: string, img: ImageInput) {
@@ -157,8 +162,6 @@ export const community_members = {
 
   leave: (communityId: string) => supabase.rpc("leave_community", { p_community_id: communityId }),
 
-  markRead: (communityId: string) => supabase.rpc("mark_community_read", { p_community_id: communityId }),
-
   isMember: (communityId: string) => supabase.rpc("is_community_member", { target_community_id: communityId }),
 
   isAdmin: (communityId: string) => supabase.rpc("is_community_admin", { target_community_id: communityId }),
@@ -181,8 +184,6 @@ export const community_messages = {
 
   delete: (id: string) => supabase.rpc("delete_community_message", { p_message_id: id }),
 
-  getUnreadCount: (communityId: string) =>
-    supabase.rpc("get_community_unread_count", { p_community_id: communityId }),
 };
 
 export const direct_messages = {
@@ -209,6 +210,8 @@ export const items = {
   getMine: () => supabase.rpc("get_my_items"),
 
   getById: (id: string) => supabase.rpc("get_item", { p_item_id: id }),
+
+  getCommunityIds: (itemId: string) => supabase.rpc("get_item_community_ids", { p_item_id: itemId }),
 
   create: async (data: CreateItemRequest, image?: ImageInput) => {
     if (image) {
