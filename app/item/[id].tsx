@@ -5,7 +5,6 @@ import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +19,7 @@ import {
   type Item,
   type Profile,
 } from "../../services/supabase_api";
+import StorageImage from "../components/StorageImage";
 
 const imageMap: Record<string, any> = {
   // item images
@@ -67,11 +67,6 @@ function resolveImageSource(
 
   const trimmed = key.trim();
   if (!trimmed) return undefined;
-
-  // remote URL
-  if (/^https?:\/\//i.test(trimmed)) {
-    return { uri: trimmed };
-  }
 
   // local bundled image by filename
   const lower = trimmed.toLowerCase();
@@ -195,10 +190,13 @@ export default function ItemDetail() {
 
       <ScrollView style={styles.container}>
         {/* ITEM IMAGE */}
-        {itemImageSource ? (
-          <Image
-            source={itemImageSource}
+        {item.image_path ? (
+          <StorageImage
+            bucket="item-images"
+            path={item.image_path}
+            localSource={itemImageSource}
             style={[styles.image, isBorrowed && { opacity: 0.55 }]}
+            contentFit="cover"
           />
         ) : (
           <View style={[styles.image, styles.imagePlaceholder]}>
@@ -223,8 +221,14 @@ export default function ItemDetail() {
 
         {/* LISTER PROFILE */}
         <View style={styles.listerCard}>
-          {ownerAvatarSource ? (
-            <Image source={ownerAvatarSource} style={styles.avatar} />
+          {owner?.avatar_path ? (
+            <StorageImage
+              bucket="profile-pictures"
+              path={owner.avatar_path}
+              localSource={ownerAvatarSource}
+              style={styles.avatar}
+              contentFit="cover"
+            />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarText}>

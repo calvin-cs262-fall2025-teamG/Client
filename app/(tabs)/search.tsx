@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { items as itemsApi, type Item } from "../../services/supabase_api";
+import StorageImage from "../components/StorageImage";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -22,8 +23,6 @@ const imageMap: Record<string, any> = {
 
 const getImageSource = (raw?: string | null) => {
   if (!raw) return null;
-
-  if (raw.startsWith("http")) return { uri: raw };
 
   const filename = raw.split("/").pop()?.toLowerCase() ?? raw.toLowerCase();
 
@@ -157,7 +156,7 @@ export default function DiscoverScreen() {
           <View style={styles.grid}>
             {filteredItems.map((it) => {
               const isBorrowed = it.status === "borrowed";
-              const src = getImageSource(it.image_path);
+              const localSource = getImageSource(it.image_path);
 
               return (
                 <TouchableOpacity
@@ -166,14 +165,16 @@ export default function DiscoverScreen() {
                   onPress={() => router.push(`/item/${it.id}`)}
                   activeOpacity={0.9}
                 >
-                  {src ? (
-                    <Image
-                      source={src}
+                  {it.image_path ? (
+                    <StorageImage
+                      bucket="item-images"
+                      path={it.image_path}
+                      localSource={localSource ?? undefined}
                       style={[
                         styles.cardImage,
                         isBorrowed && { opacity: 0.55 },
                       ]}
-                      resizeMode="cover"
+                      contentFit="cover"
                     />
                   ) : (
                     <View

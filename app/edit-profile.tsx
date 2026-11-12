@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useDatabase } from "../context/DatabaseContext";
+import StorageImage from "./components/StorageImage";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -25,7 +25,6 @@ export default function EditProfile() {
   const [saving, setSaving] = useState(false);
 
   const avatarPath = profile?.avatar_path ?? null;
-  const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
 
   // Photo upload returns with the Supabase Storage migration
   const handleChangePhoto = () => {
@@ -77,8 +76,13 @@ export default function EditProfile() {
 
       {/* Avatar */}
       <View style={styles.avatarSection}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+        {avatarPath ? (
+          <StorageImage
+            bucket="profile-pictures"
+            path={avatarPath}
+            style={styles.avatar}
+            contentFit="cover"
+          />
         ) : (
           <View style={[styles.avatar, styles.placeholder]}>
             <Ionicons name="person" size={42} color="#9ca3af" />

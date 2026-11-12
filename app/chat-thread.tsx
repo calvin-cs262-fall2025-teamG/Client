@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -27,6 +26,7 @@ import {
   parseTimestamp,
   saveLastRead,
 } from "../services/readState";
+import StorageImage from "./components/StorageImage";
 
 const avatarMap: Record<string, any> = {
   "helen.png": require("../assets/images/helen.png"),
@@ -219,8 +219,14 @@ export default function ChatThread() {
           </TouchableOpacity>
 
           <View style={styles.headerUserBlock}>
-            {otherAvatarSource ? (
-              <Image source={otherAvatarSource} style={styles.headerAvatar} />
+            {otherAvatar ? (
+              <StorageImage
+                bucket="profile-pictures"
+                path={otherAvatar}
+                localSource={otherAvatarSource}
+                style={styles.headerAvatar}
+                contentFit="cover"
+              />
             ) : (
               <View
                 style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}
@@ -255,8 +261,14 @@ export default function ChatThread() {
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerUserBlock}>
-          {otherAvatarSource ? (
-            <Image source={otherAvatarSource} style={styles.headerAvatar} />
+          {otherAvatar ? (
+            <StorageImage
+              bucket="profile-pictures"
+              path={otherAvatar}
+              localSource={otherAvatarSource}
+              style={styles.headerAvatar}
+              contentFit="cover"
+            />
           ) : (
             <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
               <Text style={styles.headerAvatarText}>{headerInitial}</Text>
