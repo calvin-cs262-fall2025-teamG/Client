@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useItems } from "./ItemsContext";
 import {
@@ -26,6 +26,12 @@ const BorrowingContext = createContext<BorrowingValue | null>(null);
 export function BorrowingProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { refresh: refreshItems } = useItems();
+
+  // Read after an await, so a sign-out during the call is seen.
+  const userIdRef = useRef(user?.id);
+  useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
 
   const [myRequests, setMyRequests] = useState<BorrowingRequest[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<BorrowingRequest[]>([]);
@@ -75,20 +81,26 @@ export function BorrowingProvider({ children }: { children: React.ReactNode }) {
 
   // Approving and returning also change item status and history on the server,
   // so reload borrowing data and items rather than patching several lists by hand.
+  // Skip the reload if the user signed out while the call was in flight.
+  const refreshAfterChange = useCallback(async () => {
+    if (!userIdRef.current) return;
+    await Promise.all([refresh(), refreshItems()]);
+  }, [refresh, refreshItems]);
+
   const approveRequest = useCallback(
     async (requestId: string) => {
       unwrap(await borrowing_requests.approve(requestId));
-      await Promise.all([refresh(), refreshItems()]);
+      await refreshAfterChange();
     },
-    [refresh, refreshItems]
+    [refreshAfterChange]
   );
 
   const markReturned = useCallback(
     async (requestId: string) => {
       unwrap(await borrowing_history.markReturned(requestId));
-      await Promise.all([refresh(), refreshItems()]);
+      await refreshAfterChange();
     },
-    [refresh, refreshItems]
+    [refreshAfterChange]
   );
 
   const value: BorrowingValue = {
