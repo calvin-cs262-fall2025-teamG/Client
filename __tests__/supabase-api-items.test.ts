@@ -1,4 +1,4 @@
-import { items } from "../services/supabase_api";
+import { communities, community_members, items } from "../services/supabase_api";
 
 const mockRpc = jest.fn();
 
@@ -43,4 +43,30 @@ it("forwards community selections on create and update", async () => {
   const detailsOnly = { name: "Renamed" };
   await items.update("item-1", detailsOnly);
   expect(mockRpc).toHaveBeenCalledWith("update_item", { p_item_id: "item-1", p_data: detailsOnly });
+});
+
+it("forwards community management RPC arguments and responses", async () => {
+  const result = { data: { id: "community-1" }, error: null };
+  const failure = { data: null, error: { message: "permission denied" } };
+  mockRpc.mockResolvedValueOnce(result)
+    .mockResolvedValueOnce(failure)
+    .mockResolvedValueOnce(result)
+    .mockResolvedValueOnce(failure);
+
+  expect(await communities.transferOwnership("community-1", "user-1")).toEqual(result);
+  expect(mockRpc).toHaveBeenNthCalledWith(1, "transfer_community_ownership", {
+    p_community_id: "community-1", p_new_owner_id: "user-1",
+  });
+  expect(await communities.removeItem("community-1", "item-1")).toEqual(failure);
+  expect(mockRpc).toHaveBeenNthCalledWith(2, "remove_community_item", {
+    p_community_id: "community-1", p_item_id: "item-1",
+  });
+  expect(await community_members.invite("community-1", "user-1")).toEqual(result);
+  expect(mockRpc).toHaveBeenNthCalledWith(3, "invite_community_member", {
+    p_community_id: "community-1", p_user_id: "user-1",
+  });
+  expect(await community_members.setStatus("community-1", "user-1", "declined")).toEqual(failure);
+  expect(mockRpc).toHaveBeenNthCalledWith(4, "set_community_member_status", {
+    p_community_id: "community-1", p_user_id: "user-1", p_status: "declined",
+  });
 });

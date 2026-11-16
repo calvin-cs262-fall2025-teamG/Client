@@ -1,6 +1,6 @@
 import { randomUUID } from "expo-crypto";
 import { supabase } from "../app/utils/supabase";
-import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types.ts";
+import type { Tables, TablesInsert, TablesUpdate } from "./database.types.ts";
 
 export type Profile = Tables<"profiles">;
 export type Community = Tables<"communities">;
@@ -25,9 +25,16 @@ export type CreateDirectMessageRequest = Pick<TablesInsert<"direct_messages">, "
 export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_messages">, "community_id" | "content" | "item_id">;
 
 export type CommunityMemberRole = "owner" | "admin" | "member";
+export type CommunityMemberStatus = "pending" | "active" | "declined";
 
 export type ImageInput = { data: ArrayBuffer; ext?: string };
 export type ImageBucket = "profile-pictures" | "item-images" | "community-images";
+
+async function getCurrentUserId() {
+  const res = await supabase.auth.getUser();
+  if (res.error) return { id: null, error: res.error};
+  return { id: res.data.user?.id ?? null };
+}
 
 async function uploadImage(bucket: string, path: string, img: ImageInput) {
   const ext = (img.ext ?? "jpeg").replace(/^\./, "").toLowerCase();
@@ -58,12 +65,6 @@ export async function getImageUrl(
 
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn);
   return { signedUrl: data?.signedUrl ?? null, error };
-}
-
-async function getCurrentUserId() {
-  const res = await supabase.auth.getUser();
-  if (res.error) return { id: null, error: res.error};
-  return { id: res.data.user?.id ?? null };
 }
 
 export const profiles = {
@@ -132,6 +133,18 @@ export const communities = {
   delete: async (id: string) => {
     return supabase.rpc("delete_community", { p_community_id: id });
   },
+
+  transferOwnership: (communityId: string, newOwnerId: string) =>
+    supabase.rpc("transfer_community_ownership", {
+      p_community_id: communityId,
+      p_new_owner_id: newOwnerId,
+    }),
+
+  removeItem: (communityId: string, itemId: string) =>
+    supabase.rpc("remove_community_item", {
+      p_community_id: communityId,
+      p_item_id: itemId,
+    }),
 };
 
 export const community_members = {
@@ -144,6 +157,9 @@ export const community_members = {
   requestToJoin: (communityId: string) =>
     supabase.rpc("request_join_community", { p_community_id: communityId }),
 
+  invite: (communityId: string, userId: string) =>
+    supabase.rpc("invite_community_member", { p_community_id: communityId, p_user_id: userId }),
+
   approve: (communityId: string, userId: string) =>
     supabase.rpc("approve_community_member", { p_community_id: communityId, p_user_id: userId }),
 
@@ -155,6 +171,13 @@ export const community_members = {
       p_community_id: communityId,
       p_user_id: userId,
       p_role: role,
+    }),
+
+  setStatus: (communityId: string, userId: string, status: CommunityMemberStatus) =>
+    supabase.rpc("set_community_member_status", {
+      p_community_id: communityId,
+      p_user_id: userId,
+      p_status: status,
     }),
 
   remove: (communityId: string, userId: string) =>
