@@ -64,7 +64,7 @@ export default function ListItem() {
 
       // The server sets the owner to the signed-in user and status to "available"
       await createItem({
-        community_id: communityId,
+        community_ids: [communityId],
         name: title.trim(),
         description: description.trim() || undefined,
         category: category.trim() || "Other",
