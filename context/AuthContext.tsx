@@ -1,15 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import {AppState, Platform } from "react-native";
-import { supabase } from "../app/utils/supabase";
+import { supabase } from "../lib/supabase";
 import { Session } from "@supabase/supabase-js";
-import { 
-  SignInInput, 
-  SignUpInput,
-  signUp,
-  signIn,
-  signOut,
-  AppUser,
- } from"../services/supabaseAuth";
+
+export type SignUpInput = {
+  email: string;
+  password: string;
+  displayName: string;
+};
+
+export type SignInInput = {
+  email: string;
+  password: string;
+};
+
+export type AppUser = {
+  id: string;              // profiles.id / auth user UUID
+  email: string | null;    // from the auth session
+  display_name: string;    // profiles.display_name
+  avatar_path: string | null;
+  created_at: string;
+};
 
 type AuthContextType = {
   user: AppUser | null;
@@ -97,19 +108,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (signInInput: SignInInput) => {
-    const { error } = await signIn(signInInput);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: signInInput.email,
+      password: signInInput.password,
+    });
 
     if (error) throw error;
   }
 
   const signup = async (signUpInput: SignUpInput) => {
-    const { error } = await signUp(signUpInput);
+    const { error } = await supabase.auth.signUp({
+      email: signUpInput.email,
+      password: signUpInput.password,
+      options: {
+        data: { display_name: signUpInput.displayName },
+        emailRedirectTo: "heynbr://auth/callback",
+      },
+    });
     
     if (error) throw error;
   };
 
   const logout = async () => {
-    const { error } = await signOut();
+    const { error } = await supabase.auth.signOut();
 
     if (error) throw error;
   }

@@ -172,3 +172,11 @@ it("saves the newest created_at under dm:u2 and keeps other keys", async () => {
     expect(await readState()).toEqual({ "community:c1": OLDEST, "dm:u2": SENT })
   );
 });
+
+it("shows No messages yet for a conversation with no messages", async () => {
+  mocked(api.direct_messages.getConversation).mockImplementation(() => ok([]));
+
+  await render(<ChatThread />);
+
+  expect(await screen.findByText("No messages yet")).toBeTruthy();
+});

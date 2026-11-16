@@ -105,3 +105,11 @@ it("puts the text back if sending fails", async () => {
 
   await waitFor(() => expect(screen.getByPlaceholderText(/message/i).props.value).toBe("hi"));
 });
+
+it("shows the empty state for a community with no messages", async () => {
+  mocked(api.community_messages.getByCommunity).mockImplementation(() => ok([]));
+
+  await render(<CommunityThread />);
+
+  expect(await screen.findByText("No messages yet. Say hi to your neighbors!")).toBeTruthy();
+});
