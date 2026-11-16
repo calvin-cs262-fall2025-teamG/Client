@@ -97,7 +97,7 @@ describe("Home community filter", () => {
   it("defaults to All communities and shows every item", async () => {
     await renderHome();
 
-    expect(screen.getByText("All (2)")).toBeTruthy();
+    expect(screen.getByText("All communities")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.getByText("Tent")).toBeTruthy();
     expect(screen.getByText("Hammer")).toBeTruthy();
@@ -186,7 +186,7 @@ describe("Home community filter", () => {
     await renderHome();
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith("homeCommunityFilter:me"));
-    expect(screen.getByText("All (2)")).toBeTruthy();
+    expect(screen.getByText("All communities")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
   });
 
@@ -196,7 +196,7 @@ describe("Home community filter", () => {
     await renderHome();
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith("homeCommunityFilter:me"));
-    expect(screen.getByText("All (2)")).toBeTruthy();
+    expect(screen.getByText("All communities")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
     expect(screen.getByText("Tent")).toBeTruthy();
   });
@@ -212,7 +212,7 @@ describe("Home community filter", () => {
     ];
     await screen.rerender(<Index />);
 
-    expect(screen.getByText("All (2)")).toBeTruthy();
+    expect(screen.getByText("All communities")).toBeTruthy();
     expect(screen.getByText("Drill")).toBeTruthy();
   });
 
@@ -221,7 +221,7 @@ describe("Home community filter", () => {
 
     await renderHome();
 
-    expect(screen.getByText("All (2)")).toBeTruthy();
+    expect(screen.getByText("All communities")).toBeTruthy();
     expect(screen.getByText("Tent")).toBeTruthy();
   });
 });
@@ -264,11 +264,11 @@ describe("Home header", () => {
     expect(screen.queryByLabelText("Choose community")).toBeNull();
   });
 
-  it("shows All (N) with a caret when several communities and All is selected", async () => {
+  it("shows All communities with a caret when several communities and All is selected", async () => {
     await renderHome();
 
     expect(screen.getByText("YOUR COMMUNITIES")).toBeTruthy();
-    expect(screen.getByText("All (2)")).toBeTruthy();
+    expect(screen.getByText("All communities")).toBeTruthy();
     expect(screen.getByTestId("community-switcher-caret")).toBeTruthy();
   });
 
@@ -295,7 +295,8 @@ describe("Home header", () => {
   it("no longer shows the separate All communities pill", async () => {
     await renderHome();
 
-    expect(screen.queryByText("All communities")).toBeNull();
+    // Only the header box says "All communities"; there's no extra pill.
+    expect(screen.getAllByText("All communities")).toHaveLength(1);
   });
 
   it("opens Bookmarks from the bookmark icon", async () => {

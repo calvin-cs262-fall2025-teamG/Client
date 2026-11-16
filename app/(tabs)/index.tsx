@@ -87,7 +87,7 @@ export default function Index() {
   const switcherName = !canSwitchCommunity
     ? (myCommunities[0]?.name ?? "None yet")
     : showingAll
-      ? `All (${myCommunities.length})`
+      ? "All communities"
       : communityNames[selectedCommunity];
 
   const pickCommunity = (communityId: string) => {
