@@ -63,14 +63,13 @@ only a disabled button.
 | `app/HelpDetails.tsx`, `app/HelpList.tsx` | | Mostly static content |
 | `app/auth/callback.tsx`, `app/(auth)/verify-email.tsx` | | Email confirmation flow |
 | `app/borrow-confirmation.tsx` | | |
-| `app/components/BookmarkButton.tsx`, `BookmarkHeaderIcon.tsx`, `CloseButton.tsx` | | |
-| `services/supabase_api.ts`, `authServices.ts`, `api.ts` | | Thin RPC wrappers, always mocked in tests |
+| `app/components/BookmarkButton.tsx` | | |
+| `services/supabase_api.ts` | | Thin RPC wrappers, always mocked in tests |
 
 ### Partly covered (lowest first, by lines)
 
 | File | Lines | Branches | Uncovered |
 | ---- | ----- | -------- | --------- |
-| `services/chat.ts` | 61% | 20% | 59-60, 137-164 (community details, leave) |
 | `app/bookmark.tsx` | 67% | 80% | 24, 54-75 (back, remove and toggle buttons); was 0% |
 | `app/(tabs)/profile.tsx` | 74% | 71% | 36-37, 45-47, 95, 152-172, 234 |
 | `app/item/[id].tsx` | 75% | 57% | 68-78, 99-100, 189-243 (borrow / contact actions) |
@@ -85,7 +84,6 @@ only a disabled button.
 | `context/BorrowingContext.tsx` | 100% | 60% | was 89% |
 | `context/CommunityContext.tsx` | 100% | 50% | was 91% |
 | `context/ProfileContext.tsx` | 100% | 90% | was 95% |
-| `services/supabaseAuth.ts` | 100% | 100% | was 0% |
 
 The context branch numbers are low because of the `useX must be used inside
 <Provider>` checks, which no test renders outside a provider.
@@ -116,7 +114,6 @@ The context branch numbers are low because of the `useX must be used inside
   - [x] `chat.tsx` failed conversation load, thrown request, and a failed
     community message load
   - [x] `login.tsx` login and sign-up errors, including the fallback message
-  - [ ] `chat.ts` `getCommunityDetails` "Community not found"
   - [ ] `edit-item.tsx` delete failure (lines 165-179)
   - [ ] `edit-profile.tsx` save failure branch
 

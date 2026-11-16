@@ -2,7 +2,7 @@ import { items } from "../services/supabase_api";
 
 const mockRpc = jest.fn();
 
-jest.mock("../app/utils/supabase", () => ({
+jest.mock("../lib/supabase", () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
     auth: { getUser: jest.fn() },

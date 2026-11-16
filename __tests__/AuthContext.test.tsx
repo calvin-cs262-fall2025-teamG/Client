@@ -1,11 +1,11 @@
 import React from "react";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { supabase } from "../app/utils/supabase";
+import { supabase } from "../lib/supabase";
 
 // A fake supabase client. The real one needs .env and a network.
-// services/supabaseAuth is left real, so login/signup/logout go through it.
-jest.mock("../app/utils/supabase", () => {
+// AuthContext calls supabase.auth directly, so every auth method it uses is mocked here.
+jest.mock("../lib/supabase", () => {
   const single = jest.fn();
   return {
     supabase: {
