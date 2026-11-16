@@ -45,7 +45,6 @@ jest.mock("../app/components/BookmarkButton", () => {
 
 const makeItem = (overrides: Record<string, unknown> = {}) => ({
   id: "item-1",
-  community_id: "c1",
   owner_id: "me",
   name: "Drill",
   description: null,

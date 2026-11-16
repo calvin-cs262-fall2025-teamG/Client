@@ -47,7 +47,6 @@ const item = (id: string, name: string, status = "available") => ({
   name,
   status,
   owner_id: "me",
-  community_id: "c1",
   description: null,
   category: "Tools",
   image_path: null,

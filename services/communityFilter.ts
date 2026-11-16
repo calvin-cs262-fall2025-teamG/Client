@@ -4,20 +4,34 @@ import type { Community, Item } from "./supabase_api";
 // The value of the community filter when no single community is picked.
 export const ALL_COMMUNITIES = "all";
 
-// Items have one community_id today. If an item can belong to several
-// communities, this is the only check that needs to change.
-export function itemInCommunity(item: Pick<Item, "community_id">, communityId: string): boolean {
-  return item.community_id === communityId;
+// An item can be in several communities. Its list comes from
+// items.getCommunityIds; undefined means it hasn't loaded or the lookup failed.
+export function itemInCommunity(communityIds: string[] | undefined, communityId: string): boolean {
+  return communityIds?.includes(communityId) ?? false;
 }
 
 // get_items is already limited by RLS to the user's own items and items in
-// communities they are an active member of, so "All" keeps every item.
-export function filterItemsByCommunity<T extends Pick<Item, "community_id">>(
+// communities they are an active member of, so "All" keeps every item, even
+// ones whose communities haven't loaded. A single community hides those.
+export function filterItemsByCommunity<T extends Pick<Item, "id">>(
   items: T[],
-  communityId: string
+  communityId: string,
+  communityIdsByItem: Record<string, string[]>
 ): T[] {
   if (communityId === ALL_COMMUNITIES) return items;
-  return items.filter((item) => itemInCommunity(item, communityId));
+  return items.filter((item) => itemInCommunity(communityIdsByItem[item.id], communityId));
+}
+
+// The first of the item's communities the user is in, plus "+N" for the rest
+// of the user's communities it is in. Undefined when there are none.
+export function communityLabel(
+  communityIds: string[] | undefined,
+  communityNames: Record<string, string>
+): string | undefined {
+  const mine = (communityIds ?? []).filter((id) => communityNames[id] !== undefined);
+  if (mine.length === 0) return undefined;
+  const first = communityNames[mine[0]];
+  return mine.length > 1 ? `${first} +${mine.length - 1}` : first;
 }
 
 // A saved community the user is no longer in falls back to "All".

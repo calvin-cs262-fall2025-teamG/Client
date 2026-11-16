@@ -27,7 +27,6 @@ const T1 = "2026-10-19T12:00:00.123456+00:00";
 const makeItem = (overrides: Record<string, unknown> = {}) => ({
   id: "i1",
   name: "Drill",
-  community_id: "c1",
   category: "Tools",
   status: "available",
   owner_id: "someone",

@@ -29,8 +29,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useDatabase } from "../../context/DatabaseContext";
 import {
   ALL_COMMUNITIES,
+  communityLabel,
   filterItemsByCommunity,
 } from "../../services/communityFilter";
+import { useItemCommunities } from "../../hooks/useItemCommunities";
 import { parseTimestamp } from "../../services/readState";
 import ItemCard from "../components/ItemCard";
 import ItemRow from "../components/ItemRow";
@@ -179,9 +181,17 @@ export default function DiscoverScreen() {
     return () => clearTimeout(timeoutId);
   }, [loadItems, loadCommunities]);
 
+  // "New in your communities" needs every item's communities, so they are
+  // always looked up here.
+  const {
+    communityIdsByItem,
+    loading: communitiesLoading,
+    refresh: refreshCommunities,
+  } = useItemCommunities(items.map((it) => it.id));
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadItems(), loadCommunities()]);
+    await Promise.all([loadItems(), loadCommunities(), refreshCommunities()]);
     setRefreshing(false);
   };
 
@@ -214,15 +224,18 @@ export default function DiscoverScreen() {
     return allCommunities.filter((c) => !mine.has(c.id));
   }, [allCommunities, myCommunities]);
 
+  // Items whose communities haven't loaded stay out until they do.
   const newItems = useMemo(
     () =>
       items
-        .filter((it) => communityNames[it.community_id] !== undefined)
+        .filter((it) =>
+          (communityIdsByItem[it.id] ?? []).some((id) => communityNames[id] !== undefined),
+        )
         .sort(
           (a, b) => parseTimestamp(b.created_at) - parseTimestamp(a.created_at),
         )
         .slice(0, NEW_ITEMS_LIMIT),
-    [items, communityNames],
+    [items, communityIdsByItem, communityNames],
   );
 
   const query = searchQuery.trim().toLowerCase();
@@ -230,7 +243,7 @@ export default function DiscoverScreen() {
 
   const matchingItems = useMemo(
     () =>
-      filterItemsByCommunity(items, activeCommunity).filter(
+      filterItemsByCommunity(items, activeCommunity, communityIdsByItem).filter(
         (it) =>
           (!category || matchesCategory(it, category)) &&
           (!query ||
@@ -238,7 +251,7 @@ export default function DiscoverScreen() {
             (it.description ?? "").toLowerCase().includes(query)) &&
           (!availableOnly || it.status === "available"),
       ),
-    [items, activeCommunity, category, query, availableOnly],
+    [items, activeCommunity, communityIdsByItem, category, query, availableOnly],
   );
 
   // Communities only match typed text; a category tile alone finds none.
@@ -290,7 +303,17 @@ export default function DiscoverScreen() {
     ...myCommunities,
   ];
 
-  const showLabels = myCommunities.length >= 2;
+  const showLabels = activeCommunity === ALL_COMMUNITIES && myCommunities.length >= 2;
+  const labelFor = (it: Item) =>
+    showLabels ? communityLabel(communityIdsByItem[it.id], communityNames) : undefined;
+  // A single community hides items until their communities load, so show a
+  // spinner instead of "No items found" while they do.
+  const itemsLoading =
+    loading ||
+    (resultTab !== "Communities" &&
+      activeCommunity !== ALL_COMMUNITIES &&
+      communitiesLoading &&
+      matchingItems.length === 0);
 
   const renderCommunityRow = (c: Community) => (
     <View key={c.id} style={styles.communityRow}>
@@ -413,11 +436,7 @@ export default function DiscoverScreen() {
           </View>
           <View style={styles.rows}>
             {newItems.map((it) => (
-              <ItemRow
-                key={it.id}
-                item={it}
-                communityName={communityNames[it.community_id]}
-              />
+              <ItemRow key={it.id} item={it} communityName={labelFor(it)} />
             ))}
           </View>
         </View>
@@ -478,7 +497,7 @@ export default function DiscoverScreen() {
               <ItemRow
                 key={it.id}
                 item={it}
-                communityName={communityNames[it.community_id]}
+                communityName={labelFor(it)}
                 showStatus
               />
             ))}
@@ -572,7 +591,7 @@ export default function DiscoverScreen() {
         </View>
       )}
 
-      {loading ? (
+      {itemsLoading ? (
         <View style={{ paddingTop: 30 }}>
           <ActivityIndicator />
         </View>
@@ -588,7 +607,7 @@ export default function DiscoverScreen() {
                 key={it.id}
                 item={it}
                 showCommunity={showLabels}
-                communityName={communityNames[it.community_id]}
+                communityName={labelFor(it)}
               />
             ))}
           </View>

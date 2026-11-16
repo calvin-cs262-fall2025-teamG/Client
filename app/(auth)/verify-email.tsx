@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { supabase } from "../../app/utils/supabase";
+import { supabase } from "../../lib/supabase";
 
 const logo = require("../../assets/images/logo.png");
 

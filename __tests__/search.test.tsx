@@ -1,9 +1,10 @@
 import React from "react";
 import { Alert } from "react-native";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react-native";
+import { act, render, screen, fireEvent, waitFor, within } from "@testing-library/react-native";
 import DiscoverScreen from "../app/(tabs)/search";
 import * as api from "../services/supabase_api";
 import { ITEM_CATEGORIES } from "../constants/categories";
+import { clearItemCommunities } from "../hooks/useItemCommunities";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
   jest.requireActual("@react-native-async-storage/async-storage/jest/async-storage-mock")
@@ -16,7 +17,7 @@ jest.mock("expo-router", () => ({
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
 jest.mock("../services/supabase_api", () => ({
-  items: { getAll: jest.fn() },
+  items: { getAll: jest.fn(), getCommunityIds: jest.fn() },
   communities: { getAll: jest.fn() },
 }));
 
@@ -43,17 +44,9 @@ const mocked = (fn: unknown) => fn as jest.Mock;
 // Day n of October 2026, in the format PostgREST returns.
 const day = (n: number) => `2026-10-${String(n).padStart(2, "0")}T12:00:00.123456+00:00`;
 
-const item = (
-  id: string,
-  name: string,
-  community_id: string,
-  category: string,
-  status: string,
-  created = 1
-) => ({
+const item = (id: string, name: string, category: string, status: string, created = 1) => ({
   id,
   name,
-  community_id,
   category,
   status,
   owner_id: "someone",
@@ -75,11 +68,14 @@ const community = (id: string, name: string, description: string | null) => ({
 });
 
 const ITEMS = [
-  item("i1", "Drill", "c1", "Tools", "available", 1),
-  item("i2", "Tent", "c2", "Outdoor", "borrowed", 2),
-  item("i3", "Hammer", "c1", "Tools", "borrowed", 3),
-  item("i4", "Kettle", "c2", "Kitchen", "available", 4),
+  item("i1", "Drill", "Tools", "available", 1),
+  item("i2", "Tent", "Outdoor", "borrowed", 2),
+  item("i3", "Hammer", "Tools", "borrowed", 3),
+  item("i4", "Kettle", "Kitchen", "available", 4),
 ];
+
+// What items.getCommunityIds returns for each item.
+let communityIds: Record<string, string[]> = {};
 
 const COMMUNITIES = [
   community("c1", "Maple Street", "Our block"),
@@ -120,6 +116,18 @@ beforeEach(() => {
   mockRequestToJoin.mockResolvedValue(undefined);
   mocked(api.items.getAll).mockImplementation(() => ok(ITEMS));
   mocked(api.communities.getAll).mockImplementation(() => ok(COMMUNITIES));
+  communityIds = {
+    i1: ["c1"],
+    i2: ["c2"],
+    i3: ["c1"],
+    i4: ["c2"],
+    i5: ["c1"],
+    i6: ["c2"],
+    i7: ["c9"],
+    i9: ["c1"],
+  };
+  mocked(api.items.getCommunityIds).mockImplementation((id: string) => ok(communityIds[id] ?? []));
+  clearItemCommunities();
 });
 
 afterEach(() => {
@@ -259,7 +267,7 @@ describe("Browse by category", () => {
 
   it("groups unknown categories under Other", async () => {
     mocked(api.items.getAll).mockImplementation(() =>
-      ok([...ITEMS, item("i9", "Mystery box", "c1", "Test", "available", 5)])
+      ok([...ITEMS, item("i9", "Mystery box", "Test", "available", 5)])
     );
     await renderDiscover();
     await screen.findByText("New in your communities");
@@ -285,25 +293,28 @@ describe("New in your communities", () => {
     mocked(api.items.getAll).mockImplementation(() =>
       ok([
         ...ITEMS,
-        item("i5", "Ladder", "c1", "Tools", "available", 5),
-        item("i6", "Wok", "c2", "Kitchen", "available", 6),
-        item("i7", "Elsewhere", "c9", "Other", "available", 9),
+        item("i5", "Ladder", "Tools", "available", 5),
+        item("i6", "Wok", "Kitchen", "available", 6),
+        item("i7", "Elsewhere", "Other", "available", 9),
       ])
     );
     await renderDiscover();
     await screen.findByText("New in your communities");
 
-    const rendered = screen
-      .getAllByText(/^(Wok|Ladder|Kettle|Hammer|Tent|Drill|Elsewhere)$/)
-      .map((n) => n.props.children);
-    expect(rendered).toEqual(["Wok", "Ladder", "Kettle", "Hammer", "Tent"]);
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByText(/^(Wok|Ladder|Kettle|Hammer|Tent|Drill|Elsewhere)$/)
+          .map((n) => n.props.children)
+      ).toEqual(["Wok", "Ladder", "Kettle", "Hammer", "Tent"])
+    );
   });
 
   it("shows the community name on each row and opens the item when tapped", async () => {
     await renderDiscover();
     await screen.findByText("New in your communities");
 
-    expect(screen.getAllByText("Oak Hall").length).toBe(2);
+    await waitFor(() => expect(screen.getAllByText("Oak Hall").length).toBe(2));
     await fireEvent.press(screen.getByText("Kettle"));
 
     expect(mockRouter.push).toHaveBeenCalledWith("/item/i4");
@@ -313,7 +324,32 @@ describe("New in your communities", () => {
     await renderDiscover();
     await screen.findByText("New in your communities");
 
-    expect(screen.getByLabelText("Bookmark Kettle")).toBeTruthy();
+    expect(await screen.findByLabelText("Bookmark Kettle")).toBeTruthy();
+  });
+
+  it("labels an item in several of the user's communities with +N", async () => {
+    communityIds = { ...communityIds, i4: ["c2", "c9", "c1"] };
+    await renderDiscover();
+
+    expect(await screen.findByText("Oak Hall +1")).toBeTruthy();
+  });
+
+  it("leaves out items until their communities load", async () => {
+    mocked(api.items.getCommunityIds).mockReturnValue(new Promise(() => {}));
+    await renderDiscover();
+
+    expect(screen.queryByText("New in your communities")).toBeNull();
+    expect(screen.queryByText("Kettle")).toBeNull();
+  });
+
+  it("leaves out an item whose lookup failed and still shows the rest", async () => {
+    mocked(api.items.getCommunityIds).mockImplementation((id: string) =>
+      id === "i4" ? Promise.resolve({ data: null, error: { message: "boom" } }) : ok(communityIds[id])
+    );
+    await renderDiscover();
+
+    expect(await screen.findByText("Tent")).toBeTruthy();
+    expect(screen.queryByText("Kettle")).toBeNull();
   });
 });
 
@@ -372,9 +408,36 @@ describe("Filters", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
     await showResults();
 
-    expect(screen.getByText("Kettle")).toBeTruthy();
+    expect(await screen.findByText("Kettle")).toBeTruthy();
     expect(screen.queryByText("Tent")).toBeNull();
     expect(screen.getByTestId("filters-badge")).toHaveTextContent("2");
+    // Labels only show under All communities.
+    expect(screen.queryByText("Oak Hall +1")).toBeNull();
+  });
+
+  it("hides results under a picked community until their communities load", async () => {
+    const resolvers: Record<string, () => void> = {};
+    mocked(api.items.getCommunityIds).mockImplementation(
+      (id: string) =>
+        new Promise((resolve) => {
+          resolvers[id] = () => resolve({ data: communityIds[id], error: null });
+        })
+    );
+    await renderDiscover();
+    await fireEvent.press(screen.getByRole("button", { name: "Browse Kitchen" }));
+    // All communities shows the item before its communities load.
+    expect(screen.getByText("Kettle")).toBeTruthy();
+
+    await openFilters();
+    await fireEvent.press(screen.getByRole("button", { name: "Oak Hall" }));
+    await showResults();
+
+    expect(screen.queryByText("Kettle")).toBeNull();
+    expect(screen.queryByText("No items found")).toBeNull();
+
+    await act(async () => resolvers.i4());
+
+    expect(await screen.findByText("Kettle")).toBeTruthy();
   });
 
   it("clears every filter with Clear all", async () => {

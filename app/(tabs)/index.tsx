@@ -27,11 +27,13 @@ import {
 } from "../../constants/categories";
 import {
   ALL_COMMUNITIES,
+  communityLabel,
   filterItemsByCommunity,
   loadCommunityFilter,
   resolveCommunityFilter,
   saveCommunityFilter,
 } from "../../services/communityFilter";
+import { useItemCommunities } from "../../hooks/useItemCommunities";
 
 export default function Index() {
   const router = useRouter();
@@ -116,13 +118,27 @@ export default function Index() {
     return () => clearTimeout(timeoutId);
   }, [loadItems]);
 
+  // Labels show only under All for a user in 2+ communities. Without labels
+  // or a single community picked, the item communities aren't needed.
+  const showLabels = showingAll && myCommunities.length >= 2;
+  const needCommunities = !showingAll || showLabels;
+  const {
+    communityIdsByItem,
+    loading: communitiesLoading,
+    refresh: refreshCommunities,
+  } = useItemCommunities(needCommunities ? items.map((item) => item.id) : []);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadItems();
+    await Promise.all([loadItems(), refreshCommunities()]);
     setRefreshing(false);
   };
 
-  const filteredItems = filterItemsByCommunity(items, selectedCommunity).filter((item) => {
+  const filteredItems = filterItemsByCommunity(
+    items,
+    selectedCommunity,
+    communityIdsByItem
+  ).filter((item) => {
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
       q === "" ||
@@ -309,6 +325,7 @@ export default function Index() {
 
       {/* MAIN CONTENT */}
       <ScrollView
+        testID="home-items"
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -316,7 +333,11 @@ export default function Index() {
       >
 
         {/* ITEMS GRID */}
-        {filteredItems.length === 0 ? (
+        {filteredItems.length === 0 && !showingAll && communitiesLoading ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator testID="item-communities-loading" color="#f97316" />
+          </View>
+        ) : filteredItems.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="cube-outline" size={60} color="#9ca3af" />
             <Text style={styles.emptyText}>No items found</Text>
@@ -332,8 +353,8 @@ export default function Index() {
               <ItemCard
                 key={item.id}
                 item={item}
-                showCommunity={showingAll && myCommunities.length >= 2}
-                communityName={communityNames[item.community_id]}
+                showCommunity={showLabels}
+                communityName={communityLabel(communityIdsByItem[item.id], communityNames)}
               />
             ))}
           </View>
