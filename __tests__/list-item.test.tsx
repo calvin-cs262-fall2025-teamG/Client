@@ -81,7 +81,7 @@ it("creates the item in the only community, with no image fields", async () => {
   );
   expect(mockCreateItem).toHaveBeenCalledTimes(1);
   expect(mockCreateItem).toHaveBeenCalledWith({
-    community_id: "c1",
+    community_ids: ["c1"],
     name: "Drill",
     description: "Cordless",
     category: "Tools",
@@ -144,6 +144,6 @@ it("makes a user with several communities pick one", async () => {
   await fireEvent.press(screen.getByText("Post Item"));
 
   await waitFor(() =>
-    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ community_id: "c2" }))
+    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ community_ids: ["c2"] }))
   );
 });

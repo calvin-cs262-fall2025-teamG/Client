@@ -78,12 +78,12 @@ describe("useItems", () => {
 
     let created: unknown;
     await act(async () => {
-      created = await result.current.items.createItem({ community_id: "c1", name: "Ladder" });
+      created = await result.current.items.createItem({ community_ids: ["c1"], name: "Ladder" });
     });
-
+    
     expect(created).toEqual({ id: "i3", name: "Ladder", status: "available" });
     expect(result.current.items.myItems.map((i) => i.id)).toEqual(["i3", "i1", "i2"]);
-    expect(api.items.create).toHaveBeenCalledWith({ community_id: "c1", name: "Ladder" });
+    expect(api.items.create).toHaveBeenCalledWith({ community_ids: ["c1"], name: "Ladder" });
   });
 
   it("updateItem replaces only that item, in place", async () => {
