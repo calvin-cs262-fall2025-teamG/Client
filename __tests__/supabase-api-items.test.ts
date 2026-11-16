@@ -1,12 +1,15 @@
 import { communities, community_members, items } from "../services/supabase_api";
 
 const mockRpc = jest.fn();
+const mockGetUser = jest.fn();
+const mockUpload = jest.fn();
+const mockStorageFrom = jest.fn((_bucket: string) => ({ upload: mockUpload }));
 
 jest.mock("../lib/supabase", () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
-    auth: { getUser: jest.fn() },
-    storage: { from: jest.fn() },
+    auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
+    storage: { from: (bucket: string) => mockStorageFrom(bucket) },
   },
 }));
 
@@ -14,6 +17,9 @@ jest.mock("expo-crypto", () => ({ randomUUID: jest.fn(() => "generated-id") }));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRpc.mockReset();
+  mockGetUser.mockReset();
+  mockUpload.mockReset();
 });
 
 it("returns community IDs and propagates RPC errors", async () => {
@@ -69,4 +75,69 @@ it("forwards community management RPC arguments and responses", async () => {
   expect(mockRpc).toHaveBeenNthCalledWith(4, "set_community_member_status", {
     p_community_id: "community-1", p_user_id: "user-1", p_status: "declined",
   });
+});
+
+it("uploads a community image before creating the community with its path", async () => {
+  const image = { data: new ArrayBuffer(8), ext: "png" };
+  const path = "generated-id/user-1/main-generated-id.png";
+  const result = { data: { id: "generated-id", avatar_path: path }, error: null };
+  mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+  mockUpload.mockResolvedValue({ error: null });
+  mockRpc.mockResolvedValue(result);
+
+  expect(await communities.create({ name: "Oak Hall" }, image)).toEqual(result);
+  expect(mockStorageFrom).toHaveBeenCalledWith("community-images");
+  expect(mockUpload).toHaveBeenCalledWith(path, image.data, {
+    contentType: "image/png", upsert: false,
+  });
+  expect(mockRpc).toHaveBeenCalledTimes(1);
+  expect(mockRpc).toHaveBeenCalledWith("create_community", {
+    p_data: { name: "Oak Hall", id: "generated-id", avatar_path: path },
+  });
+  expect(mockUpload.mock.invocationCallOrder[0]).toBeLessThan(mockRpc.mock.invocationCallOrder[0]);
+});
+
+it("does not create a community when its image upload fails", async () => {
+  const error = new Error("upload failed");
+  mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+  mockUpload.mockResolvedValue({ error });
+
+  expect(await communities.create({ name: "Oak Hall" }, { data: new ArrayBuffer(8) }))
+    .toEqual({ data: null, error });
+  expect(mockRpc).not.toHaveBeenCalled();
+});
+
+it("does not upload or create when the current user cannot be retrieved", async () => {
+  const error = new Error("authentication failed");
+  mockGetUser.mockResolvedValueOnce({ data: { user: null }, error });
+  mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+  const image = { data: new ArrayBuffer(8) };
+
+  expect(await communities.create({ name: "Oak Hall" }, image)).toEqual({ data: null, error });
+  expect(await communities.create({ name: "Oak Hall" }, image))
+    .toEqual({ data: null, error: new Error("Not signed in") });
+  expect(mockStorageFrom).not.toHaveBeenCalled();
+  expect(mockRpc).not.toHaveBeenCalled();
+});
+
+it("returns the create RPC error after an image upload", async () => {
+  const failure = { data: null, error: { message: "community creation failed" } };
+  mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+  mockUpload.mockResolvedValue({ error: null });
+  mockRpc.mockResolvedValue(failure);
+
+  expect(await communities.create({ name: "Oak Hall" }, { data: new ArrayBuffer(8) }))
+    .toEqual(failure);
+  expect(mockUpload.mock.invocationCallOrder[0]).toBeLessThan(mockRpc.mock.invocationCallOrder[0]);
+});
+
+it("creates a community without uploading when no image is supplied", async () => {
+  const data = { name: "Oak Hall" };
+  const result = { data: { id: "community-1" }, error: null };
+  mockRpc.mockResolvedValue(result);
+
+  expect(await communities.create(data)).toEqual(result);
+  expect(mockRpc).toHaveBeenCalledWith("create_community", { p_data: data });
+  expect(mockGetUser).not.toHaveBeenCalled();
+  expect(mockStorageFrom).not.toHaveBeenCalled();
 });
