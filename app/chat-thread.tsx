@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { ImageSourcePropType } from "react-native";
 import {
@@ -16,10 +17,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
-import { useDatabase } from "../context/DatabaseContext";
+import { useBorrowing } from "../context/BorrowingContext";
+import { useItems } from "../context/ItemsContext";
+import { useProfile } from "../context/ProfileContext";
+import {
+  newestFirst,
+  requestStage,
+  STAGE_LABELS,
+} from "../services/borrowingStatus";
 import {
   direct_messages,
+  items as itemsApi,
   type DirectMessage,
+  type Item,
   type Profile,
 } from "../services/supabase_api";
 import {
@@ -67,7 +77,14 @@ export default function ChatThread() {
 
   const router = useRouter();
   const { user } = useAuth();
-  const { getProfile } = useDatabase();
+  const { getProfile } = useProfile();
+  const {
+    myRequests,
+    incomingRequests,
+    borrowingHistory,
+    refresh: refreshBorrowing,
+  } = useBorrowing();
+  const { myItems } = useItems();
   const scrollViewRef = useRef<ScrollView>(null);
   // Attach the item to the first message sent from this screen only
   const pendingItemIdRef = useRef(itemId || undefined);
@@ -138,6 +155,97 @@ export default function ChatThread() {
 
     loadOtherUser();
   }, [otherUserId, getProfile]);
+
+  // A request may have been approved on the other person's device
+  useEffect(() => {
+    void refreshBorrowing();
+  }, [refreshBorrowing]);
+
+  // The item this conversation is about: the route's, else the newest message's
+  const conversationItemId =
+    itemId ||
+    [...messages].reverse().find((m) => m.item_id)?.item_id ||
+    undefined;
+
+  // They asked to borrow my item
+  const lenderRequest = conversationItemId
+    ? incomingRequests
+        .filter(
+          (r) =>
+            r.item_id === conversationItemId && r.requester_id === otherUserId,
+        )
+        .sort(newestFirst)[0]
+    : undefined;
+  // I asked for this item; only counts if it belongs to the person I'm talking to
+  const myRequestForItem = conversationItemId
+    ? myRequests
+        .filter((r) => r.item_id === conversationItemId)
+        .sort(newestFirst)[0]
+    : undefined;
+
+  const [fetchedItem, setFetchedItem] = useState<Item | null>(null);
+  const fetchItemId =
+    !lenderRequest && myRequestForItem ? conversationItemId : undefined;
+  useEffect(() => {
+    if (!fetchItemId) return;
+    let active = true;
+    Promise.resolve(itemsApi.getById(fetchItemId))
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (active) setFetchedItem(data ?? null);
+      })
+      .catch((e) => console.error("Failed to load item:", e));
+    return () => {
+      active = false;
+    };
+  }, [fetchItemId]);
+
+  const borrowerRequest =
+    myRequestForItem &&
+    fetchedItem &&
+    fetchedItem.id === conversationItemId &&
+    fetchedItem.owner_id === otherUserId
+      ? myRequestForItem
+      : undefined;
+  const pinned = lenderRequest ?? borrowerRequest;
+  const isLender = !!lenderRequest;
+  const pinnedItemName = isLender
+    ? myItems.find((i) => i.id === conversationItemId)?.name
+    : fetchedItem?.name;
+  const stage = pinned ? requestStage(pinned, borrowingHistory) : undefined;
+
+  const displayOtherName = otherName || "Neighbor";
+  // Where the approval note goes: before the first message sent after the decision
+  const decidedMs =
+    pinned?.status === "approved" && pinned.decided_at
+      ? parseTimestamp(pinned.decided_at)
+      : null;
+  const noteIndex =
+    decidedMs === null
+      ? -1
+      : (() => {
+          const i = messages.findIndex(
+            (m) => parseTimestamp(m.created_at) > decidedMs,
+          );
+          return i === -1 ? messages.length : i;
+        })();
+  const approvalNote = (
+    <View style={styles.systemNote} testID="approval-note">
+      <Ionicons name="checkmark-circle" size={14} color="#2f7d4f" />
+      <Text style={styles.systemNoteText}>
+        {isLender
+          ? `You approved ${displayOtherName}'s request`
+          : `${displayOtherName} approved your request`}
+      </Text>
+    </View>
+  );
+
+  const showChips = !isLender && stage === "out";
+  const QUICK_REPLIES = [
+    { label: "When can I pick it up?", text: "When can I pick it up?" },
+    // Leaves the date for the borrower to type
+    { label: "I’ll return it by …", text: "I’ll return it by " },
+  ];
 
   // Record the newest message on screen as seen, on load and after sending.
   const newest = messages[messages.length - 1]?.created_at;
@@ -272,6 +380,29 @@ export default function ChatThread() {
         <View style={{ width: 24 }} />
       </View>
 
+      {pinned && (
+        <View style={styles.pinned} testID="pinned-item">
+          <View style={styles.pinnedThumb}>
+            <Ionicons name="cube-outline" size={20} color="#E8792F" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pinnedName} numberOfLines={1}>
+              {pinnedItemName ?? "Item"}
+            </Text>
+            <Text style={styles.pinnedStatus}>
+              {stage ? STAGE_LABELS[stage] : ""}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push(`/request/${pinned.id}`)}
+            accessibilityRole="link"
+            accessibilityLabel="Details"
+          >
+            <Text style={styles.pinnedLink}>Details</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* BODY */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -292,11 +423,12 @@ export default function ChatThread() {
               </Text>
             </View>
           ) : (
-            messages.map((msg) => {
+            messages.map((msg, index) => {
               const isUser = msg.sender_id === user?.id;
 
               return (
                 <View key={msg.id}>
+                  {index === noteIndex && approvalNote}
                   <View
                     style={[
                       styles.messageBubble,
@@ -325,7 +457,24 @@ export default function ChatThread() {
               );
             })
           )}
+          {noteIndex === messages.length && approvalNote}
         </ScrollView>
+
+        {showChips && (
+          <View style={styles.chipRow}>
+            {QUICK_REPLIES.map((reply) => (
+              <TouchableOpacity
+                key={reply.label}
+                style={styles.chip}
+                onPress={() => setInputText(reply.text)}
+                disabled={sending}
+                accessibilityRole="button"
+              >
+                <Text style={styles.chipText}>{reply.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* INPUT BAR */}
         <View style={styles.inputContainer}>
@@ -471,6 +620,54 @@ const styles = StyleSheet.create({
   },
   timestampLeft: { alignSelf: "flex-start", marginLeft: 6 },
   timestampRight: { alignSelf: "flex-end", marginRight: 6 },
+  pinned: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#FBEBD9",
+  },
+  pinnedThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pinnedName: { fontSize: 15, fontWeight: "700", color: "#3b1b0d" },
+  pinnedStatus: { fontSize: 12, color: "#7c5f52", marginTop: 1 },
+  pinnedLink: { fontSize: 14, fontWeight: "700", color: "#E8792F" },
+  systemNote: {
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#e4f4e9",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginVertical: 10,
+  },
+  systemNoteText: { fontSize: 12, fontWeight: "600", color: "#2f7d4f" },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    backgroundColor: "#fff",
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: "#E8792F",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#fff",
+  },
+  chipText: { fontSize: 13, fontWeight: "600", color: "#E8792F" },
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
