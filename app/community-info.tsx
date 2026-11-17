@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
 import {
-    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image,
+    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
+    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Image,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { useDatabase } from "../context/DatabaseContext";
+import StorageImage from "./components/StorageImage";
 import {
     communities, community_members, profiles,
     type Community, type CommunityMemberRole,
 } from "../services/supabase_api";
+import { confirm, notify } from "../utils/confirm";
 
 type Member = {
     user_id: string;
@@ -19,9 +22,6 @@ type Member = {
 };
 
 const roleRank: Record<CommunityMemberRole, number> = { owner: 0, admin: 1, member: 2 };
-
-// avatar_path is only shown when it is already a full URL.
-const avatarUri = (path: string | null) => (path && /^https?:\/\//i.test(path) ? path : null);
 
 async function loadCommunity(id: string): Promise<{ community: Community; members: Member[] }> {
     const [communityRes, membersRes] = await Promise.all([
@@ -75,33 +75,27 @@ export default function CommunityInfo() {
 
     const myRole = details?.members.find((m) => m.user_id === myId)?.role;
 
-    const handleLeave = () => {
+    const handleLeave = async () => {
         if (!details) return;
         const { community } = details;
         if (myRole === "owner") {
-            Alert.alert(
-                "You're the owner",
-                "Owners can't leave a community yet."
-            );
+            void notify("You're the owner", "Owners can't leave a community yet.");
             return;
         }
-        Alert.alert("Leave community?", `You'll stop seeing messages in ${community.name}.`, [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Leave",
-                style: "destructive",
-                onPress: async () => {
-                    try {
-                        // Goes through the context so the chat list drops this community too.
-                        await leaveCommunity(community.id);
-                        router.dismissTo("/chat");
-                    } catch (e) {
-                        console.error("Failed to leave community:", e);
-                        Alert.alert("Couldn't leave", "Please try again.");
-                    }
-                },
-            },
-        ]);
+        const confirmed = await confirm(
+            "Leave community?",
+            `You'll stop seeing messages in ${community.name}.`,
+            { confirmText: "Leave", destructive: true }
+        );
+        if (!confirmed) return;
+        try {
+            // Goes through the context so the chat list drops this community too.
+            await leaveCommunity(community.id);
+            router.dismissTo("/chat");
+        } catch (e) {
+            console.error("Failed to leave community:", e);
+            void notify("Couldn't leave", "Please try again.");
+        }
     };
 
     const roleLabel = (role: CommunityMemberRole) =>
@@ -121,13 +115,16 @@ export default function CommunityInfo() {
     }
 
     const { community, members } = details;
-    const communityAvatar = avatarUri(community.avatar_path);
-
     const header = (
         <View>
             <View style={styles.hero}>
-                {communityAvatar ? (
-                    <Image source={{ uri: communityAvatar }} style={styles.heroAvatar} />
+                {community.avatar_path ? (
+                    <StorageImage
+                        bucket="community-images"
+                        path={community.avatar_path}
+                        style={styles.heroAvatar}
+                        contentFit="cover"
+                    />
                 ) : (
                     <View style={[styles.heroAvatar, styles.heroPlaceholder]}>
                         <Ionicons name="people" size={44} color="#fff" />
@@ -155,7 +152,6 @@ export default function CommunityInfo() {
                 renderItem={({ item, index }) => {
                     const label = roleLabel(item.role);
                     const initial = item.display_name.trim()[0]?.toUpperCase() ?? "?";
-                    const memberAvatar = avatarUri(item.avatar_path);
                     return (
                         <View
                             style={[
@@ -164,8 +160,13 @@ export default function CommunityInfo() {
                                 index === members.length - 1 && styles.memberLast,
                             ]}
                         >
-                            {memberAvatar ? (
-                                <Image source={{ uri: memberAvatar }} style={styles.memberAvatar} />
+                            {item.avatar_path ? (
+                                <StorageImage
+                                    bucket="profile-pictures"
+                                    path={item.avatar_path}
+                                    style={styles.memberAvatar}
+                                    contentFit="cover"
+                                />
                             ) : (
                                 <View style={[styles.memberAvatar, styles.memberPlaceholder]}>
                                     <Text style={styles.memberInitial}>{initial}</Text>

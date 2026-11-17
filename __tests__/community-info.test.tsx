@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert, type AlertButton } from "react-native";
-import { act, render, screen, fireEvent } from "@testing-library/react-native";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import CommunityInfo from "../app/community-info";
 import * as api from "../services/supabase_api";
 import type { CommunityMemberRole } from "../services/supabase_api";
@@ -52,14 +52,13 @@ function membersWithMyRole(myRole: CommunityMemberRole) {
 
 let alertSpy: jest.SpyInstance;
 
-// Press a button in the most recent Alert.alert call with that title
-const pressAlertButton = async (title: string, buttonText: string) => {
-  const call = [...alertSpy.mock.calls].reverse().find((c) => c[0] === title);
-  const buttons = (call?.[2] ?? []) as AlertButton[];
-  await act(async () => {
-    await buttons.find((b) => b.text === buttonText)?.onPress?.();
+// confirm() waits for an answer, so the alert answers the leave question with
+// buttonText as soon as it opens. Other alerts are dismissed with their only button.
+const answerLeaveWith = (buttonText: string) =>
+  alertSpy.mockImplementation((title, _msg, buttons?: AlertButton[]) => {
+    const answer = title === "Leave community?" ? buttonText : buttons?.[0]?.text;
+    buttons?.find((b) => b.text === answer)?.onPress?.();
   });
-};
 
 async function renderAs(myRole: CommunityMemberRole) {
   mocked(api.community_members.getByCommunity).mockImplementation(() =>
@@ -98,44 +97,49 @@ describe("leaving", () => {
 
     await fireEvent.press(screen.getByText("Leave community"));
 
-    expect(alertSpy).toHaveBeenCalledWith("You're the owner", "Owners can't leave a community yet.");
+    expect(alertSpy).toHaveBeenCalledWith(
+      "You're the owner",
+      "Owners can't leave a community yet.",
+      expect.any(Array)
+    );
     expect(mockLeaveCommunity).not.toHaveBeenCalled();
   });
 
   it.each(["admin", "member"] as const)("lets the %s role leave after confirming", async (role) => {
+    answerLeaveWith("Leave");
     await renderAs(role);
 
     await fireEvent.press(screen.getByText("Leave community"));
+
     expect(alertSpy).toHaveBeenCalledWith(
       "Leave community?",
       "You'll stop seeing messages in Knollcrest.",
       expect.any(Array)
     );
-    expect(mockLeaveCommunity).not.toHaveBeenCalled();
-
-    await pressAlertButton("Leave community?", "Leave");
-
+    await waitFor(() => expect(mockRouter.dismissTo).toHaveBeenCalledWith("/chat"));
     expect(mockLeaveCommunity).toHaveBeenCalledWith("c1");
-    expect(mockRouter.dismissTo).toHaveBeenCalledWith("/chat");
   });
 
   it("does not leave when the confirmation is cancelled", async () => {
+    answerLeaveWith("Cancel");
     await renderAs("member");
 
     await fireEvent.press(screen.getByText("Leave community"));
-    await pressAlertButton("Leave community?", "Cancel");
 
+    expect(alertSpy).toHaveBeenCalledWith("Leave community?", expect.any(String), expect.any(Array));
     expect(mockLeaveCommunity).not.toHaveBeenCalled();
   });
 
   it("shows the Couldn't leave alert when leaving fails", async () => {
     mockLeaveCommunity.mockRejectedValue(new Error("network"));
+    answerLeaveWith("Leave");
     await renderAs("member");
 
     await fireEvent.press(screen.getByText("Leave community"));
-    await pressAlertButton("Leave community?", "Leave");
 
-    expect(alertSpy).toHaveBeenCalledWith("Couldn't leave", "Please try again.");
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith("Couldn't leave", "Please try again.", expect.any(Array))
+    );
     expect(mockRouter.dismissTo).not.toHaveBeenCalled();
   });
 });

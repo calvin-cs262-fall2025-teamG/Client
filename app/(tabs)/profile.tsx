@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import BookmarkButton from "../components/BookmarkButton";
+import StorageImage from "../components/StorageImage";
+import { confirm, notify } from "../../utils/confirm";
 
 type ItemCard = {
   id: string;
@@ -33,7 +35,20 @@ export default function Profile() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await logout();
+    const confirmed = await confirm(
+      "Sign out?",
+      "You'll need to log in again to use the app.",
+      { confirmText: "Sign out" },
+    );
+    if (!confirmed) return;
+
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Failed to sign out:", error);
+      void notify("Couldn't sign out", "Please try again.");
+      return;
+    }
     router.replace("/(auth)/login");
   };
 
@@ -73,7 +88,6 @@ export default function Profile() {
   ).length;
   const displayName = profile?.display_name ?? user?.display_name ?? "New User";
   const avatarPath = profile?.avatar_path ?? null;
-  const avatarUrl = avatarPath?.startsWith("http") ? avatarPath : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,6 +97,8 @@ export default function Profile() {
         <TouchableOpacity
           style={styles.logoutIcon}
           onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
           activeOpacity={0.85}
         >
           <Ionicons name="log-out-outline" size={34} color="#2b2725ff" />
@@ -94,8 +110,13 @@ export default function Profile() {
             activeOpacity={0.85}
             onPress={() => router.push("/edit-profile")}
           >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.profileImage} />
+            {avatarPath ? (
+              <StorageImage
+                bucket="profile-pictures"
+                path={avatarPath}
+                style={styles.profileImage}
+                contentFit="cover"
+              />
             ) : (
               <View style={[styles.profileImage, styles.profilePlaceholder]}>
                 <Ionicons name="person" size={34} color="#9ca3af" />
@@ -189,21 +210,19 @@ export default function Profile() {
           ) : (
             listings.map((item) => {
               const isBorrowed = item.status === "borrowed";
-              const imageUrl = item.image?.startsWith("http")
-                ? item.image
-                : null;
 
               return (
                 <View key={item.id} style={styles.recommendedItem}>
                   <View style={styles.recommendedImageContainer}>
-                    {imageUrl ? (
-                      <Image
-                        source={{ uri: imageUrl }}
+                    {item.image ? (
+                      <StorageImage
+                        bucket="item-images"
+                        path={item.image}
                         style={[
                           styles.recommendedImage,
                           isBorrowed && { opacity: 0.55 },
                         ]}
-                        resizeMode="cover"
+                        contentFit="cover"
                       />
                     ) : (
                       <View
@@ -289,6 +308,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 12,
     top: 18,
+    // The header row comes later in the tree and overlaps this corner, so
+    // without this it sits on top and swallows the taps.
+    zIndex: 1,
     width: 52,
     height: 52,
     borderRadius: 26,
