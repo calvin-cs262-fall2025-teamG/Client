@@ -245,38 +245,34 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
     },
     [load]
   );
-
-  const value: DatabaseValue = {
-    profile,
-    myCommunities,
-    myItems,
-    myRequests,
-    incomingRequests,
-    borrowingHistory,
-    loading,
-    error,
-    refresh: load,
-    profilesById,
-    getProfile,
-    updateProfile,
-    createCommunity,
-    requestToJoin,
-    leaveCommunity,
-    createItem,
-    updateItem,
-    deleteItem,
-    requestToBorrow,
-    cancelRequest,
-    approveRequest,
-    declineRequest,
-    markReturned,
-  };
-
-  return <DatabaseContext.Provider value={value}>{children}</DatabaseContext.Provider>;
 }
 
-export function useDatabase() {
-  const ctx = useContext(DatabaseContext);
-  if (!ctx) throw new Error("useDatabase must be used inside <DatabaseProvider>");
-  return ctx;
+/**
+ * @deprecated Use useProfile, useCommunities, useItems, or useBorrowing instead.
+ * Combines all four contexts so existing screens keep working.
+ */
+export function useDatabase(): DatabaseValue {
+  const profile = useProfile();
+  const community = useCommunities();
+  const itemsCtx = useItems();
+  const borrowing = useBorrowing();
+  const parts = [profile, community, itemsCtx, borrowing];
+
+  const refreshProfile = profile.refresh;
+  const refreshCommunities = community.refresh;
+  const refreshItems = itemsCtx.refresh;
+  const refreshBorrowing = borrowing.refresh;
+  const refresh = useCallback(async () => {
+    await Promise.all([refreshProfile(), refreshCommunities(), refreshItems(), refreshBorrowing()]);
+  }, [refreshProfile, refreshCommunities, refreshItems, refreshBorrowing]);
+
+  return {
+    ...profile,
+    ...community,
+    ...itemsCtx,
+    ...borrowing,
+    loading: parts.some((p) => p.loading),
+    error: parts.find((p) => p.error)?.error ?? null,
+    refresh,
+  };
 }

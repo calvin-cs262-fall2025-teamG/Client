@@ -14,6 +14,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import PageContainer from "../components/PageContainer";
+import { notify } from "../../utils/confirm";
+import { ITEM_CATEGORIES, type ItemCategory } from "../../constants/categories";
 
 export default function ListItem() {
   const router = useRouter();
@@ -22,7 +24,7 @@ export default function ListItem() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState<ItemCategory | null>(null);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
     null,
   );
@@ -50,17 +52,17 @@ export default function ListItem() {
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert("Title required", "Please add a title for your item.");
+      void notify("Title required", "Please add a title for your item.");
       return;
     }
 
     if (!user?.id) {
-      Alert.alert("Error", "You must be logged in to list an item.");
+      void notify("Error", "You must be logged in to list an item.");
       return;
     }
 
     if (myCommunities.length === 0) {
-      Alert.alert(
+      void notify(
         "Join a community first",
         "Items are shared within a community, so join one before listing.",
       );
@@ -68,7 +70,7 @@ export default function ListItem() {
     }
 
     if (!communityId) {
-      Alert.alert("Community required", "Please choose a community for your item.");
+      void notify("Community required", "Please choose a community for your item.");
       return;
     }
 
@@ -91,19 +93,19 @@ export default function ListItem() {
         await createItem(itemData);
       }
 
-      Alert.alert("Success", "Your item has been listed!", [
-        { text: "OK", onPress: () => router.push("/(tabs)/profile") },
-      ]);
+      void notify("Success", "Your item has been listed!").then(() =>
+        router.push("/(tabs)/profile"),
+      );
 
       // Clear form
       setTitle("");
       setDescription("");
-      setCategory("");
+      setCategory(null);
       setSelectedCommunityId(null);
       setSelectedImage(null);
     } catch (error) {
       console.error("Failed to create item:", error);
-      Alert.alert("Error", "Failed to list item. Please try again.");
+      void notify("Error", "Failed to list item. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -142,14 +144,31 @@ export default function ListItem() {
         editable={!uploading}
       />
 
-      <TextInput
-        placeholder="Category (e.g., 'Tools', 'Home', 'Books')"
-        placeholderTextColor="#6b7280"
-        value={category}
-        onChangeText={setCategory}
-        style={styles.input}
-        editable={!uploading}
-      />
+      <Text style={styles.communityLabel}>Category</Text>
+      <View style={styles.categoryChips}>
+        {ITEM_CATEGORIES.map((c) => {
+          const selected = c === category;
+          return (
+            <TouchableOpacity
+              key={c}
+              style={[styles.categoryChip, selected && styles.categoryChipSelected]}
+              onPress={() => setCategory(selected ? null : c)}
+              disabled={uploading}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  selected && styles.communityTextSelected,
+                ]}
+              >
+                {c}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <TextInput
         placeholder="Description (optional)"
@@ -258,6 +277,28 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+  },
+  categoryChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  categoryChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+  },
+  categoryChipSelected: {
+    borderColor: "#f97316",
+    backgroundColor: "#fff7ed",
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: "#111827",
   },
   communityList: {
     marginBottom: 4,

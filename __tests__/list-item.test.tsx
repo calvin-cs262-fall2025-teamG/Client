@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import ListItem from "../app/(tabs)/list";
+import { ITEM_CATEGORIES } from "../constants/categories";
 
 const mockPush = jest.fn();
 jest.mock("expo-crypto", () => ({ randomUUID: () => "image-id" }));
@@ -58,10 +59,7 @@ afterEach(() => {
 
 async function fillAndPost(name = "Drill") {
   await fireEvent.changeText(screen.getByPlaceholderText("Item name (e.g., 'Mini fridge')"), name);
-  await fireEvent.changeText(
-    screen.getByPlaceholderText("Category (e.g., 'Tools', 'Home', 'Books')"),
-    " Tools "
-  );
+  await fireEvent.press(screen.getByRole("button", { name: "Tools" }));
   await fireEvent.changeText(screen.getByPlaceholderText("Description (optional)"), "Cordless");
   await fireEvent.press(screen.getByText("Post Item"));
 }
@@ -71,7 +69,7 @@ it("requires a title", async () => {
 
   await fireEvent.press(screen.getByText("Post Item"));
 
-  expect(alertSpy).toHaveBeenCalledWith("Title required", "Please add a title for your item.");
+  expect(alertSpy).toHaveBeenCalledWith("Title required", "Please add a title for your item.", expect.any(Array));
   expect(mockCreateItem).not.toHaveBeenCalled();
 });
 
@@ -87,7 +85,7 @@ it("creates the item in the only community, with no image fields", async () => {
   );
   expect(mockCreateItem).toHaveBeenCalledTimes(1);
   expect(mockCreateItem).toHaveBeenCalledWith({
-    community_id: "c1",
+    community_ids: ["c1"],
     name: "Drill",
     description: "Cordless",
     category: "Tools",
@@ -99,10 +97,11 @@ it("goes to the Profile tab after the success alert", async () => {
   await fillAndPost();
 
   await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Success", expect.any(String), expect.any(Array)));
+  expect(mockPush).not.toHaveBeenCalled();
   const buttons = alertSpy.mock.calls.find((c) => c[0] === "Success")![2];
   buttons[0].onPress();
 
-  expect(mockPush).toHaveBeenCalledWith("/(tabs)/profile");
+  await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/(tabs)/profile"));
 });
 
 it("shows the failure alert when createItem fails", async () => {
@@ -112,7 +111,7 @@ it("shows the failure alert when createItem fails", async () => {
   await fillAndPost();
 
   await waitFor(() =>
-    expect(alertSpy).toHaveBeenCalledWith("Error", "Failed to list item. Please try again.")
+    expect(alertSpy).toHaveBeenCalledWith("Error", "Failed to list item. Please try again.", expect.any(Array))
   );
   expect(mockPush).not.toHaveBeenCalled();
 });
@@ -127,10 +126,10 @@ it("passes the selected photo to item creation", async () => {
   await fireEvent.press(screen.getByText("Add a Photo"));
   await fillAndPost();
 
-  await waitFor(() => expect(mockCreateItem).toHaveBeenCalledWith(
-    expect.objectContaining({ community_id: "c1", name: "Drill" }),
-    { uri: "file:///item.jpg", mimeType: "image/jpeg" },
-  ));
+  expect(alertSpy).toHaveBeenCalledWith(
+    "Coming soon",
+    "Photo upload is being moved to the new server.", expect.any(Array)
+  );
 });
 
 it("asks a user with no communities to join one first", async () => {
@@ -139,7 +138,7 @@ it("asks a user with no communities to join one first", async () => {
 
   await fillAndPost();
 
-  expect(alertSpy).toHaveBeenCalledWith("Join a community first", expect.any(String));
+  expect(alertSpy).toHaveBeenCalledWith("Join a community first", expect.any(String), expect.any(Array));
   expect(mockCreateItem).not.toHaveBeenCalled();
 });
 
@@ -148,13 +147,32 @@ it("makes a user with several communities pick one", async () => {
   await render(<ListItem />);
 
   await fillAndPost();
-  expect(alertSpy).toHaveBeenCalledWith("Community required", expect.any(String));
+  expect(alertSpy).toHaveBeenCalledWith("Community required", expect.any(String), expect.any(Array));
   expect(mockCreateItem).not.toHaveBeenCalled();
 
   await fireEvent.press(screen.getByText("Eastown"));
   await fireEvent.press(screen.getByText("Post Item"));
 
   await waitFor(() =>
-    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ community_id: "c2" }))
+    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ community_ids: ["c2"] }))
+  );
+});
+
+it("offers the shared category list", async () => {
+  await render(<ListItem />);
+
+  for (const c of ITEM_CATEGORIES) {
+    expect(screen.getByRole("button", { name: c })).toBeTruthy();
+  }
+});
+
+it("saves Other when no category is picked", async () => {
+  await render(<ListItem />);
+
+  await fireEvent.changeText(screen.getByPlaceholderText("Item name (e.g., 'Mini fridge')"), "Lamp");
+  await fireEvent.press(screen.getByText("Post Item"));
+
+  await waitFor(() =>
+    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ category: "Other" }))
   );
 });

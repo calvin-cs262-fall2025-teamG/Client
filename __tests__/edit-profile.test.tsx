@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert } from "react-native";
+import { Alert, type AlertButton } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import EditProfile from "../app/edit-profile";
 
@@ -32,7 +32,10 @@ let alertSpy: jest.SpyInstance;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+  // Press OK on every message, as the user would; notify waits for it
+  alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons?: AlertButton[]) => {
+    buttons?.find((b) => b.text === "OK")?.onPress?.();
+  });
   jest.spyOn(console, "error").mockImplementation(() => {});
   mockUpdateProfile.mockImplementation(async ({ display_name }: { display_name: string }) => ({
     id: "me",
@@ -62,7 +65,7 @@ it("saves the trimmed name, updates the auth user and goes back", async () => {
   await waitFor(() => expect(mockBack).toHaveBeenCalled());
   expect(mockUpdateProfile).toHaveBeenCalledWith({ display_name: "Bryn L" });
   expect(mockSetUser).toHaveBeenCalledWith({ ...mockUser, display_name: "Bryn L" });
-  expect(alertSpy).toHaveBeenCalledWith("Success", "Profile updated!");
+  expect(alertSpy).toHaveBeenCalledWith("Success", "Profile updated!", expect.any(Array));
 });
 
 it("requires a name", async () => {
@@ -71,7 +74,7 @@ it("requires a name", async () => {
   await fireEvent.changeText(nameInput(), "   ");
   await fireEvent.press(screen.getByText("Save"));
 
-  expect(alertSpy).toHaveBeenCalledWith("Name required", "Please enter your name.");
+  expect(alertSpy).toHaveBeenCalledWith("Name required", "Please enter your name.", expect.any(Array));
   expect(mockUpdateProfile).not.toHaveBeenCalled();
   expect(mockBack).not.toHaveBeenCalled();
 });
@@ -83,7 +86,7 @@ it("shows the error alert and stays when the update fails", async () => {
   await fireEvent.press(screen.getByText("Save"));
 
   await waitFor(() =>
-    expect(alertSpy).toHaveBeenCalledWith("Error", "Failed to update profile. Please try again.")
+    expect(alertSpy).toHaveBeenCalledWith("Error", "Failed to update profile. Please try again.", expect.any(Array))
   );
   expect(mockSetUser).not.toHaveBeenCalled();
   expect(mockBack).not.toHaveBeenCalled();
@@ -96,6 +99,6 @@ it("shows Coming soon for the photo button", async () => {
 
   expect(alertSpy).toHaveBeenCalledWith(
     "Coming soon",
-    "Changing your profile photo isn't available yet."
+    "Changing your profile photo isn't available yet.", expect.any(Array)
   );
 });

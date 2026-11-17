@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { supabase } from "../utils/supabase";
+import { supabase } from "../../lib/supabase";
 
 export default function AuthCallbackScreen() {
 	const { code, error, error_description: errorDescription } =
