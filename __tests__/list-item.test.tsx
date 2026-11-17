@@ -1,12 +1,18 @@
 import React from "react";
 import { Alert } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import ListItem from "../app/(tabs)/list";
 import { ITEM_CATEGORIES } from "../constants/categories";
 
 const mockPush = jest.fn();
+jest.mock("expo-crypto", () => ({ randomUUID: () => "image-id" }));
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
+}));
+
+jest.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: jest.fn(),
 }));
 
 jest.mock("../context/AuthContext", () => ({
@@ -110,10 +116,15 @@ it("shows the failure alert when createItem fails", async () => {
   expect(mockPush).not.toHaveBeenCalled();
 });
 
-it("shows Coming soon when tapping Add a Photo", async () => {
+it("passes the selected photo to item creation", async () => {
+  (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: "file:///item.jpg", mimeType: "image/jpeg" }],
+  });
   await render(<ListItem />);
 
   await fireEvent.press(screen.getByText("Add a Photo"));
+  await fillAndPost();
 
   expect(alertSpy).toHaveBeenCalledWith(
     "Coming soon",

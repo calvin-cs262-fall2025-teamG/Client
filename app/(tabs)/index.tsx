@@ -19,6 +19,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import { items as itemsApi, type Item } from "../../services/supabase_api";
+import StorageImage from "../components/StorageImage";
 import ItemCard from "../components/ItemCard";
 import {
   ALL_CATEGORIES,
@@ -349,14 +350,111 @@ export default function Index() {
           </View>
         ) : (
           <View style={styles.recommendedGrid}>
-            {filteredItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                showCommunity={showLabels}
-                communityName={communityLabel(communityIdsByItem[item.id], communityNames)}
-              />
-            ))}
+            {filteredItems.map((item) => {
+              const isBookmarked = isSaved(item.id);
+              const isBorrowed = item.status === "borrowed";
+
+              return (
+                <View key={item.id} style={styles.recommendedItem}>
+                  {/* IMAGE + BOOKMARK */}
+                  <View style={styles.recommendedImageContainer}>
+                    {/* Edit icon for own items, bookmark for others */}
+                    {item.owner_id === user?.id ? (
+                      <TouchableOpacity
+                        style={styles.editIconContainer}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/edit-item",
+                            params: { id: item.id },
+                          })
+                        }
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="pencil" size={16} color="#fff" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.bookmarkIconContainer}
+                        onPress={() => handleBookmarkToggle(item)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                          size={22}
+                          color="#3b1b0d"
+                        />
+                      </TouchableOpacity>
+                    )}
+                    {/* Navigate via image */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (item.owner_id === user?.id) {
+                          router.push({
+                            pathname: "/edit-item",
+                            params: { id: item.id },
+                          });
+                        } else {
+                          router.push(`/item/${item.id}`);
+                        }
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      {item.image_path ? (
+                        <StorageImage
+                          bucket="item-images"
+                          path={item.image_path}
+                          localSource={imageMap[item.image_path]}
+                          style={[
+                            styles.recommendedImage,
+                            isBorrowed && { opacity: 0.55 },
+                          ]}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.recommendedImage,
+                            styles.placeholderImage,
+                          ]}
+                        >
+                          <Ionicons
+                            name="image-outline"
+                            size={40}
+                            color="#9ca3af"
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+
+                    {/* Borrowed badge */}
+                    {isBorrowed && (
+                      <View style={[styles.statusBadge, styles.statusBorrowed]}>
+                        <Text style={styles.statusText}>Borrowed</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Navigate via info section */}
+                  <TouchableOpacity
+                    onPress={() => router.push(`/item/${item.id}`)}
+                    activeOpacity={0.8}
+                    style={styles.recommendedInfo}
+                  >
+                    <Text
+                      style={[
+                        styles.recommendedName,
+                        isBorrowed && { opacity: 0.7 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         )}
       </ScrollView>
