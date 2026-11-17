@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image,
+    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Image,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +10,7 @@ import {
     communities, community_members, profiles,
     type Community, type CommunityMemberRole,
 } from "../services/supabase_api";
+import { confirm, notify } from "../utils/confirm";
 
 type Member = {
     user_id: string;
@@ -75,33 +76,27 @@ export default function CommunityInfo() {
 
     const myRole = details?.members.find((m) => m.user_id === myId)?.role;
 
-    const handleLeave = () => {
+    const handleLeave = async () => {
         if (!details) return;
         const { community } = details;
         if (myRole === "owner") {
-            Alert.alert(
-                "You're the owner",
-                "Owners can't leave a community yet."
-            );
+            void notify("You're the owner", "Owners can't leave a community yet.");
             return;
         }
-        Alert.alert("Leave community?", `You'll stop seeing messages in ${community.name}.`, [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Leave",
-                style: "destructive",
-                onPress: async () => {
-                    try {
-                        // Goes through the context so the chat list drops this community too.
-                        await leaveCommunity(community.id);
-                        router.dismissTo("/chat");
-                    } catch (e) {
-                        console.error("Failed to leave community:", e);
-                        Alert.alert("Couldn't leave", "Please try again.");
-                    }
-                },
-            },
-        ]);
+        const confirmed = await confirm(
+            "Leave community?",
+            `You'll stop seeing messages in ${community.name}.`,
+            { confirmText: "Leave", destructive: true }
+        );
+        if (!confirmed) return;
+        try {
+            // Goes through the context so the chat list drops this community too.
+            await leaveCommunity(community.id);
+            router.dismissTo("/chat");
+        } catch (e) {
+            console.error("Failed to leave community:", e);
+            void notify("Couldn't leave", "Please try again.");
+        }
     };
 
     const roleLabel = (role: CommunityMemberRole) =>

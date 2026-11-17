@@ -35,7 +35,6 @@ const mocked = (fn: unknown) => fn as jest.Mock;
 
 const makeItem = (overrides: Record<string, unknown> = {}) => ({
   id: "item-1",
-  community_id: "c1",
   owner_id: "greg",
   name: "Drill",
   description: "Cordless drill",
@@ -118,7 +117,7 @@ it("shows the failure alert and stays put when the request fails", async () => {
   await fireEvent.press(screen.getByText("Request to Borrow"));
 
   await waitFor(() =>
-    expect(alert).toHaveBeenCalledWith("Message failed", "Could not send your request. Please try again.")
+    expect(alert).toHaveBeenCalledWith("Message failed", "Could not send your request. Please try again.", expect.any(Array))
   );
   expect(mockPush).not.toHaveBeenCalled();
 });

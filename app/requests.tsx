@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +15,7 @@ import {
   items as itemsApi,
   type BorrowingRequest,
 } from "../services/supabase_api";
+import { notify } from "../utils/confirm";
 
 const HISTORY_LIMIT = 10;
 
@@ -130,7 +130,7 @@ export default function Requests() {
       await action(requestId);
     } catch (error) {
       console.error(failMessage, error);
-      Alert.alert("Something went wrong", failMessage);
+      void notify("Something went wrong", failMessage);
     } finally {
       setBusyId(null);
     }

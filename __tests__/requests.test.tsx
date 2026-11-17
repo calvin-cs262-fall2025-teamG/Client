@@ -47,7 +47,6 @@ const item = (id: string, name: string, status = "available") => ({
   name,
   status,
   owner_id: "me",
-  community_id: "c1",
   description: null,
   category: "Tools",
   image_path: null,
@@ -134,7 +133,7 @@ describe("requests for your items", () => {
     await waitFor(() =>
       expect(alertSpy).toHaveBeenCalledWith(
         "Something went wrong",
-        "Could not approve the request. Please try again."
+        "Could not approve the request. Please try again.", expect.any(Array)
       )
     );
 

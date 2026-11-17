@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
+import { confirm, notify } from "../../utils/confirm";
 import {
   items as itemsApi,
   type Item,
@@ -96,7 +96,7 @@ export default function ItemDetail() {
 
   const sendBorrowRequestMessage = async () => {
     if (!user) {
-      Alert.alert("Not logged in", "Please log in to request an item.");
+      void notify("Not logged in", "Please log in to request an item.");
       return;
     }
     if (!item) return;
@@ -106,7 +106,7 @@ export default function ItemDetail() {
       await requestToBorrow(item.id);
     } catch (e) {
       console.error("Failed to send borrow request:", e);
-      Alert.alert(
+      void notify(
         "Message failed",
         "Could not send your request. Please try again.",
       );
@@ -267,19 +267,14 @@ export default function ItemDetail() {
               (sending || hasPendingRequest) && { opacity: 0.6 },
             ]}
             disabled={sending || hasPendingRequest}
-            onPress={() =>
-              Alert.alert(
+            onPress={async () => {
+              const confirmed = await confirm(
                 "Borrow Request",
                 `Send a borrow request for ${item.name}?`,
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: sending ? "Sending..." : "Send Request",
-                    onPress: sendBorrowRequestMessage,
-                  },
-                ],
-              )
-            }
+                { confirmText: "Send Request" },
+              );
+              if (confirmed) await sendBorrowRequestMessage();
+            }}
           >
             <Text style={styles.borrowText}>
               {sending

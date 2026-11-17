@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import BookmarkButton from "../components/BookmarkButton";
+import { confirm, notify } from "../../utils/confirm";
 
 type ItemCard = {
   id: string;
@@ -33,7 +34,20 @@ export default function Profile() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await logout();
+    const confirmed = await confirm(
+      "Sign out?",
+      "You'll need to log in again to use the app.",
+      { confirmText: "Sign out" },
+    );
+    if (!confirmed) return;
+
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Failed to sign out:", error);
+      void notify("Couldn't sign out", "Please try again.");
+      return;
+    }
     router.replace("/(auth)/login");
   };
 
@@ -83,6 +97,8 @@ export default function Profile() {
         <TouchableOpacity
           style={styles.logoutIcon}
           onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
           activeOpacity={0.85}
         >
           <Ionicons name="log-out-outline" size={34} color="#2b2725ff" />
@@ -289,6 +305,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 12,
     top: 18,
+    // The header row comes later in the tree and overlaps this corner, so
+    // without this it sits on top and swallows the taps.
+    zIndex: 1,
     width: 52,
     height: 52,
     borderRadius: 26,
