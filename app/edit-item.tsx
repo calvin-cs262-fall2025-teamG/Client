@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Button,
-  Platform,
   Image,
   ScrollView,
   StyleSheet,
@@ -19,6 +19,7 @@ import { useDatabase } from "../context/DatabaseContext";
 import { items as itemsApi } from "../services/supabase_api";
 import StorageImage from "./components/StorageImage";
 import { confirm, notify } from "../utils/confirm";
+import { toImageInput } from "../utils/imageInput";
 
 type ItemStatus = "available" | "pending" | "borrowed";
 
@@ -52,6 +53,7 @@ export default function EditItem() {
   const [status, setStatus] = useState<ItemStatus | null>(null);
   const [notOwner, setNotOwner] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -96,6 +98,21 @@ export default function EditItem() {
     loadItem();
   }, [id, userId, router]);
 
+  const handleChooseImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled) setSelectedImage(result.assets[0]);
+    } catch (error) {
+      console.error("Failed to select item photo:", error);
+      void notify("Error", "Could not open your photo library.");
+    }
+  };
+
   const handleSave = async () => {
     if (!id) {
       void notify("Error", "Invalid item ID.");
@@ -110,11 +127,16 @@ export default function EditItem() {
     setSaving(true);
 
     try {
-      await updateItem(id, {
+      const itemData = {
         name: title.trim(),
         description: description.trim(),
         category: category.trim() || undefined,
-      });
+      };
+      if (selectedImage) {
+        await updateItem(id, itemData, await toImageInput(selectedImage));
+      } else {
+        await updateItem(id, itemData);
+      }
 
       await notify("Success", "Item updated successfully!");
       router.back();
@@ -191,14 +213,25 @@ export default function EditItem() {
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Image preview */}
-        {imageUrl && (imageUrl.startsWith("http") || imageUrl.includes("/")) && (
+        {selectedImage ? (
+          <Image source={{ uri: selectedImage.uri }} style={styles.image} />
+        ) : imageUrl && (imageUrl.startsWith("http") || imageUrl.includes("/")) ? (
           <StorageImage
             bucket="item-images"
             path={imageUrl}
             style={styles.image}
             contentFit="cover"
           />
-        )}
+        ) : null}
+        <TouchableOpacity
+          onPress={handleChooseImage}
+          disabled={saving}
+          style={styles.photoButton}
+        >
+          <Text style={styles.photoButtonText}>
+            {selectedImage || imageUrl ? "Change photo" : "Add a photo"}
+          </Text>
+        </TouchableOpacity>
 
         {status && (
           <View style={styles.statusSection}>
@@ -329,6 +362,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginBottom: 16,
     backgroundColor: "#e5e7eb",
+  },
+  photoButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+  },
+  photoButtonText: {
+    color: "#374151",
+    fontSize: 14,
+    fontWeight: "600",
   },
   buttonRow: {
     marginTop: 12,

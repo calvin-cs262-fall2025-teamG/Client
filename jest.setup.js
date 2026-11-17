@@ -14,3 +14,8 @@ function mockIcon() {
 
 jest.mock("@expo/vector-icons", () => ({ Ionicons: mockIcon() }));
 jest.mock("@expo/vector-icons/Ionicons", () => ({ __esModule: true, default: mockIcon() }));
+// The Supabase client stores its session in AsyncStorage, whose native module
+// doesn't exist in tests. Use the package's in-memory mock everywhere.
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
+);

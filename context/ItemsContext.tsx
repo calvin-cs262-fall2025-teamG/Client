@@ -3,6 +3,7 @@ import { useAuth } from "./AuthContext";
 import {
   items,
   type CreateItemRequest,
+  type ImageInput,
   type Item,
   type UpdateItemRequest,
 } from "../services/supabase_api";
@@ -10,8 +11,8 @@ import { replaceById, unwrap, useUserScopedLoad, type LoadState, type Take } fro
 
 export type ItemsValue = LoadState & {
   myItems: Item[];
-  createItem: (data: CreateItemRequest) => Promise<Item>;
-  updateItem: (id: string, data: UpdateItemRequest) => Promise<Item>;
+  createItem: (data: CreateItemRequest, image?: ImageInput) => Promise<Item>;
+  updateItem: (id: string, data: UpdateItemRequest, image?: ImageInput) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
 };
 
@@ -36,14 +37,14 @@ export function ItemsProvider({ children }: { children: React.ReactNode }) {
     "Could not load your items"
   );
 
-  const createItem = useCallback(async (data: CreateItemRequest) => {
-    const created = unwrap(await items.create(data));
+  const createItem = useCallback(async (data: CreateItemRequest, image?: ImageInput) => {
+    const created = unwrap(await (image ? items.create(data, image) : items.create(data)));
     setMyItems((prev) => [created, ...prev]);
     return created;
   }, []);
 
-  const updateItem = useCallback(async (id: string, data: UpdateItemRequest) => {
-    const updated = unwrap(await items.update(id, data));
+  const updateItem = useCallback(async (id: string, data: UpdateItemRequest, image?: ImageInput) => {
+    const updated = unwrap(await (image ? items.update(id, data, image) : items.update(id, data)));
     setMyItems((prev) => replaceById(prev, updated));
     return updated;
   }, []);

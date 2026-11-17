@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react-native";
+import { render, screen, waitFor } from "@testing-library/react-native";
 import ListerProfile from "../app/profile/[name]";
 
 // Mutable so tests can drop the id param
@@ -14,14 +14,22 @@ jest.mock("../context/DatabaseContext", () => ({
   useDatabase: () => ({ getProfile: mockGetProfile }),
 }));
 
+// Storage paths are signed by StorageImage; http URLs are used as-is
+const mockGetImageUrl = jest.fn();
+jest.mock("../services/supabase_api", () => ({
+  getImageUrl: (...args: unknown[]) => mockGetImageUrl(...args),
+}));
+
 type JsonNode = { props: Record<string, any>; children: (JsonNode | string)[] | null };
 
-// Collects every rendered host element whose source prop is { uri }
+// Collects every rendered host element whose source is { uri }. expo-image
+// passes its source down as an array.
 function imagesWithUri(): string[] {
   const found: string[] = [];
   const walk = (node: JsonNode | string | null) => {
     if (!node || typeof node === "string") return;
-    if (node.props?.source?.uri) found.push(node.props.source.uri);
+    const sources = [node.props?.source].flat();
+    sources.forEach((src) => src?.uri && found.push(src.uri));
     node.children?.forEach(walk);
   };
   const tree = screen.toJSON() as JsonNode | JsonNode[] | null;
@@ -33,6 +41,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockParams = { name: "Jamie", id: "u2" };
   mockGetProfile.mockResolvedValue({ id: "u2", display_name: "Jamie Rivera", avatar_path: null });
+  mockGetImageUrl.mockResolvedValue({ signedUrl: null, error: null });
 });
 
 it("shows the profile's display name once loaded", async () => {
@@ -70,10 +79,20 @@ it("shows an http avatar as an image", async () => {
   expect(imagesWithUri()).toEqual(["https://x.test/jamie.png"]);
 });
 
-it("shows the placeholder when the profile has no http avatar", async () => {
-  mockGetProfile.mockResolvedValue({ id: "u2", display_name: "Jamie Rivera", avatar_path: "jamie.png" });
+it("shows a storage avatar through a signed URL", async () => {
+  mockGetImageUrl.mockResolvedValue({ signedUrl: "https://signed.test/jamie.png", error: null });
+  mockGetProfile.mockResolvedValue({ id: "u2", display_name: "Jamie Rivera", avatar_path: "u2/avatar.png" });
+  await render(<ListerProfile />);
+  await screen.findByText("Jamie Rivera's Profile");
+
+  await waitFor(() => expect(imagesWithUri()).toEqual(["https://signed.test/jamie.png"]));
+  expect(mockGetImageUrl).toHaveBeenCalledWith("profile-pictures", "u2/avatar.png", 3600);
+});
+
+it("shows the placeholder when the profile has no avatar", async () => {
   await render(<ListerProfile />);
   await screen.findByText("Jamie Rivera's Profile");
 
   expect(imagesWithUri()).toEqual([]);
+  expect(mockGetImageUrl).not.toHaveBeenCalled();
 });

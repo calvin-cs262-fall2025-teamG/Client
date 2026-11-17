@@ -1,13 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
-  Image,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  type ImageSourcePropType,
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
@@ -16,9 +14,11 @@ import {
   updateBookmarkCount,
 } from "../../services/bookmarkCount";
 import type { Item } from "../../services/supabase_api";
+import StorageImage from "./StorageImage";
 
-// Local seed-data filenames mapped to bundled images.
-const imageMap: Record<string, ImageSourcePropType> = {
+// Local seed-data filenames mapped to bundled images. Anything else is a
+// Supabase Storage path that StorageImage turns into a signed URL.
+const imageMap: Record<string, number> = {
   "banner.png": require("../../assets/images/banner.png"),
   "bike.jpg": require("../../assets/images/bike.jpg"),
   "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
@@ -49,7 +49,7 @@ const imageMap: Record<string, ImageSourcePropType> = {
   "yogamat.jpg": require("../../assets/images/yogamat.jpg"),
 };
 
-export function itemImageSource(path: string | null): ImageSourcePropType | null {
+export function itemImageSource(path: string | null): number | { uri: string } | null {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return { uri: path };
   const filename = path.split("/").pop()?.toLowerCase() ?? "";
@@ -91,7 +91,6 @@ export default function ItemCard({ item, showCommunity, communityName }: Props) 
 
   const isOwner = item.owner_id === user?.id;
   const isBorrowed = item.status === "borrowed";
-  const src = itemImageSource(item.image_path);
 
   return (
     <View style={styles.card}>
@@ -101,8 +100,14 @@ export default function ItemCard({ item, showCommunity, communityName }: Props) 
         style={isBorrowed && styles.dimmed}
       >
         <View style={styles.imageBlock}>
-          {src ? (
-            <Image source={src} style={styles.image} resizeMode="cover" />
+          {item.image_path ? (
+            <StorageImage
+              bucket="item-images"
+              path={item.image_path}
+              localSource={itemImageSource(item.image_path) ?? undefined}
+              style={styles.image}
+              contentFit="cover"
+            />
           ) : (
             <Ionicons
               testID="item-card-placeholder"

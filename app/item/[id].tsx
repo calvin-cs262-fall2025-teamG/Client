@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +22,7 @@ import {
 } from "../../services/supabase_api";
 import StorageImage from "../components/StorageImage";
 
-const imageMap: Record<string, any> = {
+const imageMap: Record<string, number> = {
   // item images
   "bike.jpg": require("../../assets/images/bike.jpg"),
   "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
@@ -64,7 +63,7 @@ const imageMap: Record<string, any> = {
 
 function resolveImageSource(
   key?: string | null,
-): ImageSourcePropType | undefined {
+): number | { uri: string } | undefined {
   if (!key) return undefined;
 
   const trimmed = key.trim();

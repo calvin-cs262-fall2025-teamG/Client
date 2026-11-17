@@ -121,15 +121,20 @@ it("passes the selected photo to item creation", async () => {
     canceled: false,
     assets: [{ uri: "file:///item.jpg", mimeType: "image/jpeg" }],
   });
+  const bytes = new ArrayBuffer(8);
+  const fetchSpy = jest
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue({ arrayBuffer: async () => bytes } as unknown as Response);
   await render(<ListItem />);
 
   await fireEvent.press(screen.getByText("Add a Photo"));
   await fillAndPost();
 
-  expect(alertSpy).toHaveBeenCalledWith(
-    "Coming soon",
-    "Photo upload is being moved to the new server.", expect.any(Array)
-  );
+  await waitFor(() => expect(mockCreateItem).toHaveBeenCalledWith(
+    expect.objectContaining({ community_ids: ["c1"], name: "Drill" }),
+    { data: bytes, ext: "jpeg" },
+  ));
+  expect(fetchSpy).toHaveBeenCalledWith("file:///item.jpg");
 });
 
 it("asks a user with no communities to join one first", async () => {

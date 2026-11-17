@@ -1,11 +1,11 @@
-jest.mock("../app/utils/supabase", () => ({
+jest.mock("../lib/supabase", () => ({
   supabase: {
     rpc: jest.fn(),
     storage: { from: jest.fn() },
   },
 }));
 
-import { supabase } from "../app/utils/supabase";
+import { supabase } from "../lib/supabase";
 import { getImageUrl, profiles } from "../services/supabase_api";
 
 const rpc = supabase.rpc as jest.Mock;

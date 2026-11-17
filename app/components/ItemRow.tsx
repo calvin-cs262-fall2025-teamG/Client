@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import type { Item } from "../../services/supabase_api";
 import { itemImageSource, useItemBookmark } from "./ItemCard";
+import StorageImage from "./StorageImage";
 
 type Props = {
   item: Item;
@@ -19,7 +20,6 @@ export default function ItemRow({ item, communityName, showStatus }: Props) {
   const { saved, toggleBookmark } = useItemBookmark(item);
 
   const isOwner = item.owner_id === user?.id;
-  const src = itemImageSource(item.image_path);
   const status =
     item.status === "borrowed" ? "Borrowed" : item.status === "available" ? "Available" : null;
 
@@ -31,8 +31,14 @@ export default function ItemRow({ item, communityName, showStatus }: Props) {
         accessibilityRole="button"
       >
         <View style={styles.thumb}>
-          {src ? (
-            <Image source={src} style={styles.thumbImage} resizeMode="cover" />
+          {item.image_path ? (
+            <StorageImage
+              bucket="item-images"
+              path={item.image_path}
+              localSource={itemImageSource(item.image_path) ?? undefined}
+              style={styles.thumbImage}
+              contentFit="cover"
+            />
           ) : (
             <Ionicons name="cube-outline" size={24} color="#c9a27e" />
           )}

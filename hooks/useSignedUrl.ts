@@ -22,9 +22,23 @@ export function useSignedUrl(
     const key = `${bucket}:${path}`;
     const refreshIn = Math.max(expiresIn - 60, 1) * 1000;
 
+    // Render can't read the clock, so a stale URL is cleared here instead:
+    // when the refresh timer fires (the URL has just expired) and when the
+    // app returns to the foreground after the expiry time.
+    const expire = (onlyIfStale: boolean) =>
+      setResolved((prev) =>
+        prev?.key === key && prev.url !== null &&
+        (!onlyIfStale || Date.now() >= prev.expiresAt)
+          ? { ...prev, url: null }
+          : prev,
+      );
+
     const scheduleRefresh = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => void refresh(), refreshIn);
+      timer = setTimeout(() => {
+        expire(false);
+        void refresh();
+      }, refreshIn);
     };
 
     const refresh = async () => {
@@ -44,7 +58,9 @@ export function useSignedUrl(
     };
 
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void refresh();
+      if (state !== "active") return;
+      expire(true);
+      void refresh();
     });
     void refresh();
 
@@ -58,7 +74,5 @@ export function useSignedUrl(
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path;
 
-  return resolved?.key === `${bucket}:${path}` && resolved.expiresAt > Date.now()
-    ? resolved.url
-    : null;
+  return resolved?.key === `${bucket}:${path}` ? resolved.url : null;
 }

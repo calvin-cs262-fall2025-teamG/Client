@@ -15,7 +15,6 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
-import type { ImageSourcePropType } from "react-native";
 import {
   community_messages,
   direct_messages,
@@ -35,7 +34,7 @@ import StorageImage from "../components/StorageImage";
 
 /* ---------------- AVATAR MAP ---------------- */
 
-const avatarMap: Record<string, any> = {
+const avatarMap: Record<string, number> = {
   "helen.png": require("../../assets/images/helen.png"),
   "jacob.png": require("../../assets/images/jacob.png"),
   "greg.png": require("../../assets/images/greg.png"),
@@ -49,7 +48,7 @@ const avatarMap: Record<string, any> = {
 
 function resolveImageSource(
   key: string | null | undefined,
-): ImageSourcePropType | undefined {
+): number | { uri: string } | undefined {
   if (!key) return undefined;
   const trimmed = key.trim();
   if (!trimmed) return undefined;
