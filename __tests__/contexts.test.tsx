@@ -5,7 +5,7 @@ import { useProfile } from "../context/ProfileContext";
 import { useCommunities } from "../context/CommunityContext";
 import { useItems } from "../context/ItemsContext";
 import { useBorrowing } from "../context/BorrowingContext";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 jest.mock("../context/AuthContext", () => ({ useAuth: () => ({ user: { id: "u1" } }) }));
 

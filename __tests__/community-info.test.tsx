@@ -2,8 +2,8 @@ import React from "react";
 import { Alert, type AlertButton } from "react-native";
 import { act, render, screen, fireEvent } from "@testing-library/react-native";
 import CommunityInfo from "../app/community-info";
-import * as api from "../services/supabase_api";
-import type { CommunityMemberRole } from "../services/supabase_api";
+import * as api from "../services/supabase_service";
+import type { CommunityMemberRole } from "../services/supabase_service";
 
 const mockRouter = { dismissTo: jest.fn() };
 jest.mock("expo-router", () => ({

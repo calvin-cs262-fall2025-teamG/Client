@@ -2,7 +2,7 @@ import React from "react";
 import { Alert, type AlertButton } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import EditItem from "../app/edit-item";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 // One router object, like expo-router's stable useRouter(); the load effect depends on it
 const mockBack = jest.fn();

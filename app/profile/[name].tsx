@@ -3,7 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
 import { useDatabase } from "../../context/DatabaseContext";
-import type { Profile } from "../../services/supabase_api";
+import type { Profile } from "../../services/supabase_service";
 
 export default function ListerProfile() {
   const { name, id } = useLocalSearchParams<{ name: string; id?: string }>();

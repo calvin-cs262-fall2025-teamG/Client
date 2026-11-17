@@ -4,7 +4,7 @@ import { DatabaseProvider } from "../context/DatabaseContext";
 import { useProfile } from "../context/ProfileContext";
 import { useItems } from "../context/ItemsContext";
 import { useBorrowing } from "../context/BorrowingContext";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 // Mutable so tests can sign out or switch users and rerender
 let mockUser: { id: string } | null = null;

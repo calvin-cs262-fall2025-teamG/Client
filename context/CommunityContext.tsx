@@ -5,7 +5,7 @@ import {
   community_members,
   type Community,
   type CreateCommunityRequest,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 import { unwrap, useUserScopedLoad, type LoadState, type Take } from "./contextUtils";
 
 export type CommunityValue = LoadState & {

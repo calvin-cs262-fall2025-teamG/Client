@@ -19,7 +19,7 @@ import {
   items as itemsApi,
   type Item,
   type Profile,
-} from "../../services/supabase_api";
+} from "../../services/supabase_service";
 
 const imageMap: Record<string, any> = {
   // item images

@@ -5,7 +5,7 @@ import {
   type CreateItemRequest,
   type Item,
   type UpdateItemRequest,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 import { replaceById, unwrap, useUserScopedLoad, type LoadState, type Take } from "./contextUtils";
 
 export type ItemsValue = LoadState & {

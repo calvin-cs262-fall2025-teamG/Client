@@ -15,7 +15,7 @@ import { parseTimestamp } from "../services/readState";
 import {
   items as itemsApi,
   type BorrowingRequest,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 
 const HISTORY_LIMIT = 10;
 

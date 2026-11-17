@@ -21,7 +21,7 @@ import {
   direct_messages,
   type DirectMessage,
   type Profile,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 import {
   loadLastRead,
   parseTimestamp,

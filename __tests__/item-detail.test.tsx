@@ -2,7 +2,7 @@ import React from "react";
 import { Alert } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import ItemDetail from "../app/item/[id]";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({

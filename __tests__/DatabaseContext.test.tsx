@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, Text } from "react-native";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { DatabaseProvider, useDatabase } from "../context/DatabaseContext";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 const mockUseAuth = jest.fn();
 jest.mock("../context/AuthContext", () => ({ useAuth: () => mockUseAuth() }));

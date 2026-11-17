@@ -2,7 +2,7 @@ import React from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import CommunityThread from "../app/community-thread";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
   jest.requireActual("@react-native-async-storage/async-storage/jest/async-storage-mock")

@@ -9,7 +9,7 @@ import { useDatabase } from "../context/DatabaseContext";
 import {
     communities, community_members, profiles,
     type Community, type CommunityMemberRole,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 
 type Member = {
     user_id: string;

@@ -1,4 +1,4 @@
-import { communities, community_members, items } from "../services/supabase_api";
+import { communities, community_members, items } from "../services/supabase_service";
 
 const mockRpc = jest.fn();
 const mockGetUser = jest.fn();

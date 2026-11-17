@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
-import { profiles, type Profile, type UpdateProfileRequest } from "../services/supabase_api";
+import { profiles, type Profile, type UpdateProfileRequest } from "../services/supabase_service";
 import { unwrap, useUserScopedLoad, type LoadState, type Take } from "./contextUtils";
 
 export type ProfileValue = LoadState & {

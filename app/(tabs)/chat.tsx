@@ -24,7 +24,7 @@ import {
   type CommunityMessage,
   type DirectMessage,
   type Profile,
-} from "../../services/supabase_api";
+} from "../../services/supabase_service";
 import {
   isUnread,
   loadLastRead,
