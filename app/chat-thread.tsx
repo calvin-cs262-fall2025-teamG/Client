@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "../utils/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useBorrowing } from "../context/BorrowingContext";
 import { useItems } from "../context/ItemsContext";
@@ -321,7 +322,7 @@ export default function ChatThread() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => goBack(router)}>
             <Text style={styles.backButton}>←</Text>
           </TouchableOpacity>
 
@@ -364,7 +365,7 @@ export default function ChatThread() {
       <StatusBar barStyle="light-content" />
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerUserBlock}>

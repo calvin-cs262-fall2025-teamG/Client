@@ -3,9 +3,17 @@ import { Alert, type AlertButton } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import EditProfile from "../app/edit-profile";
 
+// canGoBack is false when the screen was opened with no history (reload, direct link)
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
+let mockCanGoBack = true;
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ push: jest.fn(), back: mockBack }),
+  useRouter: () => ({
+    push: jest.fn(),
+    back: mockBack,
+    replace: mockReplace,
+    canGoBack: () => mockCanGoBack,
+  }),
 }));
 
 const mockUser = {
@@ -32,6 +40,7 @@ let alertSpy: jest.SpyInstance;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanGoBack = true;
   // Press OK on every message, as the user would; notify waits for it
   alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons?: AlertButton[]) => {
     buttons?.find((b) => b.text === "OK")?.onPress?.();
@@ -66,6 +75,17 @@ it("saves the trimmed name, updates the auth user and goes back", async () => {
   expect(mockUpdateProfile).toHaveBeenCalledWith({ display_name: "Bryn L" });
   expect(mockSetUser).toHaveBeenCalledWith({ ...mockUser, display_name: "Bryn L" });
   expect(alertSpy).toHaveBeenCalledWith("Success", "Profile updated!", expect.any(Array));
+});
+
+it("goes to Home after saving when there is no history", async () => {
+  mockCanGoBack = false;
+  await render(<EditProfile />);
+
+  await fireEvent.changeText(nameInput(), "Bryn L");
+  await fireEvent.press(screen.getByText("Save"));
+
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/(tabs)"));
+  expect(mockBack).not.toHaveBeenCalled();
 });
 
 it("requires a name", async () => {

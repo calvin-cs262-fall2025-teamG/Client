@@ -6,8 +6,16 @@ import EditItem from "../app/edit-item";
 import * as api from "../services/supabase_api";
 
 // One router object, like expo-router's stable useRouter(); the load effect depends on it
+// canGoBack is false when the screen was opened with no history (reload, direct link)
 const mockBack = jest.fn();
-const mockRouter = { push: jest.fn(), back: mockBack };
+const mockReplace = jest.fn();
+let mockCanGoBack = true;
+const mockRouter = {
+  push: jest.fn(),
+  back: mockBack,
+  replace: mockReplace,
+  canGoBack: () => mockCanGoBack,
+};
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ id: "item-1" }),
   useRouter: () => mockRouter,
@@ -66,6 +74,7 @@ const answerDeleteConfirm = (buttonText: "Delete" | "Cancel") =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanGoBack = true;
   alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_title, _msg, buttons?: AlertButton[]) =>
     pressOk(buttons)
   );
@@ -179,6 +188,25 @@ it("sends someone else's item back with an alert and no form", async () => {
   expect(screen.queryByDisplayValue("Drill")).toBeNull();
   expect(screen.queryByText("Save changes")).toBeNull();
   expect(api.items.getById).toHaveBeenCalledTimes(1);
+});
+
+it("sends someone else's item to Home when there is no history", async () => {
+  mockCanGoBack = false;
+  mocked(api.items.getById).mockImplementation(() => ok(makeItem({ owner_id: "someone-else" })));
+  await render(<EditItem />);
+
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/(tabs)"));
+  expect(mockBack).not.toHaveBeenCalled();
+});
+
+it("goes Home after saving when there is no history", async () => {
+  mockCanGoBack = false;
+  await renderLoaded();
+
+  await fireEvent.press(screen.getByText("Save changes"));
+
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/(tabs)"));
+  expect(mockBack).not.toHaveBeenCalled();
 });
 
 it("stays on the screen when saving throws", async () => {

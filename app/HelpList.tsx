@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { goBack } from "../utils/navigation";
 
 interface HelpSection {
   key: string;
@@ -21,7 +22,7 @@ export default function HelpListScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.closeButton}>
           <Text style={styles.closeText}>×</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help & FAQ</Text>

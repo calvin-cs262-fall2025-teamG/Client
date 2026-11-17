@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { goBack } from "../utils/navigation";
 import { useEffect, useState } from "react";
 import {
   ScrollView,
@@ -379,7 +380,7 @@ export default function Requests() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack(router)}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >

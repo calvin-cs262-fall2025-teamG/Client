@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { goBack } from "../utils/navigation";
 import { useState } from "react";
 import {
   Alert,
@@ -50,7 +51,7 @@ export default function EditProfile() {
       setUser({ ...user, display_name: updated.display_name });
 
       await notify("Success", "Profile updated!");
-      router.back();
+      goBack(router);
     } catch (error) {
       console.error("Error updating profile:", error);
       void notify("Error", "Failed to update profile. Please try again.");
@@ -63,7 +64,7 @@ export default function EditProfile() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Text style={styles.cancel}>Cancel</Text>
         </TouchableOpacity>
 

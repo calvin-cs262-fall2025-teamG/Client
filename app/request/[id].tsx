@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "../../utils/navigation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -126,7 +127,7 @@ export default function RequestDetail() {
   const header = (
     <View style={styles.header}>
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={() => goBack(router)}
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
