@@ -124,6 +124,10 @@ it("passes a selected photo to item update", async () => {
     canceled: false,
     assets: [{ uri: "file:///updated.jpg", mimeType: "image/jpeg" }],
   });
+  const bytes = new ArrayBuffer(8);
+  const fetchSpy = jest
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue({ arrayBuffer: async () => bytes } as unknown as Response);
   await renderLoaded();
 
   await fireEvent.press(screen.getByText("Add a photo"));
@@ -132,8 +136,9 @@ it("passes a selected photo to item update", async () => {
   await waitFor(() => expect(mockUpdateItem).toHaveBeenCalledWith(
     "item-1",
     expect.objectContaining({ name: "Drill" }),
-    { uri: "file:///updated.jpg", mimeType: "image/jpeg" },
+    { data: bytes, ext: "jpeg" },
   ));
+  expect(fetchSpy).toHaveBeenCalledWith("file:///updated.jpg");
 });
 
 it.each([

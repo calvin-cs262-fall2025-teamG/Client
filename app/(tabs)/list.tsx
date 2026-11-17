@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   StyleSheet,
   Text,
@@ -16,6 +15,7 @@ import { useDatabase } from "../../context/DatabaseContext";
 import PageContainer from "../components/PageContainer";
 import { notify } from "../../utils/confirm";
 import { ITEM_CATEGORIES, type ItemCategory } from "../../constants/categories";
+import { toImageInput } from "../../utils/imageInput";
 
 export default function ListItem() {
   const router = useRouter();
@@ -24,18 +24,20 @@ export default function ListItem() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [selectedCommunityIds, setSelectedCommunityIds] = useState<string[]>([]);
   const [category, setCategory] = useState<ItemCategory | null>(null);
-  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
-    null,
-  );
+  const [selectedCommunityIds, setSelectedCommunityIds] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  const communityIds = myCommunities.length === 1
-    ? [myCommunities[0].id]
-    : selectedCommunityIds;
+  // With one community there is nothing to choose; with several the user
+  // picks one or more
+  const communityIds =
+    myCommunities.length === 1 ? [myCommunities[0].id] : selectedCommunityIds;
+
+  const toggleCommunity = (id: string) =>
+    setSelectedCommunityIds((current) =>
+      current.includes(id) ? current.filter((c) => c !== id) : [...current, id],
+    );
 
   const handleAddPhoto = async () => {
     try {
@@ -48,7 +50,7 @@ export default function ListItem() {
       if (!result.canceled) setSelectedImage(result.assets[0]);
     } catch (error) {
       console.error("Failed to select item photo:", error);
-      Alert.alert("Error", "Could not open your photo library.");
+      void notify("Error", "Could not open your photo library.");
     }
   };
 
@@ -72,7 +74,10 @@ export default function ListItem() {
     }
 
     if (communityIds.length === 0) {
-      Alert.alert("Community required", "Please choose at least one community for your item.");
+      void notify(
+        "Community required",
+        "Please choose at least one community for your item.",
+      );
       return;
     }
 
@@ -80,17 +85,14 @@ export default function ListItem() {
       setUploading(true);
 
       // The server sets the owner to the signed-in user and status to "available"
-      await createItem({
+      const itemData = {
         community_ids: communityIds,
         name: title.trim(),
         description: description.trim() || undefined,
-        category: category.trim() || "Other",
+        category: category ?? "Other",
       };
       if (selectedImage) {
-        await createItem(itemData, {
-          uri: selectedImage.uri,
-          mimeType: selectedImage.mimeType,
-        });
+        await createItem(itemData, await toImageInput(selectedImage));
       } else {
         await createItem(itemData);
       }
@@ -102,10 +104,8 @@ export default function ListItem() {
       // Clear form
       setTitle("");
       setDescription("");
-      setCategory("");
-      setSelectedCommunityIds([]);
       setCategory(null);
-      setSelectedCommunityId(null);
+      setSelectedCommunityIds([]);
       setSelectedImage(null);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -193,11 +193,7 @@ export default function ListItem() {
               <TouchableOpacity
                 key={c.id}
                 style={[styles.input, selected && styles.communitySelected]}
-                onPress={() => setSelectedCommunityIds((current) =>
-                  selected
-                    ? current.filter((id) => id !== c.id)
-                    : [...current, c.id]
-                )}
+                onPress={() => toggleCommunity(c.id)}
                 disabled={uploading}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: selected }}
@@ -251,7 +247,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   selectedImage: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
     width: "100%",
     height: "100%",
   },

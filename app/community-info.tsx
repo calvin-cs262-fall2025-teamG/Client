@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
-    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Image,
+    View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";

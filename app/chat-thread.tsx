@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,7 +27,7 @@ import {
 } from "../services/readState";
 import StorageImage from "./components/StorageImage";
 
-const avatarMap: Record<string, any> = {
+const avatarMap: Record<string, number> = {
   "helen.png": require("../assets/images/helen.png"),
   "jacob.png": require("../assets/images/jacob.png"),
   "greg.png": require("../assets/images/greg.png"),
@@ -40,8 +39,8 @@ const avatarMap: Record<string, any> = {
 
 function resolveImageSource(
   key: string | null | undefined,
-  imageMap: Record<string, any>,
-): ImageSourcePropType | undefined {
+  imageMap: Record<string, number>,
+): number | { uri: string } | undefined {
   if (!key) return undefined;
   const trimmed = key.trim();
   if (!trimmed) return undefined;
