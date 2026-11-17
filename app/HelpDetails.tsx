@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "../utils/navigation";
 import {
   ScrollView,
   StyleSheet,
@@ -116,7 +117,7 @@ export default function HelpDetailsScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => goBack(router)}
             style={styles.backButton}
           >
             <Text style={styles.backText}>‹ Back</Text>
@@ -128,7 +129,7 @@ export default function HelpDetailsScreen() {
           <Text style={styles.errorText}>Help topic not found</Text>
           <TouchableOpacity
             style={styles.errorButton}
-            onPress={() => router.back()}
+            onPress={() => goBack(router)}
           >
             <Text style={styles.errorButtonText}>Go Back</Text>
           </TouchableOpacity>
@@ -141,7 +142,7 @@ export default function HelpDetailsScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack(router)}
           style={styles.backButton}
         >
           <Text style={styles.backText}>‹ Back</Text>

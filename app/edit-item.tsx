@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "../utils/navigation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -74,7 +75,7 @@ export default function EditItem() {
         if (item.owner_id !== userId) {
           setNotOwner(true);
           void notify("Error", "You can only edit your own items.");
-          router.back();
+          goBack(router);
           return;
         }
 
@@ -139,7 +140,7 @@ export default function EditItem() {
       }
 
       await notify("Success", "Item updated successfully!");
-      router.back();
+      goBack(router);
     } catch (error) {
       console.error("Failed to save edits:", error);
       void notify("Error", "Could not save changes. Please try again.");
@@ -166,7 +167,7 @@ export default function EditItem() {
     try {
       await deleteItem(id);
       await notify("Deleted", "Item removed successfully.");
-      router.back();
+      goBack(router);
     } catch (error) {
       console.error("Failed to delete item:", error);
       void notify("Error", "Could not delete the item.");
@@ -204,7 +205,7 @@ export default function EditItem() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Back button header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Item</Text>

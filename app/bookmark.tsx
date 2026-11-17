@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { goBack } from "../utils/navigation";
 import {
   Image,
   ScrollView,
@@ -22,7 +23,7 @@ export default function BookmarkScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
 
