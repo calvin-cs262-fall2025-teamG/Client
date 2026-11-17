@@ -1,9 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -37,8 +35,9 @@ import {
   parseTimestamp,
   saveLastRead,
 } from "../services/readState";
+import StorageImage from "./components/StorageImage";
 
-const avatarMap: Record<string, any> = {
+const avatarMap: Record<string, number> = {
   "helen.png": require("../assets/images/helen.png"),
   "jacob.png": require("../assets/images/jacob.png"),
   "greg.png": require("../assets/images/greg.png"),
@@ -50,8 +49,8 @@ const avatarMap: Record<string, any> = {
 
 function resolveImageSource(
   key: string | null | undefined,
-  imageMap: Record<string, any>,
-): ImageSourcePropType | undefined {
+  imageMap: Record<string, number>,
+): number | { uri: string } | undefined {
   if (!key) return undefined;
   const trimmed = key.trim();
   if (!trimmed) return undefined;
@@ -327,8 +326,14 @@ export default function ChatThread() {
           </TouchableOpacity>
 
           <View style={styles.headerUserBlock}>
-            {otherAvatarSource ? (
-              <Image source={otherAvatarSource} style={styles.headerAvatar} />
+            {otherAvatar ? (
+              <StorageImage
+                bucket="profile-pictures"
+                path={otherAvatar}
+                localSource={otherAvatarSource}
+                style={styles.headerAvatar}
+                contentFit="cover"
+              />
             ) : (
               <View
                 style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}
@@ -363,8 +368,14 @@ export default function ChatThread() {
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerUserBlock}>
-          {otherAvatarSource ? (
-            <Image source={otherAvatarSource} style={styles.headerAvatar} />
+          {otherAvatar ? (
+            <StorageImage
+              bucket="profile-pictures"
+              path={otherAvatar}
+              localSource={otherAvatarSource}
+              style={styles.headerAvatar}
+              contentFit="cover"
+            />
           ) : (
             <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
               <Text style={styles.headerAvatarText}>{headerInitial}</Text>

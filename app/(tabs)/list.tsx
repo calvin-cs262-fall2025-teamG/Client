@@ -1,8 +1,9 @@
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +13,9 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
 import PageContainer from "../components/PageContainer";
+import { notify } from "../../utils/confirm";
+import { ITEM_CATEGORIES, type ItemCategory } from "../../constants/categories";
+import { toImageInput } from "../../utils/imageInput";
 
 export default function ListItem() {
   const router = useRouter();
@@ -20,42 +24,60 @@ export default function ListItem() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
-    null,
-  );
+  const [category, setCategory] = useState<ItemCategory | null>(null);
+  const [selectedCommunityIds, setSelectedCommunityIds] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // With one community there is nothing to choose; with several the user picks
-  const communityId =
-    myCommunities.length === 1 ? myCommunities[0].id : selectedCommunityId;
+  // With one community there is nothing to choose; with several the user
+  // picks one or more
+  const communityIds =
+    myCommunities.length === 1 ? [myCommunities[0].id] : selectedCommunityIds;
 
-  // Photo upload returns with the Supabase Storage migration
-  const handleAddPhoto = () => {
-    Alert.alert("Coming soon", "Photo upload is being moved to the new server.");
+  const toggleCommunity = (id: string) =>
+    setSelectedCommunityIds((current) =>
+      current.includes(id) ? current.filter((c) => c !== id) : [...current, id],
+    );
+
+  const handleAddPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled) setSelectedImage(result.assets[0]);
+    } catch (error) {
+      console.error("Failed to select item photo:", error);
+      void notify("Error", "Could not open your photo library.");
+    }
   };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert("Title required", "Please add a title for your item.");
+      void notify("Title required", "Please add a title for your item.");
       return;
     }
 
     if (!user?.id) {
-      Alert.alert("Error", "You must be logged in to list an item.");
+      void notify("Error", "You must be logged in to list an item.");
       return;
     }
 
     if (myCommunities.length === 0) {
-      Alert.alert(
+      void notify(
         "Join a community first",
         "Items are shared within a community, so join one before listing.",
       );
       return;
     }
 
-    if (!communityId) {
-      Alert.alert("Community required", "Please choose a community for your item.");
+    if (communityIds.length === 0) {
+      void notify(
+        "Community required",
+        "Please choose at least one community for your item.",
+      );
       return;
     }
 
@@ -63,25 +85,31 @@ export default function ListItem() {
       setUploading(true);
 
       // The server sets the owner to the signed-in user and status to "available"
-      await createItem({
-        community_ids: [communityId],
+      const itemData = {
+        community_ids: communityIds,
         name: title.trim(),
         description: description.trim() || undefined,
-        category: category.trim() || "Other",
-      });
+        category: category ?? "Other",
+      };
+      if (selectedImage) {
+        await createItem(itemData, await toImageInput(selectedImage));
+      } else {
+        await createItem(itemData);
+      }
 
-      Alert.alert("Success", "Your item has been listed!", [
-        { text: "OK", onPress: () => router.push("/(tabs)/profile") },
-      ]);
+      void notify("Success", "Your item has been listed!").then(() =>
+        router.push("/(tabs)/profile"),
+      );
 
       // Clear form
       setTitle("");
       setDescription("");
-      setCategory("");
-      setSelectedCommunityId(null);
+      setCategory(null);
+      setSelectedCommunityIds([]);
+      setSelectedImage(null);
     } catch (error) {
       console.error("Failed to create item:", error);
-      Alert.alert("Error", "Failed to list item. Please try again.");
+      void notify("Error", "Failed to list item. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -96,10 +124,19 @@ export default function ListItem() {
         onPress={handleAddPhoto}
         disabled={uploading}
       >
-        <View style={styles.addPhotoBox}>
-          <Text style={styles.addPhotoText}>Add a Photo</Text>
-          <Text style={styles.subText}>Photos are coming soon</Text>
-        </View>
+        {selectedImage ? (
+          <>
+            <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+            <View style={styles.photoLabel}>
+              <Text style={styles.addPhotoText}>Change Photo</Text>
+            </View>
+          </>
+        ) : (
+          <View style={styles.addPhotoBox}>
+            <Text style={styles.addPhotoText}>Add a Photo</Text>
+            <Text style={styles.subText}>Choose from your library</Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       <TextInput
@@ -111,14 +148,31 @@ export default function ListItem() {
         editable={!uploading}
       />
 
-      <TextInput
-        placeholder="Category (e.g., 'Tools', 'Home', 'Books')"
-        placeholderTextColor="#6b7280"
-        value={category}
-        onChangeText={setCategory}
-        style={styles.input}
-        editable={!uploading}
-      />
+      <Text style={styles.communityLabel}>Category</Text>
+      <View style={styles.categoryChips}>
+        {ITEM_CATEGORIES.map((c) => {
+          const selected = c === category;
+          return (
+            <TouchableOpacity
+              key={c}
+              style={[styles.categoryChip, selected && styles.categoryChipSelected]}
+              onPress={() => setCategory(selected ? null : c)}
+              disabled={uploading}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  selected && styles.communityTextSelected,
+                ]}
+              >
+                {c}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <TextInput
         placeholder="Description (optional)"
@@ -132,16 +186,17 @@ export default function ListItem() {
 
       {myCommunities.length > 1 && (
         <View style={styles.communityList}>
-          <Text style={styles.communityLabel}>Community</Text>
+          <Text style={styles.communityLabel}>Communities</Text>
           {myCommunities.map((c) => {
-            const selected = c.id === selectedCommunityId;
+            const selected = selectedCommunityIds.includes(c.id);
             return (
               <TouchableOpacity
                 key={c.id}
                 style={[styles.input, selected && styles.communitySelected]}
-                onPress={() => setSelectedCommunityId(c.id)}
+                onPress={() => toggleCommunity(c.id)}
                 disabled={uploading}
-                accessibilityState={{ selected }}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selected }}
               >
                 <Text
                   style={[
@@ -191,6 +246,22 @@ const styles = StyleSheet.create({
   addPhotoBox: {
     alignItems: "center",
   },
+  selectedImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+  },
+  photoLabel: {
+    position: "absolute",
+    bottom: 12,
+    alignSelf: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+  },
   addPhotoText: {
     fontSize: 16,
     fontWeight: "600",
@@ -213,6 +284,28 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+  },
+  categoryChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  categoryChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+  },
+  categoryChipSelected: {
+    borderColor: "#f97316",
+    backgroundColor: "#fff7ed",
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: "#111827",
   },
   communityList: {
     marginBottom: 4,

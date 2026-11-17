@@ -41,9 +41,9 @@ export default function TabLayout() {
           name="search"
           options={{
             headerShown: false,
-            title: "Search",
+            title: "Discover",
             tabBarIcon: ({ color, focused }) =>
-              icon(focused, "search", "search-outline", color),
+              icon(focused, "compass", "compass-outline", color),
           }}
         />
 

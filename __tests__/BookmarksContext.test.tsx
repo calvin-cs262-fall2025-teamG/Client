@@ -164,6 +164,11 @@ describe("item normalization", () => {
       expected: { imageKey: "drill.jpg" },
     },
     {
+      name: "preserves the case of storage object paths",
+      raw: { id: DRILL, title: "Drill", image_path: "users/UserA/Item.JPG" },
+      expected: { imageKey: "users/UserA/Item.JPG" },
+    },
+    {
       name: "defaults status to none",
       raw: { id: DRILL, title: "Drill" },
       expected: { status: "none", imageKey: null },

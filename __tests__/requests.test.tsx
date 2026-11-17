@@ -159,7 +159,7 @@ describe("Waiting for you", () => {
     await waitFor(() =>
       expect(notify).toHaveBeenCalledWith(
         "Something went wrong",
-        "Could not approve the request. Please try again."
+        "Could not approve the request. Please try again.", expect.any(Array)
       )
     );
     expect(screen.queryByTestId("return-hint")).toBeNull();

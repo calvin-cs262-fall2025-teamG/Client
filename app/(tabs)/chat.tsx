@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -16,7 +15,6 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
-import type { ImageSourcePropType } from "react-native";
 import {
   community_messages,
   direct_messages,
@@ -32,10 +30,11 @@ import {
   saveLastRead,
   type LastReadMap,
 } from "../../services/readState";
+import StorageImage from "../components/StorageImage";
 
 /* ---------------- AVATAR MAP ---------------- */
 
-const avatarMap: Record<string, any> = {
+const avatarMap: Record<string, number> = {
   "helen.png": require("../../assets/images/helen.png"),
   "jacob.png": require("../../assets/images/jacob.png"),
   "greg.png": require("../../assets/images/greg.png"),
@@ -49,7 +48,7 @@ const avatarMap: Record<string, any> = {
 
 function resolveImageSource(
   key: string | null | undefined,
-): ImageSourcePropType | undefined {
+): number | { uri: string } | undefined {
   if (!key) return undefined;
   const trimmed = key.trim();
   if (!trimmed) return undefined;
@@ -273,9 +272,18 @@ export default function Chat() {
                     })
                   }
                 >
-                  <View style={[styles.avatarImage, styles.communityIcon]}>
-                    <Ionicons name="people" size={26} color="#fff" />
-                  </View>
+                  {c.avatar_path ? (
+                    <StorageImage
+                      bucket="community-images"
+                      path={c.avatar_path}
+                      style={styles.avatarImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={[styles.avatarImage, styles.communityIcon]}>
+                      <Ionicons name="people" size={26} color="#fff" />
+                    </View>
+                  )}
                   <View style={styles.chatContent}>
                     <View style={styles.chatHeader}>
                       <Text style={styles.chatName}>{c.name}</Text>
@@ -331,8 +339,14 @@ export default function Chat() {
                   });
                 }}
               >
-                {avatarSource ? (
-                  <Image source={avatarSource} style={styles.avatarImage} />
+                {avatarKey ? (
+                  <StorageImage
+                    bucket="profile-pictures"
+                    path={avatarKey}
+                    localSource={avatarSource}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                  />
                 ) : (
                   <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
                     <Text style={styles.avatarInitial}>{initial}</Text>
