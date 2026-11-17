@@ -1,4 +1,4 @@
-import { items } from "../services/supabase_api";
+import { community_members, items } from "../services/supabase_api";
 
 const mockRpc = jest.fn();
 
@@ -43,4 +43,14 @@ it("forwards community selections on create and update", async () => {
   const detailsOnly = { name: "Renamed" };
   await items.update("item-1", detailsOnly);
   expect(mockRpc).toHaveBeenCalledWith("update_item", { p_item_id: "item-1", p_data: detailsOnly });
+});
+
+it("requests membership in each distinct community", async () => {
+  mockRpc.mockResolvedValue({ data: null, error: null });
+
+  await community_members.requestToJoinMany(["c1", "c2", "c1"]);
+
+  expect(mockRpc).toHaveBeenCalledTimes(2);
+  expect(mockRpc).toHaveBeenNthCalledWith(1, "request_join_community", { p_community_id: "c1" });
+  expect(mockRpc).toHaveBeenNthCalledWith(2, "request_join_community", { p_community_id: "c2" });
 });

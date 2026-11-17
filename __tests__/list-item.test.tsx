@@ -132,7 +132,7 @@ it("asks a user with no communities to join one first", async () => {
   expect(mockCreateItem).not.toHaveBeenCalled();
 });
 
-it("makes a user with several communities pick one", async () => {
+it("lets a user with several communities pick multiple", async () => {
   mockCommunities = [community("c1", "Calvin Seniors"), community("c2", "Eastown")];
   await render(<ListItem />);
 
@@ -140,10 +140,13 @@ it("makes a user with several communities pick one", async () => {
   expect(alertSpy).toHaveBeenCalledWith("Community required", expect.any(String));
   expect(mockCreateItem).not.toHaveBeenCalled();
 
+  await fireEvent.press(screen.getByText("Calvin Seniors"));
   await fireEvent.press(screen.getByText("Eastown"));
   await fireEvent.press(screen.getByText("Post Item"));
 
   await waitFor(() =>
-    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ community_ids: ["c2"] }))
+    expect(mockCreateItem).toHaveBeenCalledWith(
+      expect.objectContaining({ community_ids: ["c1", "c2"] }),
+    )
   );
 });

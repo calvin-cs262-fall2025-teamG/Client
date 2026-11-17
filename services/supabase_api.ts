@@ -144,6 +144,13 @@ export const community_members = {
   requestToJoin: (communityId: string) =>
     supabase.rpc("request_join_community", { p_community_id: communityId }),
 
+  requestToJoinMany: (communityIds: string[]) =>
+    Promise.all(
+      [...new Set(communityIds)].map((communityId) =>
+        supabase.rpc("request_join_community", { p_community_id: communityId }),
+      ),
+    ),
+
   approve: (communityId: string, userId: string) =>
     supabase.rpc("approve_community_member", { p_community_id: communityId, p_user_id: userId }),
 

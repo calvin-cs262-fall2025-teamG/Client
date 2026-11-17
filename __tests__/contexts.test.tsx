@@ -13,7 +13,7 @@ jest.mock("../context/AuthContext", () => ({ useAuth: () => ({ user: { id: "u1" 
 jest.mock("../services/supabase_api", () => ({
   profiles: { getCurrent: jest.fn(), getById: jest.fn(), update: jest.fn() },
   communities: { getMine: jest.fn(), create: jest.fn() },
-  community_members: { requestToJoin: jest.fn(), leave: jest.fn() },
+  community_members: { requestToJoin: jest.fn(), requestToJoinMany: jest.fn(), leave: jest.fn() },
   items: { getMine: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
   borrowing_requests: {
     getMine: jest.fn(),
@@ -193,3 +193,16 @@ describe("approveRequest and markReturned", () => {
     loaders().forEach((fn) => expect(fn).not.toHaveBeenCalled());
   });
 });
+
+  it("submits membership requests for multiple communities", async () => {
+    mocked(api.community_members.requestToJoinMany).mockImplementation((ids: string[]) =>
+      Promise.all(ids.map(() => ok(null)))
+    );
+    const { result } = await renderLoaded();
+
+    await act(async () => {
+      await result.current.community.requestToJoinMany(["c1", "c2"]);
+    });
+
+    expect(api.community_members.requestToJoinMany).toHaveBeenCalledWith(["c1", "c2"]);
+  });

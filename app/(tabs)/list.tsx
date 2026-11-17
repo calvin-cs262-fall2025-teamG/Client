@@ -21,14 +21,12 @@ export default function ListItem() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
-    null,
-  );
+  const [selectedCommunityIds, setSelectedCommunityIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  // With one community there is nothing to choose; with several the user picks
-  const communityId =
-    myCommunities.length === 1 ? myCommunities[0].id : selectedCommunityId;
+  const communityIds = myCommunities.length === 1
+    ? [myCommunities[0].id]
+    : selectedCommunityIds;
 
   // Photo upload returns with the Supabase Storage migration
   const handleAddPhoto = () => {
@@ -54,8 +52,8 @@ export default function ListItem() {
       return;
     }
 
-    if (!communityId) {
-      Alert.alert("Community required", "Please choose a community for your item.");
+    if (communityIds.length === 0) {
+      Alert.alert("Community required", "Please choose at least one community for your item.");
       return;
     }
 
@@ -64,7 +62,7 @@ export default function ListItem() {
 
       // The server sets the owner to the signed-in user and status to "available"
       await createItem({
-        community_ids: [communityId],
+        community_ids: communityIds,
         name: title.trim(),
         description: description.trim() || undefined,
         category: category.trim() || "Other",
@@ -78,7 +76,7 @@ export default function ListItem() {
       setTitle("");
       setDescription("");
       setCategory("");
-      setSelectedCommunityId(null);
+      setSelectedCommunityIds([]);
     } catch (error) {
       console.error("Failed to create item:", error);
       Alert.alert("Error", "Failed to list item. Please try again.");
@@ -132,16 +130,21 @@ export default function ListItem() {
 
       {myCommunities.length > 1 && (
         <View style={styles.communityList}>
-          <Text style={styles.communityLabel}>Community</Text>
+          <Text style={styles.communityLabel}>Communities</Text>
           {myCommunities.map((c) => {
-            const selected = c.id === selectedCommunityId;
+            const selected = selectedCommunityIds.includes(c.id);
             return (
               <TouchableOpacity
                 key={c.id}
                 style={[styles.input, selected && styles.communitySelected]}
-                onPress={() => setSelectedCommunityId(c.id)}
+                onPress={() => setSelectedCommunityIds((current) =>
+                  selected
+                    ? current.filter((id) => id !== c.id)
+                    : [...current, c.id]
+                )}
                 disabled={uploading}
-                accessibilityState={{ selected }}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selected }}
               >
                 <Text
                   style={[
