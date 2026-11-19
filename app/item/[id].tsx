@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "../../utils/navigation";
 import { useEffect, useState } from "react";
-import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
   Alert,
@@ -15,13 +15,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useDatabase } from "../../context/DatabaseContext";
+import { confirm, notify } from "../../utils/confirm";
 import {
   items as itemsApi,
   type Item,
   type Profile,
 } from "../../services/supabase_service";
+import StorageImage from "../components/StorageImage";
 
-const imageMap: Record<string, any> = {
+const imageMap: Record<string, number> = {
   // item images
   "bike.jpg": require("../../assets/images/bike.jpg"),
   "campingtent.jpg": require("../../assets/images/campingtent.jpg"),
@@ -62,16 +64,11 @@ const imageMap: Record<string, any> = {
 
 function resolveImageSource(
   key?: string | null,
-): ImageSourcePropType | undefined {
+): number | { uri: string } | undefined {
   if (!key) return undefined;
 
   const trimmed = key.trim();
   if (!trimmed) return undefined;
-
-  // remote URL
-  if (/^https?:\/\//i.test(trimmed)) {
-    return { uri: trimmed };
-  }
 
   // local bundled image by filename
   const lower = trimmed.toLowerCase();
@@ -96,7 +93,7 @@ export default function ItemDetail() {
 
   const sendBorrowRequestMessage = async () => {
     if (!user) {
-      Alert.alert("Not logged in", "Please log in to request an item.");
+      void notify("Not logged in", "Please log in to request an item.");
       return;
     }
     if (!item) return;
@@ -106,7 +103,7 @@ export default function ItemDetail() {
       await requestToBorrow(item.id);
     } catch (e) {
       console.error("Failed to send borrow request:", e);
-      Alert.alert(
+      void notify(
         "Message failed",
         "Could not send your request. Please try again.",
       );
@@ -186,7 +183,7 @@ export default function ItemDetail() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Back button header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Item Details</Text>
@@ -195,10 +192,13 @@ export default function ItemDetail() {
 
       <ScrollView style={styles.container}>
         {/* ITEM IMAGE */}
-        {itemImageSource ? (
-          <Image
-            source={itemImageSource}
+        {item.image_path ? (
+          <StorageImage
+            bucket="item-images"
+            path={item.image_path}
+            localSource={itemImageSource}
             style={[styles.image, isBorrowed && { opacity: 0.55 }]}
+            contentFit="cover"
           />
         ) : (
           <View style={[styles.image, styles.imagePlaceholder]}>
@@ -223,8 +223,14 @@ export default function ItemDetail() {
 
         {/* LISTER PROFILE */}
         <View style={styles.listerCard}>
-          {ownerAvatarSource ? (
-            <Image source={ownerAvatarSource} style={styles.avatar} />
+          {owner?.avatar_path ? (
+            <StorageImage
+              bucket="profile-pictures"
+              path={owner.avatar_path}
+              localSource={ownerAvatarSource}
+              style={styles.avatar}
+              contentFit="cover"
+            />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarText}>
@@ -267,19 +273,14 @@ export default function ItemDetail() {
               (sending || hasPendingRequest) && { opacity: 0.6 },
             ]}
             disabled={sending || hasPendingRequest}
-            onPress={() =>
-              Alert.alert(
+            onPress={async () => {
+              const confirmed = await confirm(
                 "Borrow Request",
                 `Send a borrow request for ${item.name}?`,
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: sending ? "Sending..." : "Send Request",
-                    onPress: sendBorrowRequestMessage,
-                  },
-                ],
-              )
-            }
+                { confirmText: "Send Request" },
+              );
+              if (confirmed) await sendBorrowRequestMessage();
+            }}
           >
             <Text style={styles.borrowText}>
               {sending

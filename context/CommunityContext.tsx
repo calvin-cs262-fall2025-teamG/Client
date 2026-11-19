@@ -12,6 +12,7 @@ export type CommunityValue = LoadState & {
   myCommunities: Community[];
   createCommunity: (data: CreateCommunityRequest) => Promise<Community>;
   requestToJoin: (communityId: string) => Promise<void>;
+  requestToJoinMany: (communityIds: string[]) => Promise<void>;
   leaveCommunity: (communityId: string) => Promise<void>;
 };
 
@@ -47,6 +48,11 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
     unwrap(await community_members.requestToJoin(communityId));
   }, []);
 
+  const requestToJoinMany = useCallback(async (communityIds: string[]) => {
+    const results = await community_members.requestToJoinMany(communityIds);
+    results.forEach(unwrap);
+  }, []);
+
   const leaveCommunity = useCallback(async (communityId: string) => {
     unwrap(await community_members.leave(communityId));
     setMyCommunities((prev) => prev.filter((c) => c.id !== communityId));
@@ -59,6 +65,7 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
     refresh,
     createCommunity,
     requestToJoin,
+    requestToJoinMany,
     leaveCommunity,
   };
 

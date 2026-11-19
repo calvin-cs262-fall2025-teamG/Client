@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { goBack } from "../utils/navigation";
 import {
   Image,
   ScrollView,
@@ -10,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBookmarks } from "../context/BookmarksContext";
+import StorageImage from "./components/StorageImage";
 
 export default function BookmarkScreen() {
   const { byId, isSaved, toggle, remove } = useBookmarks();
@@ -21,7 +23,7 @@ export default function BookmarkScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
 
@@ -77,6 +79,13 @@ export default function BookmarkScreen() {
                   >
                     {item.image ? (
                       <Image source={item.image} style={styles.image} />
+                    ) : item.imageKey ? (
+                      <StorageImage
+                        bucket="item-images"
+                        path={item.imageKey}
+                        style={styles.image}
+                        contentFit="cover"
+                      />
                     ) : (
                       <View style={[styles.image, styles.imagePlaceholder]}>
                         <Ionicons

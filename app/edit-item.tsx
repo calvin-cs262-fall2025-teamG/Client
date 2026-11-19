@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "../utils/navigation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Button,
   Image,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +18,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useDatabase } from "../context/DatabaseContext";
 import { items as itemsApi } from "../services/supabase_service";
+import StorageImage from "./components/StorageImage";
+import { confirm, notify } from "../utils/confirm";
+import { toImageInput } from "../utils/imageInput";
 
 type ItemStatus = "available" | "pending" | "borrowed";
 
@@ -51,6 +54,7 @@ export default function EditItem() {
   const [status, setStatus] = useState<ItemStatus | null>(null);
   const [notOwner, setNotOwner] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -70,8 +74,8 @@ export default function EditItem() {
 
         if (item.owner_id !== userId) {
           setNotOwner(true);
-          Alert.alert("Error", "You can only edit your own items.");
-          router.back();
+          void notify("Error", "You can only edit your own items.");
+          goBack(router);
           return;
         }
 
@@ -86,7 +90,7 @@ export default function EditItem() {
         );
       } catch (error) {
         console.error("Failed to load item:", error);
-        Alert.alert("Error", "Could not load item details.");
+        void notify("Error", "Could not load item details.");
       } finally {
         setLoading(false);
       }
@@ -95,32 +99,51 @@ export default function EditItem() {
     loadItem();
   }, [id, userId, router]);
 
+  const handleChooseImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled) setSelectedImage(result.assets[0]);
+    } catch (error) {
+      console.error("Failed to select item photo:", error);
+      void notify("Error", "Could not open your photo library.");
+    }
+  };
+
   const handleSave = async () => {
     if (!id) {
-      Alert.alert("Error", "Invalid item ID.");
+      void notify("Error", "Invalid item ID.");
       return;
     }
 
     if (!title.trim()) {
-      Alert.alert("Missing title", "Please give your item a name.");
+      void notify("Missing title", "Please give your item a name.");
       return;
     }
 
     setSaving(true);
 
     try {
-      await updateItem(id, {
+      const itemData = {
         name: title.trim(),
         description: description.trim(),
         category: category.trim() || undefined,
-      });
+      };
+      if (selectedImage) {
+        await updateItem(id, itemData, await toImageInput(selectedImage));
+      } else {
+        await updateItem(id, itemData);
+      }
 
-      Alert.alert("Success", "Item updated successfully!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      await notify("Success", "Item updated successfully!");
+      goBack(router);
     } catch (error) {
       console.error("Failed to save edits:", error);
-      Alert.alert("Error", "Could not save changes. Please try again.");
+      void notify("Error", "Could not save changes. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -128,54 +151,26 @@ export default function EditItem() {
 
   const handleDelete = async () => {
     if (!id) {
-      Alert.alert("Error", "Invalid item ID.");
+      void notify("Error", "Invalid item ID.");
       return;
     }
 
-    const confirmed =
-      Platform.OS === "web"
-        ? window.confirm(
-            "Delete item?\n\nThis will permanently remove the item from your listings.",
-          )
-        : await new Promise<boolean>((resolve) => {
-            Alert.alert(
-              "Delete item?",
-              "This will permanently remove the item from your listings.",
-              [
-                {
-                  text: "Cancel",
-                  style: "cancel",
-                  onPress: () => resolve(false),
-                },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => resolve(true),
-                },
-              ],
-            );
-          });
+    const confirmed = await confirm(
+      "Delete item?",
+      "This will permanently remove the item from your listings.",
+      { confirmText: "Delete", destructive: true },
+    );
 
     if (!confirmed) return;
 
     setSaving(true);
     try {
       await deleteItem(id);
-      if (Platform.OS === "web") {
-        window.alert("Item removed successfully.");
-        router.back();
-      } else {
-        Alert.alert("Deleted", "Item removed successfully.", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
-      }
+      await notify("Deleted", "Item removed successfully.");
+      goBack(router);
     } catch (error) {
       console.error("Failed to delete item:", error);
-      if (Platform.OS === "web") {
-        window.alert("Could not delete the item.");
-      } else {
-        Alert.alert("Error", "Could not delete the item.");
-      }
+      void notify("Error", "Could not delete the item.");
       setSaving(false);
     }
   };
@@ -210,7 +205,7 @@ export default function EditItem() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Back button header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Item</Text>
@@ -219,13 +214,25 @@ export default function EditItem() {
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Image preview */}
-        {imageUrl && imageUrl.startsWith("http") && (
-          <Image
-            source={{ uri: imageUrl }}
+        {selectedImage ? (
+          <Image source={{ uri: selectedImage.uri }} style={styles.image} />
+        ) : imageUrl && (imageUrl.startsWith("http") || imageUrl.includes("/")) ? (
+          <StorageImage
+            bucket="item-images"
+            path={imageUrl}
             style={styles.image}
-            resizeMode="cover"
+            contentFit="cover"
           />
-        )}
+        ) : null}
+        <TouchableOpacity
+          onPress={handleChooseImage}
+          disabled={saving}
+          style={styles.photoButton}
+        >
+          <Text style={styles.photoButtonText}>
+            {selectedImage || imageUrl ? "Change photo" : "Add a photo"}
+          </Text>
+        </TouchableOpacity>
 
         {status && (
           <View style={styles.statusSection}>
@@ -356,6 +363,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginBottom: 16,
     backgroundColor: "#e5e7eb",
+  },
+  photoButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+  },
+  photoButtonText: {
+    color: "#374151",
+    fontSize: 14,
+    fontWeight: "600",
   },
   buttonRow: {
     marginTop: 12,
