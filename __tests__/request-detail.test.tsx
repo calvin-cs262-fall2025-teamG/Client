@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, within } from "@testing-library/react-native";
 import RequestDetail from "../app/request/[id]";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 import { formatDate } from "../services/borrowingStatus";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
@@ -45,7 +45,7 @@ jest.mock("../context/CommunityContext", () => ({
 }));
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   items: { getById: jest.fn(), getCommunityIds: jest.fn() },
   communities: { getById: jest.fn() },
 }));

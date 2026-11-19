@@ -10,7 +10,7 @@ import * as api from "../services/supabase_service";
 jest.mock("../context/AuthContext", () => ({ useAuth: () => ({ user: { id: "u1" } }) }));
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   profiles: { getCurrent: jest.fn(), getById: jest.fn(), update: jest.fn() },
   communities: { getMine: jest.fn(), create: jest.fn() },
   community_members: { requestToJoin: jest.fn(), requestToJoinMany: jest.fn(), leave: jest.fn() },

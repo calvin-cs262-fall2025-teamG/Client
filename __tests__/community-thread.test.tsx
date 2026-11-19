@@ -19,7 +19,7 @@ jest.mock("../context/AuthContext", () => ({
 }));
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   community_messages: { getByCommunity: jest.fn(), create: jest.fn() },
   profiles: { getById: jest.fn() },
 }));

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 import {
   MAX_CONCURRENT_LOOKUPS,
   clearItemCommunities,
@@ -7,7 +7,7 @@ import {
 } from "../hooks/useItemCommunities";
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   items: { getCommunityIds: jest.fn() },
 }));
 
