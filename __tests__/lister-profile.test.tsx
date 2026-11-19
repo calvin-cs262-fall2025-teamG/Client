@@ -16,7 +16,7 @@ jest.mock("../context/DatabaseContext", () => ({
 
 // Storage paths are signed by StorageImage; http URLs are used as-is
 const mockGetImageUrl = jest.fn();
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   getImageUrl: (...args: unknown[]) => mockGetImageUrl(...args),
 }));
 

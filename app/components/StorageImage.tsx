@@ -1,6 +1,6 @@
 import { Image, type ImageProps } from "expo-image";
 import { useSignedUrl } from "../../hooks/useSignedUrl";
-import type { ImageBucket } from "../../services/supabase_api";
+import type { ImageBucket } from "../../services/supabase_service";
 
 type StorageImageProps = Omit<ImageProps, "source"> & {
   bucket: ImageBucket;

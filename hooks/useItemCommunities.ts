@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useAuth } from "../context/AuthContext";
-import { items as itemsApi } from "../services/supabase_api";
+import { items as itemsApi } from "../services/supabase_service";
 
 // get_items doesn't return an item's communities yet, so each item needs its
 // own items.getCommunityIds request. Results are cached here, outside React,

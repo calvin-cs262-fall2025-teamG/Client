@@ -10,7 +10,7 @@ import StorageImage from "./components/StorageImage";
 import {
     communities, community_members, profiles,
     type Community, type CommunityMemberRole,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 import { confirm, notify } from "../utils/confirm";
 
 type Member = {

@@ -25,7 +25,7 @@ import {
   communities as communitiesApi,
   items as itemsApi,
   type Item,
-} from "../../services/supabase_api";
+} from "../../services/supabase_service";
 
 const ORANGE = "#E8792F";
 const BROWN = "#3b1b0d";

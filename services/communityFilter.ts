@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Community, Item } from "./supabase_api";
+import type { Community, Item } from "./supabase_service";
 
 // The value of the community filter when no single community is picked.
 export const ALL_COMMUNITIES = "all";

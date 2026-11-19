@@ -1,6 +1,6 @@
 import { randomUUID } from "expo-crypto";
 import { supabase } from "../lib/supabase";
-import type { Tables, TablesInsert, TablesUpdate } from "./supabase_database.types";
+import type { Tables, TablesInsert, TablesUpdate } from "./database.types";
 
 export type Profile = Tables<"profiles">;
 export type Community = Tables<"communities">;
@@ -25,9 +25,16 @@ export type CreateDirectMessageRequest = Pick<TablesInsert<"direct_messages">, "
 export type CreateCommunityMessageRequest = Pick<TablesInsert<"community_messages">, "community_id" | "content" | "item_id">;
 
 export type CommunityMemberRole = "owner" | "admin" | "member";
+export type CommunityMemberStatus = "pending" | "active" | "declined";
 
 export type ImageInput = { data: ArrayBuffer; ext?: string };
 export type ImageBucket = "profile-pictures" | "item-images" | "community-images";
+
+async function getCurrentUserId() {
+  const res = await supabase.auth.getUser();
+  if (res.error) return { id: null, error: res.error};
+  return { id: res.data.user?.id ?? null };
+}
 
 async function uploadImage(bucket: string, path: string, img: ImageInput) {
   const ext = (img.ext ?? "jpeg").replace(/^\./, "").toLowerCase();
@@ -60,12 +67,6 @@ export async function getImageUrl(
   return { signedUrl: data?.signedUrl ?? null, error };
 }
 
-async function getCurrentUserId() {
-  const res = await supabase.auth.getUser();
-  if (res.error) return { id: null, error: res.error};
-  return { id: res.data.user?.id ?? null };
-}
-
 export const profiles = {
   getById: (id: string) => supabase.rpc("get_profile", { p_id: id }),
 
@@ -94,22 +95,16 @@ export const communities = {
   getById: (id: string) => supabase.rpc("get_community", { p_community_id: id }),
 
   create: async (data: CreateCommunityRequest, image?: ImageInput) => {
-    /* 
-      Maybe can be fixed?
-      Note this operation is not atomic. If the upload fails, the community 
-      has already been created without an image. If the follow-up update 
-      fails, the community remains and the uploaded image is unreferenced 
-      until the server’s orphan sweep queues it for cleanup. The failure 
-      response currently returns { data: null, error }, so callers should be 
-      aware that a community may exist even when create reports an error.
-    */
     if (image) {
-      const create_res = await supabase.rpc("create_community", { p_data: data });
-      if (create_res.error)  return { ...create_res, error: create_res.error };
-      const up = await uploadImage("community-images", `${create_res.data.id}/avatar-${randomUUID()}`, image);
-      if (up.error) return { data: null, error: up.error };
-      const res = await supabase.rpc("update_community", { p_community_id: create_res.data.id, p_data: { avatar_path: up.path } })
-      if (res.error) return { data: null, error: res.error };
+      const userId = await getCurrentUserId();
+      if ( userId.error ) return { data: null, error: userId.error };
+      if (!userId.id) return { data: null, error: new Error("Not signed in") };
+      const id = randomUUID();
+      const up = await uploadImage("community-images", `${id}/${userId.id}/main-${randomUUID()}`, image);
+      if (up.error) return { data: null, error: up.error }; 
+      data = { ...data, id: id, avatar_path: up.path};
+      const res = await supabase.rpc("create_community", { p_data: data });
+      if (res.error) return { ...res, error: res.error };
       return res;
     }
     
@@ -132,6 +127,18 @@ export const communities = {
   delete: async (id: string) => {
     return supabase.rpc("delete_community", { p_community_id: id });
   },
+
+  transferOwnership: (communityId: string, newOwnerId: string) =>
+    supabase.rpc("transfer_community_ownership", {
+      p_community_id: communityId,
+      p_new_owner_id: newOwnerId,
+    }),
+
+  removeItem: (communityId: string, itemId: string) =>
+    supabase.rpc("remove_community_item", {
+      p_community_id: communityId,
+      p_item_id: itemId,
+    }),
 };
 
 export const community_members = {
@@ -162,6 +169,13 @@ export const community_members = {
       p_community_id: communityId,
       p_user_id: userId,
       p_role: role,
+    }),
+
+  setStatus: (communityId: string, userId: string, status: CommunityMemberStatus) =>
+    supabase.rpc("set_community_member_status", {
+      p_community_id: communityId,
+      p_user_id: userId,
+      p_status: status,
     }),
 
   remove: (communityId: string, userId: string) =>

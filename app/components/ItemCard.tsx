@@ -13,7 +13,7 @@ import {
   getBookmarkCount,
   updateBookmarkCount,
 } from "../../services/bookmarkCount";
-import type { Item } from "../../services/supabase_api";
+import type { Item } from "../../services/supabase_service";
 import StorageImage from "./StorageImage";
 
 // Local seed-data filenames mapped to bundled images. Anything else is a

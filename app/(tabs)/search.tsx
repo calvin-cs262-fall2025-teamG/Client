@@ -23,7 +23,7 @@ import {
   items as itemsApi,
   type Community,
   type Item,
-} from "../../services/supabase_api";
+} from "../../services/supabase_service";
 import { Ionicons } from "@expo/vector-icons";
 import { useDatabase } from "../../context/DatabaseContext";
 import {

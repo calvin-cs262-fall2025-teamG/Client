@@ -1,5 +1,5 @@
 import type { ImagePickerAsset } from "expo-image-picker";
-import type { ImageInput } from "../services/supabase_api";
+import type { ImageInput } from "../services/supabase_service";
 
 // Reads a picked photo into the shape the items API uploads. The extension
 // comes from the mime type, falling back to the file name.

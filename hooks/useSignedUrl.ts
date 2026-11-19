@@ -3,7 +3,7 @@ import { AppState } from "react-native";
 import {
   getImageUrl,
   type ImageBucket,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 
 type SignedUrlState = { key: string; url: string | null; expiresAt: number };
 

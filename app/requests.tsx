@@ -21,7 +21,7 @@ import {
   STAGE_LABELS,
 } from "../services/borrowingStatus";
 import { parseTimestamp } from "../services/readState";
-import { items as itemsApi } from "../services/supabase_api";
+import { items as itemsApi } from "../services/supabase_service";
 import { confirm, notify } from "../utils/confirm";
 
 const ORANGE = "#E8792F";
