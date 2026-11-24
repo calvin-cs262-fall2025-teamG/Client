@@ -6,7 +6,7 @@ import {
   borrowing_requests,
   type BorrowingHistory,
   type BorrowingRequest,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 import { replaceById, unwrap, useUserScopedLoad, type LoadState, type Take } from "./contextUtils";
 
 export type BorrowingValue = LoadState & {

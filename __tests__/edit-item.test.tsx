@@ -3,7 +3,7 @@ import { Alert, type AlertButton } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import EditItem from "../app/edit-item";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 // One router object, like expo-router's stable useRouter(); the load effect depends on it
 // canGoBack is false when the screen was opened with no history (reload, direct link)
@@ -36,7 +36,7 @@ jest.mock("../context/DatabaseContext", () => ({
 }));
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   items: { getById: jest.fn() },
 }));
 

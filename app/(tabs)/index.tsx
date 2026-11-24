@@ -18,7 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { useBookmarks } from "../../context/BookmarksContext";
 import { useDatabase } from "../../context/DatabaseContext";
-import { items as itemsApi, type Item } from "../../services/supabase_api";
+import { items as itemsApi, type Item } from "../../services/supabase_service";
 import ItemCard from "../components/ItemCard";
 import {
   ALL_CATEGORIES,

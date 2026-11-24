@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
-import type { Item } from "../../services/supabase_api";
+import type { Item } from "../../services/supabase_service";
 import { itemImageSource, useItemBookmark } from "./ItemCard";
 import StorageImage from "./StorageImage";
 

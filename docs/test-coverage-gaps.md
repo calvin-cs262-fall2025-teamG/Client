@@ -64,7 +64,7 @@ only a disabled button.
 | `app/auth/callback.tsx`, `app/(auth)/verify-email.tsx` | | Email confirmation flow |
 | `app/borrow-confirmation.tsx` | | |
 | `app/components/BookmarkButton.tsx` | | |
-| `services/supabase_api.ts` | | Thin RPC wrappers, always mocked in tests |
+| `services/supabase_service.ts` | | Thin RPC wrappers, always mocked in tests |
 
 ### Partly covered (lowest first, by lines)
 

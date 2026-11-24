@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useDatabase } from "../context/DatabaseContext";
-import { items as itemsApi } from "../services/supabase_api";
+import { items as itemsApi } from "../services/supabase_service";
 import StorageImage from "./components/StorageImage";
 import { confirm, notify } from "../utils/confirm";
 import { toImageInput } from "../utils/imageInput";

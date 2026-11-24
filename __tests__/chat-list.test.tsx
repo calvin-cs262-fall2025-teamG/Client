@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import Chat from "../app/(tabs)/chat";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
   jest.requireActual("@react-native-async-storage/async-storage/jest/async-storage-mock")
@@ -31,7 +31,7 @@ jest.mock("../context/DatabaseContext", () => ({
 }));
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   direct_messages: { getConversations: jest.fn() },
   community_messages: { getByCommunity: jest.fn() },
   profiles: { getById: jest.fn() },

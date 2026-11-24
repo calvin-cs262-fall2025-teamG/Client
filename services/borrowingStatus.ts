@@ -1,4 +1,4 @@
-import type { BorrowingHistory, BorrowingRequest } from "./supabase_api";
+import type { BorrowingHistory, BorrowingRequest } from "./supabase_service";
 import { parseTimestamp } from "./readState";
 
 // Where a request stands, worked out from the request row and its history row.

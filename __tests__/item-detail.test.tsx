@@ -2,7 +2,7 @@ import React from "react";
 import { Alert } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import ItemDetail from "../app/item/[id]";
-import * as api from "../services/supabase_api";
+import * as api from "../services/supabase_service";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -25,7 +25,7 @@ jest.mock("../context/DatabaseContext", () => ({
 }));
 
 // A factory mock keeps the real supabase client (which needs .env) from loading.
-jest.mock("../services/supabase_api", () => ({
+jest.mock("../services/supabase_service", () => ({
   items: { getById: jest.fn() },
   direct_messages: { create: jest.fn() },
 }));

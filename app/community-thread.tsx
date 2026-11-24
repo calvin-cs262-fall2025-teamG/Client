@@ -7,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { community_messages, profiles, type CommunityMessage } from "../services/supabase_api";
+import { community_messages, profiles, type CommunityMessage } from "../services/supabase_service";
 import { loadLastRead, parseTimestamp, saveLastRead } from "../services/readState";
 
 export default function CommunityThread() {

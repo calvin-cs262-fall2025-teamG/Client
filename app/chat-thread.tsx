@@ -30,7 +30,7 @@ import {
   type DirectMessage,
   type Item,
   type Profile,
-} from "../services/supabase_api";
+} from "../services/supabase_service";
 import {
   loadLastRead,
   parseTimestamp,
